@@ -10,8 +10,9 @@ dependencies = [
     "pyuptech>=0.1.4",
     "bdmc>=0.1.5",
     "coloredlogs>=15.0.1",
-    "fire>=0.6.0",
     "pydantic>=2.7.1",
+    "click>=8.1.7",
+    "pyyaml>=6.0.1",
 ]
 requires-python = "==3.11.*"
 readme = "README.md"
