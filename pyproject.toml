@@ -1,14 +1,17 @@
 [project]
 name = "kazu"
-version = "0.1.0"
+version = "0.1.0.dev0"
 description = "Default template for PDM package"
 authors = [
     {name = "Whth", email = "88489697+Whth@users.noreply.github.com"},
 ]
 dependencies = [
-    "pyuptech>=0.1.4a1",
-    "mentabotix>=0.1.1a0",
-    "bdmc>=0.1.3",
+    "mentabotix>=0.1.3a2",
+    "pyuptech>=0.1.4",
+    "bdmc>=0.1.5",
+    "coloredlogs>=15.0.1",
+    "fire>=0.6.0",
+    "pydantic>=2.7.1",
 ]
 requires-python = "==3.11.*"
 readme = "README.md"
@@ -16,4 +19,4 @@ license = {text = "MIT"}
 
 
 [tool.pdm]
-distribution = false
+distribution = true
