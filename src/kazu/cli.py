@@ -1,15 +1,17 @@
 from pathlib import Path
-from typing import Callable, TextIO
+from typing import Callable, TextIO, Optional, Tuple
 
 import bdmc
 import click
 import mentabotix
 import pyuptech
+from click import secho
 from mentabotix import MovingState, MovingTransition
 
 from . import __version__, __command__
 from .config import Env, RunMode, DEFAULT_APP_CONFIG_PATH, APPConfig, _InternalConfig
 from .logger import set_log_level
+from .visualize import print_colored_toml
 
 
 def _set_all_log_level(level: int | str):
@@ -51,14 +53,20 @@ def main(ctx: click.Context, app_config_path):
 @main.command("config")
 @click.help_option("-h", "--help")
 @click.pass_context
-@click.argument("key")
-@click.argument("value")
-def configure(context: click.Context, key: str, value: str):
+@click.argument("kv", type=(str, str), required=False)
+def configure(context: click.Context, kv: Optional[Tuple[str, str]] = None):
     """
     Configure KAZU
     """
     config: _InternalConfig = context.obj
     app_config = config.app_config
+    if kv is None:
+        from toml import dumps
+
+        secho(f"Config file at {config.app_config_file_path}", fg="green", bold=True)
+        print_colored_toml(dumps(APPConfig.model_dump(app_config)))
+        return
+    key, value = kv
     try:
         exec(f"app_config.{key} = '{value}'")
     except Exception as e:
@@ -97,7 +105,7 @@ def run(use_camera: bool, team_color: str, run_config: TextIO | None, mode: str)
 
 @main.command("check")
 @click.help_option("-h", "--help")
-@click.argument("device", type=click.Choice(["mot", "cam", "led", "lcd", "adc", "io", "mpu", "pow"]))
+@click.argument("device", type=click.Choice(["mot", "cam", "led", "lcd", "adc", "io", "mpu", "pow", "all"]))
 def test(device: str):
     """
     Check devices.
@@ -107,9 +115,10 @@ def test(device: str):
 
 @main.command("cmd")
 @click.help_option("-h", "--help")
+@click.pass_context
 @click.argument("duration", type=click.FLOAT, required=True)
 @click.argument("speeds", nargs=-1, type=click.INT, required=True)
-def control_motor(duration: float, speeds: list[int]):
+def control_motor(ctx: click.Context, duration: float, speeds: list[int]):
     """
     Control motor by sending command.
 
@@ -121,8 +130,10 @@ def control_motor(duration: float, speeds: list[int]):
 
         DURATION: (float)
     """
-    from .compile import composer, botix
+    from .compile import composer, botix, controller
 
+    internal_conf: _InternalConfig = ctx.obj
+    controller.serial_client.port = internal_conf.app_config.motion.port
     states, transitions = (
         composer.init_container()
         .add(MovingState(*speeds))
