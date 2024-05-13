@@ -97,6 +97,8 @@ class LoggerConfig(BaseModel):
 
 
 class SensorConfig(BaseModel):
+
+    adc_min_sample_interval: int = 5
     edge_fl_index: int = 0
     edge_fr_index: int = 1
     edge_rl_index: int = 2

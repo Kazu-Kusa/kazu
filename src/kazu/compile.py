@@ -1,9 +1,24 @@
 from typing import Callable
-from mentabotix import MovingState, MovingTransition, MovingChainComposer, Botix
+
 from bdmc import CloseLoopController
+from mentabotix import MovingChainComposer, Botix, Menta
+from pyuptech import OnBoardSensors
 
+sensors = OnBoardSensors()
+menta = Menta(
+    samplers=[
+        sensors.adc_all_channels,
+        sensors.io_all_channels,
+        sensors.get_io_level,
+        sensors.get_all_io_mode,
+        sensors.atti_all,
+        sensors.gyro_all,
+        sensors.acc_all,
+    ]
+)
+controller = CloseLoopController()
 
-botix = Botix(controller=CloseLoopController())
+botix = Botix(controller=controller)
 
 composer = MovingChainComposer()
 

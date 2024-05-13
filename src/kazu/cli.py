@@ -1,6 +1,5 @@
-from io import TextIOWrapper
 from pathlib import Path
-from typing import Callable
+from typing import Callable, TextIO
 
 import bdmc
 import click
@@ -20,10 +19,12 @@ def _set_all_log_level(level: int | str):
     set_log_level(level)
 
 
-@click.group()
-@click.pass_context
-@click.version_option(__version__, "-v", "--version", prog_name=__command__)
+@click.group(
+    epilog="For more details, Check at https://github.com/Kazu-Kusa/kazu",
+)
 @click.help_option("-h", "--help")
+@click.version_option(__version__, "-v", "--version", prog_name=__command__)
+@click.pass_context
 @click.option(
     "-a",
     "--app-config-path",
@@ -33,16 +34,14 @@ def _set_all_log_level(level: int | str):
     help=f"config file path, also can receive env {Env.KAZU_APP_CONFIG_PATH}",
 )
 def main(ctx: click.Context, app_config_path):
-    """
-    A Dedicated Robots Control System
-    """
+    """A Dedicated Robots Control System"""
     if (config_path := Path(app_config_path)).exists():
-        with open(app_config_path) as fp:
+        with open(app_config_path, encoding="utf-8") as fp:
             app_config = APPConfig.read_config(fp)
     else:
         config_path.parent.mkdir(parents=True, exist_ok=True)
         app_config = APPConfig()
-        with open(app_config_path, "w") as fp:
+        with open(app_config_path, "w", encoding="utf-8") as fp:
             APPConfig.dump_config(fp, app_config)
 
     ctx.obj = _InternalConfig(app_config=app_config, app_config_file_path=app_config_path)
@@ -71,8 +70,8 @@ def configure(context: click.Context, key: str, value: str):
 
 @main.command("run")
 @click.help_option("-h", "--help")
-@click.option("-e", "--use-camera", is_flag=True, default=True, help="use camera")
-@click.option("-t", "--team-color", default="blue", type=click.Choice(["blue", "yellow"]), help="team color")
+@click.option("-e", "--use-camera", is_flag=True, default=True, help="If use camera")
+@click.option("-t", "--team-color", default="blue", type=click.Choice(["blue", "yellow"]), help="Allay team color")
 @click.option(
     "-c",
     "--run-config",
@@ -89,7 +88,7 @@ def configure(context: click.Context, key: str, value: str):
     help=f"run mode, also can receive env {Env.KAZU_RUN_MODE}",
     envvar=Env.KAZU_RUN_MODE,
 )
-def run(use_camera: bool, team_color: str, run_config: TextIOWrapper | None, mode: str):
+def run(use_camera: bool, team_color: str, run_config: TextIO | None, mode: str):
     """
     Run command for the main group.
     """
@@ -107,11 +106,20 @@ def test(device: str):
 
 
 @main.command("cmd")
-@click.argument("duration", type=click.FLOAT)
-@click.argument("speeds", nargs=-1, type=click.INT)
+@click.help_option("-h", "--help")
+@click.argument("duration", type=click.FLOAT, required=True)
+@click.argument("speeds", nargs=-1, type=click.INT, required=True)
 def control_motor(duration: float, speeds: list[int]):
     """
     Control motor by sending command.
+
+    move the bot at <SPEEDS> for <DURATION> seconds, then stop.
+
+    Args:
+
+        SPEEDS: (int) | (int,int) | (int,int,int,int)
+
+        DURATION: (float)
     """
     from .compile import composer, botix
 
