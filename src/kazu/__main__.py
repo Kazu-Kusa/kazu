@@ -1,9 +1,4 @@
-import mentabotix
-
-
-def greet(name="World"):
-    return f"Hello, {name}!"
+from .cli import main
 
 if __name__ == "__main__":
-    import fire
-    fire.Fire(greet)
+    main()
