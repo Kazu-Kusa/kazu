@@ -90,6 +90,7 @@ class MotionConfig(BaseModel):
 class VisionConfig(BaseModel):
     team_color: Literal["yellow", "blue"] = "blue"
     use_camera: bool = True
+    camera_device_id: int = 0
 
 
 class LoggerConfig(BaseModel):

@@ -1,5 +1,5 @@
 from bdmc import CloseLoopController
-from mentabotix import Camera
+from cv2 import VideoCapture
 from pyuptech import OnBoardSensors
 
 from .logger import _logger
@@ -15,9 +15,10 @@ def check_motor(controller: CloseLoopController) -> bool:
         return False
 
 
-def check_camera(camera: Camera) -> bool:
+def check_camera(camera: VideoCapture) -> bool:
+    camera: VideoCapture
     _logger.info("Start checking camera device.")
-    if camera.camera_device.isOpened():
+    if camera.isOpened():
         _logger.info("Camera communication channel is ready.")
         return True
     else:
@@ -27,8 +28,11 @@ def check_camera(camera: Camera) -> bool:
 
 def check_adc(sensors: OnBoardSensors) -> bool:
     _logger.info("Start checking ADC device.")
-    first = sensors.adc_io_open().adc_all_channels()
-
+    try:
+        first = sensors.adc_io_open().adc_all_channels()
+    except Exception as e:
+        _logger.error(f"Encounter exception: {e}")
+        return False
     if any(first):
         _logger.info("ADC communication channel is ready.")
         return True
@@ -39,7 +43,11 @@ def check_adc(sensors: OnBoardSensors) -> bool:
 
 def check_io(sensors: OnBoardSensors) -> bool:
     _logger.info("Start checking IO device.")
-    first = sensors.adc_io_open().set_all_io_mode(0).set_all_io_level(1).io_all_channels()
+    try:
+        first = sensors.adc_io_open().set_all_io_mode(0).set_all_io_level(1).io_all_channels()
+    except Exception as e:
+        _logger.error(f"Encounter exception: {e}")
+        return False
 
     if all([first << i for i in range(8)]):
 
@@ -52,10 +60,15 @@ def check_io(sensors: OnBoardSensors) -> bool:
 
 def check_mpu(sensors: OnBoardSensors) -> bool:
     _logger.info("Start checking MPU device.")
-    sensors.MPU6500_Open()
-    atti_data = sensors.atti_all()
-    gyro_data = sensors.gyro_all()
-    acc_data = sensors.acc_all()
+
+    try:
+        sensors.MPU6500_Open()
+        atti_data = sensors.atti_all()
+        gyro_data = sensors.gyro_all()
+        acc_data = sensors.acc_all()
+    except Exception as e:
+        _logger.error(f"Encounter exception: {e}")
+        return False
     if all(acc_data) and all(atti_data) and all(gyro_data):
         _logger.info("MPU communication channel is ready.")
         return True
@@ -67,7 +80,11 @@ def check_mpu(sensors: OnBoardSensors) -> bool:
 def check_power(sensors: OnBoardSensors) -> bool:
     _logger.info("Start checking power supply.")
 
-    voltage = sensors.adc_io_open().adc_all_channels()[-1] * 3.3 * 4.0 / 4096
+    try:
+        voltage = sensors.adc_io_open().adc_all_channels()[-1] * 3.3 * 4.0 / 4096
+    except Exception as e:
+        _logger.error(f"Encounter exception: {e}")
+        return False
     if voltage > 7.0:
         _logger.info("Power supply is ready.")
         return True
