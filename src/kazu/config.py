@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path
 from typing import Tuple, List, Self, Literal, TextIO, Optional, Any, Dict
@@ -102,43 +101,6 @@ class ContextVar(Enum):
     @staticmethod
     def export_context() -> Dict[str, Any]:
         return {a.name: a.default for a in ContextVar}
-
-
-@dataclass(frozen=True)
-class Env:
-    """
-    KAZU_CONFIG_PATH: str = "KAZU_CONFIG_PATH"
-    """
-
-    KAZU_APP_CONFIG_PATH: str = "KAZU_APP_CONFIG_PATH"
-    KAZU_RUN_CONFIG_PATH: str = "KAZU_CONFIG_PATH"
-    KAZU_RUN_MODE: str = "KAZU_RUN_MODE"
-
-
-@dataclass(frozen=True)
-class RunMode:
-    """
-    run modes that suit for most use cases
-
-    Attributes:
-        AFG: [A]LWAYS O[F]F STA[G]E
-        ANG: [A]LWAYS O[N] STA[G]E
-        NGS: O[N] STA[G]E [S]TART
-        FGS: O[F]F STA[G]E [S]TART
-
-        FGDL: O[F]F STA[G]E [D]ASH [L]OOP
-    """
-
-    AFG: str = "AFG"
-    ANG: str = "ANG"
-    NGS: str = "NGS"
-    FGS: str = "FGS"
-
-    FGDL: str = "FGDL"
-
-    @staticmethod
-    def export() -> List[str]:
-        return [RunMode.AFG, RunMode.ANG, RunMode.NGS, RunMode.FGS, RunMode.FGDL]
 
 
 class MotionConfig(BaseModel):
