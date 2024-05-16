@@ -1,6 +1,7 @@
 from dataclasses import dataclass
+from enum import Enum, auto
 from pathlib import Path
-from typing import Tuple, List, Self, Literal, TextIO, Optional
+from typing import Tuple, List, Self, Literal, TextIO, Optional, Any, Dict
 
 from pydantic import BaseModel
 from toml import load, dump
@@ -9,37 +10,98 @@ DEFAULT_APP_CONFIG_PATH = f"{Path.home().as_posix()}/.kazu/config.toml"
 
 
 class EdgeConfig(BaseModel):
-    lower_threshold: float = 1700
-    upper_threshold: float = 2200
+    lower_threshold: List[float] = [1700] * 4
+    upper_threshold: List[float] = [2200] * 4
+
+    action_speed: float = 4000
 
 
 class SurroundingConfig(BaseModel):
-    lower_threshold: float = 1000
-    upper_threshold: float = 2300
+    lower_threshold: List[float] = [1000] * 4
+    upper_threshold: List[float] = [2300] * 4
+
+    action_speed: float = 3000
 
 
-class NormalConfig(BaseModel): ...
+class NormalConfig(BaseModel):
+
+    use_gradient_speed: bool = True
 
 
-class fenceConfig(BaseModel): ...
+class fenceConfig(BaseModel):
+    lower_threshold: List[float] = [1700] * 4
+    upper_threshold: List[float] = [2200] * 4
+
+
+class StrategyConfig(BaseModel):
+    use_edge_component: bool = True
+    use_surrounding_component: bool = True
+    use_normal_component: bool = True
+    use_fence_component: bool = True
+
+
+class PerformanceConfig(BaseModel):
+    min_sync_interval: float = 0.007
 
 
 class RunConfig(BaseModel):
+
     edge: EdgeConfig = EdgeConfig()
     surrounding: SurroundingConfig = SurroundingConfig()
     normal: NormalConfig = NormalConfig()
     fence: fenceConfig = fenceConfig()
+
+    strategy: StrategyConfig = StrategyConfig()
+    perf: PerformanceConfig = PerformanceConfig()
     # TODO fill the configs that still remain
     ...
 
+    @classmethod
+    def read_config(cls, fp: TextIO) -> Self:
+        """
+        Reads a configuration from a file object and returns an instance of the class.
 
-class InitContext(BaseModel):
+        Args:
+            fp (TextIOWrapper): A file object containing the configuration data.
 
-    on_stage: bool = False
-    reset: bool = True
-    # TODO fill the configs that still remain
+        Returns:
+            Self: An instance of the class with the configuration data loaded from the file.
 
-    ...
+        Raises:
+            ValidationError: If the loaded configuration data fails validation.
+        """
+        return cls.model_validate(load(fp))
+
+    @classmethod
+    def dump_config(cls, fp: TextIO, config: Self) -> None:
+        """
+        Dump the configuration data to a file object.
+
+        Args:
+            fp (TextIOWrapper): The file object to write the configuration data to.
+            config (Self): The configuration data to be dumped.
+
+        Returns:
+            None
+        """
+        dump(cls.model_dump(config), fp)
+
+
+class ContextVar(Enum):
+
+    on_stage: bool = auto()
+    reset: bool = auto()
+    prev_salvo_speed: int = auto()
+
+    @property
+    def default(self) -> Any:
+        defaults = {"on_stage": False, "reset": True, "prev_salvo_speed": 0}
+        assert self.name in defaults, "should always find a default value!"
+        return defaults.get(self.name)
+
+    @staticmethod
+    def export_context() -> Dict[str, Any]:
+        return {a.name: a.default for a in ContextVar}
 
 
 @dataclass(frozen=True)
