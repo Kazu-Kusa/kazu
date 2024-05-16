@@ -10,7 +10,8 @@ from click import secho
 from mentabotix import MovingState, MovingTransition
 
 from . import __version__, __command__
-from .config import Env, RunMode, DEFAULT_APP_CONFIG_PATH, APPConfig, _InternalConfig
+from .compile import make_edge_handler
+from .config import Env, RunMode, DEFAULT_APP_CONFIG_PATH, APPConfig, _InternalConfig, RunConfig
 from .logger import set_log_level
 from .visualize import print_colored_toml
 
@@ -51,8 +52,26 @@ def main(ctx: click.Context, app_config_path):
     _set_all_log_level(ctx.obj.app_config.logger.log_level)
 
 
+def reset_config(ctx: click.Context, *_):
+    ctx.obj.app_config = APPConfig()
+    with open(ctx.obj.app_config_file_path, "w") as fp:
+        APPConfig.dump_config(fp, ctx.obj.app_config)
+    secho(f"Reset config file at {Path(ctx.obj.app_config_file_path).absolute().as_posix()} to default.", fg="yellow")
+    ctx.exit(0)
+
+
 @main.command("config")
 @click.help_option("-h", "--help")
+@click.option(
+    "-r",
+    "--reset",
+    is_flag=True,
+    default=False,
+    required=False,
+    show_default=True,
+    help="Reset config",
+    callback=reset_config,
+)
 @click.pass_context
 @click.argument("kv", type=(str, str), required=False)
 def configure(context: click.Context, kv: Optional[Tuple[str, str]] = None):
@@ -64,7 +83,7 @@ def configure(context: click.Context, kv: Optional[Tuple[str, str]] = None):
     if kv is None:
         from toml import dumps
 
-        secho(f"Config file at {config.app_config_file_path}", fg="green", bold=True)
+        secho(f"Config file at {Path(config.app_config_file_path).absolute().as_posix()}", fg="green", bold=True)
         print_colored_toml(dumps(APPConfig.model_dump(app_config)))
         return
     key, value = kv
@@ -77,14 +96,31 @@ def configure(context: click.Context, kv: Optional[Tuple[str, str]] = None):
             APPConfig.dump_config(fp, app_config)
 
 
+def export_default_runconfig(ctx: click.Context, _, path: Path):
+    path = Path(path)
+    path.parent.mkdir(exist_ok=True, parents=True)
+    with open(path, mode="w") as fp:
+        RunConfig.dump_config(fp, RunConfig())
+    ctx.exit(0)
+
+
 @main.command("run")
+@click.pass_context
 @click.help_option("-h", "--help")
-@click.option("-e", "--use-camera", is_flag=True, default=True, help="If use camera")
-@click.option("-t", "--team-color", default="blue", type=click.Choice(["blue", "yellow"]), help="Allay team color")
+@click.option("-e", "--use-camera", is_flag=True, default=True, show_default=True, help="If use camera")
+@click.option(
+    "-t",
+    "--team-color",
+    default="blue",
+    show_default=True,
+    type=click.Choice(["blue", "yellow"]),
+    help="Change allay team color temporarily.",
+)
 @click.option(
     "-c",
     "--run-config",
-    default=None,
+    show_default=True,
+    required=True,
     help=f"config file path, also can receive env {Env.KAZU_RUN_CONFIG_PATH}",
     type=click.File("r", encoding="utf-8"),
     envvar=Env.KAZU_RUN_CONFIG_PATH,
@@ -92,23 +128,41 @@ def configure(context: click.Context, kv: Optional[Tuple[str, str]] = None):
 @click.option(
     "-m",
     "--mode",
+    show_default=True,
     default=RunMode.FGS,
     type=click.Choice(RunMode.export()),
     help=f"run mode, also can receive env {Env.KAZU_RUN_MODE}",
     envvar=Env.KAZU_RUN_MODE,
 )
-def run(use_camera: bool, team_color: str, run_config: TextIO | None, mode: str):
+@click.option(
+    "-e",
+    "--export-path",
+    help=f"Path of the exported config template file",
+    type=click.Path(file_okay=True, dir_okay=False, path_type=Path),
+    callback=export_default_runconfig,
+)
+def run(ctx: click.Context, use_camera: bool, team_color: str, run_config: TextIO | None, mode: str):
     """
     Run command for the main group.
     """
+
+    internal_config: _InternalConfig = ctx.obj
+    run_config: RunConfig = RunConfig.read_config(run_config) if run_config else RunConfig()
+
+    make_edge_handler(internal_config.app_config, run_config)
+
     print(use_camera, team_color, run_config, mode)
 
 
 @main.command("check")
 @click.help_option("-h", "--help")
 @click.pass_context
-@click.argument("device", type=click.Choice(devs := ["mot", "cam", "adc", "io", "mpu", "pow", "all"]), nargs=-1)
-def test(ctx: click.Context, device: str):
+@click.argument(
+    "device",
+    type=click.Choice(devs := ["mot", "cam", "adc", "io", "mpu", "pow", "all"]),
+    nargs=-1,
+)
+def test(ctx: click.Context, device: str = ("all",)):
     """
     Check devices' normal functions
     """
