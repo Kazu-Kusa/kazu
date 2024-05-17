@@ -1,6 +1,6 @@
 from pathlib import Path
 from time import sleep
-from typing import Callable, TextIO, Optional, Tuple
+from typing import Callable, Optional, Tuple
 
 import bdmc
 import click
@@ -11,7 +11,8 @@ from mentabotix import MovingState, MovingTransition
 
 from . import __version__, __command__
 from .compile import make_edge_handler
-from .config import Env, RunMode, DEFAULT_APP_CONFIG_PATH, APPConfig, _InternalConfig, RunConfig
+from .config import DEFAULT_APP_CONFIG_PATH, APPConfig, _InternalConfig, RunConfig
+from .constant import Env, RunMode
 from .logger import set_log_level
 from .visualize import print_colored_toml
 
@@ -60,8 +61,25 @@ def reset_config(ctx: click.Context, *_):
     ctx.exit(0)
 
 
+def export_default_runconfig(ctx: click.Context, _, path: Path):
+    if path:
+        path = Path(path)
+        path.parent.mkdir(exist_ok=True, parents=True)
+        with open(path, mode="w") as fp:
+            RunConfig.dump_config(fp, RunConfig())
+        secho(f"Exported config file at {path.absolute().as_posix()}", fg="yellow")
+    ctx.exit(0)
+
+
 @main.command("config")
 @click.help_option("-h", "--help")
+@click.option(
+    "-e",
+    "--export-path",
+    help=f"Path of the exported config template file",
+    type=click.Path(file_okay=True, dir_okay=False, path_type=Path),
+    callback=export_default_runconfig,
+)
 @click.option(
     "-r",
     "--reset",
@@ -96,14 +114,6 @@ def configure(context: click.Context, kv: Optional[Tuple[str, str]] = None):
             APPConfig.dump_config(fp, app_config)
 
 
-def export_default_runconfig(ctx: click.Context, _, path: Path):
-    path = Path(path)
-    path.parent.mkdir(exist_ok=True, parents=True)
-    with open(path, mode="w") as fp:
-        RunConfig.dump_config(fp, RunConfig())
-    ctx.exit(0)
-
-
 @main.command("run")
 @click.pass_context
 @click.help_option("-h", "--help")
@@ -120,9 +130,9 @@ def export_default_runconfig(ctx: click.Context, _, path: Path):
     "-c",
     "--run-config",
     show_default=True,
-    required=True,
+    default=None,
     help=f"config file path, also can receive env {Env.KAZU_RUN_CONFIG_PATH}",
-    type=click.File("r", encoding="utf-8"),
+    type=click.Path(dir_okay=False, readable=True, path_type=Path),
     envvar=Env.KAZU_RUN_CONFIG_PATH,
 )
 @click.option(
@@ -134,20 +144,19 @@ def export_default_runconfig(ctx: click.Context, _, path: Path):
     help=f"run mode, also can receive env {Env.KAZU_RUN_MODE}",
     envvar=Env.KAZU_RUN_MODE,
 )
-@click.option(
-    "-e",
-    "--export-path",
-    help=f"Path of the exported config template file",
-    type=click.Path(file_okay=True, dir_okay=False, path_type=Path),
-    callback=export_default_runconfig,
-)
-def run(ctx: click.Context, use_camera: bool, team_color: str, run_config: TextIO | None, mode: str):
+def run(ctx: click.Context, use_camera: bool, team_color: str, run_config: Path | None, mode: str):
     """
     Run command for the main group.
     """
 
     internal_config: _InternalConfig = ctx.obj
-    run_config: RunConfig = RunConfig.read_config(run_config) if run_config else RunConfig()
+    if run_config and (r_conf := Path(run_config)).exists():
+        secho(f'Loading run config from "{r_conf.absolute().as_posix()}"', fg="green", bold=True)
+        with open(r_conf) as fp:
+            run_config: RunConfig = RunConfig.read_config(fp)
+    else:
+        secho(f"Loading DEFAULT run config", fg="yellow", bold=True)
+        run_config = RunConfig()
 
     make_edge_handler(internal_config.app_config, run_config)
 
