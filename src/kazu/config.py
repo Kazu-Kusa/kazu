@@ -12,7 +12,15 @@ class EdgeConfig(BaseModel):
     lower_threshold: List[float] = [1700] * 4
     upper_threshold: List[float] = [2200] * 4
 
-    action_speed: float = 4000
+    fallback_speed: int = 6000
+    fallback_duration: float = 0.5
+
+    advance_speed: int = 6000
+    advance_duration: float = 0.5
+
+    turn_speed: int = 5000
+    full_turn_duration: float = 0.9
+    half_turn_duration: float = 0.5
 
 
 class SurroundingConfig(BaseModel):
@@ -128,6 +136,12 @@ class SensorConfig(BaseModel):
     edge_fr_index: int = 1
     edge_rl_index: int = 2
     edge_rr_index: int = 3
+
+    gray_io_off_stage_case: int = 0
+    gray_io_left_index: int = 0
+    gray_io_right_index: int = 1
+
+    gray_adc_index: int = 8
     ...
     # TODO fill the configs that still remain
 
