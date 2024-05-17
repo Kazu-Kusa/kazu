@@ -184,17 +184,19 @@ class SurroundingCodeSign(Enum):
 
 class FenceCodeSign(Enum):
     """
-    fl           fr
-        O-----O
-           |
-        O-----O
-    rl           rr
+          front:0
+          O-----O
+    left:2   |   right:3
+          O-----O
+          rear:1
 
     Notes:
         Usually the bigger the number, the more likely it is to be an edge
+        Beware that though the CodeSign is somehow similar to that of the 'EdgeCodeSign', the meaning of the two are
+        completely different.
     """
 
-    O_O_O_O = 0
+    O_O_O_O = 0  # Front,Rear,Left,Right all four direction are not encountering edge
 
     X_O_O_O = 1  # Front encounter Fence
     O_X_O_O = 4  # Rear encounter Fence
