@@ -48,12 +48,28 @@ class SamplerIndexes:
 def make_edge_handler(
     app_config: APPConfig, run_config: RunConfig
 ) -> Tuple[MovingState, MovingState, MovingState, List[MovingTransition]]:
+    """
+    根据应用和运行配置创建边缘处理函数。
+
+    Args:
+        app_config: APPConfig 类型，应用配置，包含传感器和其它配置。
+        run_config: RunConfig 类型，运行时配置，包含边缘检测的阈值和行为配置。
+
+    Returns:
+        start_state: 开始的移动状态。
+        normal_exit: 正常退出的移动状态。
+        abnormal_exit: 异常退出的移动状态。
+        transitions_pool: 状态转换列表。
+    """
+    # 根据运行配置获取上下阈值序列
     lt_seq = run_config.edge.lower_threshold
     ut_seq = run_config.edge.upper_threshold
-
+    # 导入标准权重序列
     edge_weight_seq = EdgeWeights.export_std_weight_seq()
 
     # <editor-fold desc="Breakers">
+    # 创建不同类型的边缘中断器（breaker），用于处理边缘检测逻辑
+    # 边缘全中断器：用于实施分支逻辑
     # build edge full breaker, which used to implement the branching logic. It uses CodeSign to distinguish the edge case
     edge_full_breaker: Callable[[], int] = menta.construct_inlined_function(
         usages=[
@@ -79,7 +95,7 @@ def make_edge_handler(
         return_type_varname="int",
         return_raw=False,
     )
-
+    # 边缘前中断器：用于在检测到前方边缘时立即停止机器人
     # build edge front breaker, used to halt the bot as soon as the edge is detected at the front, using gray io and two front edge sensors
     edge_front_breaker: Callable[[], bool] = menta.construct_inlined_function(
         usages=[
@@ -100,6 +116,7 @@ def make_edge_handler(
         return_type_varname="bool",
         return_raw=False,
     )
+    # 边缘后中断器：用于在检测到后方边缘时停止机器人
     edge_rear_breaker: Callable[[], bool] = menta.construct_inlined_function(
         usages=[
             SamplerUsage(
@@ -118,6 +135,7 @@ def make_edge_handler(
     # </editor-fold>
 
     # <editor-fold desc="Case Setter">
+    # 创建上下文更新器（case setter），用于设置遇到边缘的上下文变量
     edge_setter_true = controller.register_context_updater(
         lambda: True,
         input_keys=[],
@@ -131,6 +149,9 @@ def make_edge_handler(
     )
     # </editor-fold>
 
+    # <editor-fold desc="Templates">
+
+    # 定义不同移动状态，如停止、继续、后退等
     stop_state = MovingState(0, after_exiting=[edge_setter_true])
 
     continues_state = MovingState(
@@ -162,9 +183,9 @@ def make_edge_handler(
     drift_right_back_state = MovingState.drift("rr", run_config.edge.drift_speed)
 
     drift_transition = MovingTransition(run_config.edge.drift_duration)
+    # </editor-fold>
 
     transitions_pool: List[MovingTransition] = []
-
     case_dict: Dict = {EdgeCodeSign.O_O_O_O: (normal_exit := continues_state.clone())}
     normal_exit.after_exiting.append(edge_setter_false)
 
