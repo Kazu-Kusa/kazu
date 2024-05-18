@@ -61,11 +61,11 @@ def make_edge_handler(
         abnormal_exit: 异常退出的移动状态。
         transitions_pool: 状态转换列表。
     """
+    # <editor-fold desc="Read Config">
     # 根据运行配置获取上下阈值序列
     lt_seq = run_config.edge.lower_threshold
     ut_seq = run_config.edge.upper_threshold
-    # 导入标准权重序列
-    edge_weight_seq = EdgeWeights.export_std_weight_seq()
+    # </editor-fold>
 
     # <editor-fold desc="Breakers">
     # 创建不同类型的边缘中断器（breaker），用于处理边缘检测逻辑
@@ -87,7 +87,7 @@ def make_edge_handler(
             "ret=sum("
             + ",".join(
                 f"({lt}>s{s_id} or {s_id}<{ut})*{wt}"
-                for s_id, lt, ut, wt in zip(range(4), lt_seq, ut_seq, edge_weight_seq)
+                for s_id, lt, ut, wt in zip(range(4), lt_seq, ut_seq, EdgeWeights.export_std_weight_seq())
             )
             + ")"
         ),
@@ -185,13 +185,15 @@ def make_edge_handler(
     drift_transition = MovingTransition(run_config.edge.drift_duration)
     # </editor-fold>
 
+    # <editor-fold desc="Initialize Containers">
     transitions_pool: List[MovingTransition] = []
     case_dict: Dict = {EdgeCodeSign.O_O_O_O: (normal_exit := continues_state.clone())}
     normal_exit.after_exiting.append(edge_setter_false)
+    # </editor-fold>
 
-    # <editor-fold desc="1-Activation">
+    # <editor-fold desc="1-Activation Cases">
     # fallback and full turn right
-    states, transition = (
+    [head_state, *_], transition = (
         composer.init_container()
         .add(fallback_state.clone())
         .add(fallback_transition.clone())
@@ -203,10 +205,11 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.X_O_O_O] = states[0]
+    case_dict[EdgeCodeSign.X_O_O_O] = head_state
+
     # -----------------------------------------------------------------------------
     # fallback and full turn left
-    states, transition = (
+    [head_state, *_], transition = (
         composer.init_container()
         .add(fallback_state.clone())
         .add(fallback_transition.clone())
@@ -218,11 +221,12 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.O_O_O_X] = states[0]
+    case_dict[EdgeCodeSign.O_O_O_X] = head_state
+
     # -----------------------------------------------------------------------------
 
     # advance and half turn right
-    states, transition = (
+    [head_state, *_], transition = (
         composer.init_container()
         .add(advance_state.clone())
         .add(advance_transition.clone())
@@ -234,11 +238,12 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.O_X_O_O] = states[0]
+    case_dict[EdgeCodeSign.O_X_O_O] = head_state
+
     # -----------------------------------------------------------------------------
 
     # advance and half turn left
-    states, transition = (
+    [head_state, *_], transition = (
         composer.init_container()
         .add(advance_state.clone())
         .add(advance_transition.clone())
@@ -250,12 +255,13 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.O_O_X_O] = states[0]
+    case_dict[EdgeCodeSign.O_O_X_O] = head_state
+
     # </editor-fold>
 
-    # <editor-fold desc="2-Activation">
+    # <editor-fold desc="2-Activation Cases">
     # half turn right
-    states, transition = (
+    [head_state, *_], transition = (
         composer.init_container()
         .add(right_turn_state.clone())
         .add(half_turn_transition.clone())
@@ -265,11 +271,12 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.X_X_O_O] = states[0]
+    case_dict[EdgeCodeSign.X_X_O_O] = head_state
+
     # -----------------------------------------------------------------------------
 
     # half turn left
-    states, transition = (
+    [head_state, *_], transition = (
         composer.init_container()
         .add(left_turn_state.clone())
         .add(half_turn_transition.clone())
@@ -279,11 +286,12 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.O_O_X_X] = states[0]
+    case_dict[EdgeCodeSign.O_O_X_X] = head_state
+
     # -----------------------------------------------------------------------------
 
     # fallback and full turn left or right
-    states, transition = (
+    [head_state, *_], transition = (
         composer.init_container()
         .add(fallback_state.clone())
         .add(fallback_transition.clone())
@@ -295,11 +303,12 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.X_O_O_X] = states[0]
+    case_dict[EdgeCodeSign.X_O_O_X] = head_state
+
     # -----------------------------------------------------------------------------
 
     # advance
-    states, transition = (
+    [head_state, *_], transition = (
         composer.init_container()
         .add(advance_state.clone())
         .add(advance_transition.clone())
@@ -309,11 +318,12 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.O_X_X_O] = states[0]
+    case_dict[EdgeCodeSign.O_X_X_O] = head_state
+
     # -----------------------------------------------------------------------------
 
     # drift right back
-    states, transition = (
+    [head_state, *_], transition = (
         composer.init_container()
         .add(drift_right_back_state.clone())
         .add(drift_transition.clone())
@@ -323,11 +333,12 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.X_O_X_O] = states[0]
+    case_dict[EdgeCodeSign.X_O_X_O] = head_state
+
     # -----------------------------------------------------------------------------
 
     # drift left back
-    states, transition = (
+    [head_state, *_], transition = (
         composer.init_container()
         .add(drift_left_back_state.clone())
         .add(drift_transition.clone())
@@ -337,14 +348,14 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.O_X_O_X] = states[0]
+    case_dict[EdgeCodeSign.O_X_O_X] = head_state
 
     # </editor-fold>
 
-    # <editor-fold desc="3-Activation">
+    # <editor-fold desc="3-Activation Cases">
 
     # half turn left and advance
-    states, transition = (
+    [head_state, *_], transition = (
         composer.init_container()
         .add(left_turn_state.clone())
         .add(half_turn_transition.clone())
@@ -356,11 +367,12 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.O_X_X_X] = states[0]
+    case_dict[EdgeCodeSign.O_X_X_X] = head_state
+
     # -----------------------------------------------------------------------------
 
     # half turn right and advance
-    states, transition = (
+    [head_state, *_], transition = (
         composer.init_container()
         .add(right_turn_state.clone())
         .add(half_turn_transition.clone())
@@ -372,11 +384,12 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.X_X_X_O] = states[0]
+    case_dict[EdgeCodeSign.X_X_X_O] = head_state
+
     # -----------------------------------------------------------------------------
 
     # half turn right and fallback
-    states, transition = (
+    [head_state, *_], transition = (
         composer.init_container()
         .add(right_turn_state.clone())
         .add(half_turn_transition.clone())
@@ -388,11 +401,12 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.X_O_X_X] = states[0]
+    case_dict[EdgeCodeSign.X_O_X_X] = head_state
+
     # -----------------------------------------------------------------------------
 
     # half turn left and fallback
-    states, transition = (
+    [head_state, *_], transition = (
         composer.init_container()
         .add(left_turn_state.clone())
         .add(half_turn_transition.clone())
@@ -404,19 +418,21 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.X_X_O_X] = states[0]
+    case_dict[EdgeCodeSign.X_X_O_X] = head_state
 
     # </editor-fold>
 
-    # <editor-fold desc="4-Activation">
+    # <editor-fold desc="4-Activation Cases">
     # just stop immediately, since such case are extremely rare in the normal race
-    states, transition = composer.init_container().add(stop_state).export_structure()
+    [head_state, *_], transition = composer.init_container().add(stop_state).export_structure()
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.X_X_X_X] = states[0]
+    case_dict[EdgeCodeSign.X_X_X_X] = head_state
+
     # </editor-fold>
 
+    # <editor-fold desc="Assembly">
     _, head_trans = (
         composer.init_container()
         .add(continues_state)
@@ -426,8 +442,13 @@ def make_edge_handler(
 
     transitions_pool.extend(head_trans)
 
+    # for t in transitions_pool:
+    #     print(t)
+
+    botix.export_structure("strac.puml", transitions_pool)
     start_state = continues_state
     abnormal_exit = stop_state
+    # </editor-fold>
     return start_state, normal_exit, abnormal_exit, transitions_pool
 
 
