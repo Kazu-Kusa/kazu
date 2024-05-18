@@ -11,8 +11,8 @@ DEFAULT_APP_CONFIG_PATH = f"{Path.home().as_posix()}/.kazu/config.toml"
 class TagGroup(BaseModel):
 
     team_color: Literal["yellow", "blue"] | str
-    enemy_tag: int
-    allay_tag: int
+    enemy_tag: Literal[1, 2] = None
+    allay_tag: Literal[1, 2] = None
     neutral_tag: Literal[1] = 1
 
     def __init__(self, /, **data: Any):
@@ -196,6 +196,7 @@ class LoggerConfig(BaseModel):
 class SensorConfig(BaseModel):
 
     adc_min_sample_interval: int = 5
+
     edge_fl_index: int = 0
     edge_fr_index: int = 1
     edge_rl_index: int = 2
@@ -204,7 +205,7 @@ class SensorConfig(BaseModel):
     left_adc_index: int = 4
     right_adc_index: int = 5
 
-    fb_adc_index: int = 6
+    front_adc_index: int = 6
     rb_adc_index: int = 7
 
     gray_adc_index: int = 8
@@ -212,6 +213,9 @@ class SensorConfig(BaseModel):
     gray_io_off_stage_case: int = 0
     gray_io_left_index: int = 0
     gray_io_right_index: int = 1
+
+    fl_io_index: int = 0
+    fr_io_index: int = 1
 
     ...
     # TODO fill the configs that still remain

@@ -6,6 +6,7 @@ import bdmc
 import click
 import mentabotix
 import pyuptech
+from bdmc import MotorInfo, CMD
 from click import secho
 from mentabotix import MovingState, MovingTransition
 
@@ -189,16 +190,37 @@ def run(ctx: click.Context, disable_camera: bool, team_color: str, run_config: P
         secho(f"Loading DEFAULT run config", fg="yellow", bold=True)
         run_config = RunConfig()
 
+    app_config = internal_config.app_config
     if disable_camera:
         secho("Disable camera", fg="red", bold=True)
-        internal_config.app_config.vision.use_camera = False
+        app_config.vision.use_camera = False
 
     if team_color:
         secho(f"Change team color to {team_color}", fg=team_color, bold=True)
-        internal_config.app_config.vision.team_color = team_color
-    edge_pack = make_edge_handler(internal_config.app_config, run_config)
+        app_config.vision.team_color = team_color
 
-    boot_pack = make_reboot_handler(internal_config.app_config, run_config)
+    from .compile import controller
+
+    controller.motor_infos = (
+        MotorInfo(*app_config.motion.motor_fl),
+        MotorInfo(*app_config.motion.motor_rl),
+        MotorInfo(*app_config.motion.motor_rr),
+        MotorInfo(*app_config.motion.motor_fr),
+    )
+    controller.serial_client.port = app_config.motion.port
+    controller.serial_client.open()
+    controller.start_msg_sending().send_cmd(CMD.RESET)
+
+    if app_config.vision.use_camera:
+        from .compile import tag_detector
+        from .config import TagGroup
+
+        tag_detector.open_camera(app_config.vision.camera_device_id)
+        tag_group = TagGroup(team_color=app_config.vision.team_color)
+
+    edge_pack = make_edge_handler(app_config, run_config)
+
+    boot_pack = make_reboot_handler(app_config, run_config)
 
     backstage_pack = make_back_to_stage_handler(run_config)
     botix.export_structure("edge.puml", edge_pack[-1])

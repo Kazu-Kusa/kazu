@@ -2,14 +2,7 @@ from dataclasses import dataclass
 from typing import Callable, List, Tuple, Dict
 
 from bdmc import CloseLoopController
-from mentabotix import (
-    MovingChainComposer,
-    Botix,
-    Menta,
-    MovingState,
-    MovingTransition,
-    SamplerUsage,
-)
+from mentabotix import MovingChainComposer, Botix, Menta, MovingState, MovingTransition, SamplerUsage, TagDetector
 from pyuptech import OnBoardSensors
 
 from .config import APPConfig, RunConfig, ContextVar
@@ -32,6 +25,8 @@ controller = CloseLoopController()
 botix = Botix(controller=controller)
 
 composer = MovingChainComposer()
+
+tag_detector = TagDetector()
 
 
 @dataclass
