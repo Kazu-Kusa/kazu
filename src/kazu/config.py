@@ -2,10 +2,31 @@ from enum import Enum, auto
 from pathlib import Path
 from typing import Tuple, List, Self, Literal, TextIO, Optional, Any, Dict
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from toml import load, dump
 
 DEFAULT_APP_CONFIG_PATH = f"{Path.home().as_posix()}/.kazu/config.toml"
+
+
+class TagGroup(BaseModel):
+
+    team_color: Literal["yellow", "blue"] | str
+    enemy_tag: int
+    allay_tag: int
+    neutral_tag: int = Field(default=0, const=True)
+
+    def __init__(self, /, **data: Any):
+        super().__init__(**data)
+
+        match self.team_color:
+            case "yellow":
+                self.enemy_tag = 1
+                self.allay_tag = 2
+            case "blue":
+                self.enemy_tag = 2
+                self.allay_tag = 1
+            case _:
+                raise ValueError(f"Invalid team_color, got {self.team_color}")
 
 
 class EdgeConfig(BaseModel):
@@ -142,7 +163,7 @@ class ContextVar(Enum):
     def default(self) -> Any:
         defaults = {
             "on_stage": False,
-            "reset": True,
+            "reset": False,
             "prev_salvo_speed": 0,
             "had_encountered_edge": False,
         }
