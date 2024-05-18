@@ -10,7 +10,7 @@ from click import secho
 from mentabotix import MovingState, MovingTransition
 
 from . import __version__, __command__
-from .compile import make_edge_handler
+from .compile import make_edge_handler, make_reboot_handler, botix
 from .config import DEFAULT_APP_CONFIG_PATH, APPConfig, _InternalConfig, RunConfig
 from .constant import Env, RunMode
 from .logger import set_log_level
@@ -158,8 +158,12 @@ def run(ctx: click.Context, use_camera: bool, team_color: str, run_config: Path 
         secho(f"Loading DEFAULT run config", fg="yellow", bold=True)
         run_config = RunConfig()
 
-    make_edge_handler(internal_config.app_config, run_config)
+    edge_pack = make_edge_handler(internal_config.app_config, run_config)
 
+    boot_pack = make_reboot_handler(internal_config.app_config, run_config)
+
+    botix.export_structure("edge.puml", edge_pack[-1])
+    botix.export_structure("boot.puml", boot_pack[-1])
     print(use_camera, team_color, run_config, mode)
 
 

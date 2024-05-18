@@ -442,9 +442,6 @@ def make_edge_handler(
 
     transitions_pool.extend(head_trans)
 
-    # for t in transitions_pool:
-    #     print(t)
-
     botix.export_structure("strac.puml", transitions_pool)
     start_state = continues_state
     abnormal_exit = stop_state
@@ -464,9 +461,38 @@ def make_fence_handler() -> Callable:
     raise NotImplementedError
 
 
-def make_start_handler() -> Callable:
-    raise NotImplementedError
+def make_reboot_handler(
+    app_config: APPConfig, run_config: RunConfig
+) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
 
+    activation_breaker = menta.construct_inlined_function(
+        usages=[
+            SamplerUsage(
+                used_sampler_index=SamplerIndexes.adc_all,
+                required_data_indexes=[app_config.sensor.left_adc_index, app_config.sensor.right_adc_index],
+            )
+        ],
+        judging_source=f"ret=s0>{run_config.boot.left_threshold} and s1>{run_config.boot.right_threshold}",
+        return_type_varname="bool",
+        extra_context={"bool": bool},
+        return_raw=False,
+    )
 
-def make_reboot_handler() -> Callable:
-    raise NotImplementedError
+    holding_state = MovingState(0)
+    holding_transition = MovingTransition(run_config.boot.max_holding_duration, breaker=activation_breaker)
+    # waiting for a booting signal, and dash on to the stage once received
+    states, transitions = (
+        composer.init_container()
+        .add(holding_state)
+        .add(holding_transition)
+        .add(MovingState.straight(-run_config.boot.dash_speed))
+        .add(MovingTransition(run_config.boot.dash_duration))
+        .add(MovingState(0))
+        .add(MovingTransition(0))
+        .add(
+            MovingState.rand_turn(controller, run_config.boot.turn_speed, turn_left_prob=run_config.boot.turn_left_prob)
+        )
+        .export_structure()
+    )
+
+    return states[0], states[-1], transitions

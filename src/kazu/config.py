@@ -56,6 +56,21 @@ class PerformanceConfig(BaseModel):
     min_sync_interval: float = 0.007
 
 
+class BootConfig(BaseModel):
+    max_holding_duration: float = 180
+
+    left_threshold: int = 2050
+    right_threshold: int = 2050
+
+    dash_speed: int = 8000
+    dash_duration: float = 0.7
+
+    turn_speed: int = 5000
+    full_turn_duration: float = 0.9
+    half_turn_duration: float = 0.5
+    turn_left_prob: float = 0.5
+
+
 class RunConfig(BaseModel):
 
     edge: EdgeConfig = EdgeConfig()
@@ -63,6 +78,7 @@ class RunConfig(BaseModel):
     normal: NormalConfig = NormalConfig()
     fence: fenceConfig = fenceConfig()
 
+    boot: BootConfig = BootConfig()
     strategy: StrategyConfig = StrategyConfig()
     perf: PerformanceConfig = PerformanceConfig()
     # TODO fill the configs that still remain
@@ -148,11 +164,18 @@ class SensorConfig(BaseModel):
     edge_rl_index: int = 2
     edge_rr_index: int = 3
 
+    left_adc_index: int = 4
+    right_adc_index: int = 5
+
+    fb_adc_index: int = 6
+    rb_adc_index: int = 7
+
+    gray_adc_index: int = 8
+
     gray_io_off_stage_case: int = 0
     gray_io_left_index: int = 0
     gray_io_right_index: int = 1
 
-    gray_adc_index: int = 8
     ...
     # TODO fill the configs that still remain
 
