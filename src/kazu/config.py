@@ -104,10 +104,16 @@ class ContextVar(Enum):
     on_stage: bool = auto()
     reset: bool = auto()
     prev_salvo_speed: int = auto()
+    had_encountered_edge: bool = auto()
 
     @property
     def default(self) -> Any:
-        defaults = {"on_stage": False, "reset": True, "prev_salvo_speed": 0}
+        defaults = {
+            "on_stage": False,
+            "reset": True,
+            "prev_salvo_speed": 0,
+            "had_encountered_edge": False,
+        }
         assert self.name in defaults, "should always find a default value!"
         return defaults.get(self.name)
 

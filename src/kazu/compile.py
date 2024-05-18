@@ -45,12 +45,15 @@ class SamplerIndexes:
     acc_all: int = 6
 
 
-def make_edge_handler(app_config: APPConfig, run_config: RunConfig) -> Tuple[List[MovingState], List[MovingTransition]]:
+def make_edge_handler(
+    app_config: APPConfig, run_config: RunConfig
+) -> Tuple[MovingState, MovingState, MovingState, List[MovingTransition]]:
     lt_seq = run_config.edge.lower_threshold
     ut_seq = run_config.edge.upper_threshold
 
     edge_weight_seq = EdgeWeights.export_std_weight_seq()
 
+    # <editor-fold desc="Breakers">
     # build edge full breaker, which used to implement the branching logic. It uses CodeSign to distinguish the edge case
     edge_full_breaker: Callable[[], int] = menta.construct_inlined_function(
         usages=[
@@ -112,8 +115,23 @@ def make_edge_handler(app_config: APPConfig, run_config: RunConfig) -> Tuple[Lis
         return_type_varname="bool",
         return_raw=False,
     )
+    # </editor-fold>
 
-    stop_state = MovingState(0)
+    # <editor-fold desc="Case Setter">
+    edge_setter_true = controller.register_context_updater(
+        lambda: True,
+        input_keys=[],
+        output_keys=[ContextVar.had_encountered_edge.name],
+    )
+
+    edge_setter_false = controller.register_context_updater(
+        lambda: False,
+        input_keys=[],
+        output_keys=[ContextVar.had_encountered_edge.name],
+    )
+    # </editor-fold>
+
+    stop_state = MovingState(0, after_exiting=[edge_setter_true])
 
     continues_state = MovingState(
         speed_expressions=ContextVar.prev_salvo_speed.name, used_context_variables=[ContextVar.prev_salvo_speed.name]
@@ -147,7 +165,8 @@ def make_edge_handler(app_config: APPConfig, run_config: RunConfig) -> Tuple[Lis
 
     transitions_pool: List[MovingTransition] = []
 
-    case_dict: Dict = {EdgeCodeSign.O_O_O_O: continues_state.clone()}
+    case_dict: Dict = {EdgeCodeSign.O_O_O_O: (normal_exit := continues_state.clone())}
+    normal_exit.after_exiting.append(edge_setter_false)
 
     # <editor-fold desc="1-Activation">
     # fallback and full turn right
@@ -377,7 +396,7 @@ def make_edge_handler(app_config: APPConfig, run_config: RunConfig) -> Tuple[Lis
     case_dict[EdgeCodeSign.X_X_X_X] = states[0]
     # </editor-fold>
 
-    head_state, head_trans = (
+    _, head_trans = (
         composer.init_container()
         .add(continues_state)
         .add(MovingTransition(run_config.perf.min_sync_interval, breaker=edge_full_breaker, to_states=case_dict))
@@ -385,9 +404,10 @@ def make_edge_handler(app_config: APPConfig, run_config: RunConfig) -> Tuple[Lis
     )
 
     transitions_pool.extend(head_trans)
-    botix.export_structure("strac.puml", transitions_pool)
 
-    return
+    start_state = continues_state
+    abnormal_exit = stop_state
+    return start_state, normal_exit, abnormal_exit, transitions_pool
 
 
 def make_surrounding_handler() -> Callable:
