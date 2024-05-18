@@ -1,8 +1,15 @@
 from dataclasses import dataclass
-from typing import Callable, List, Tuple, Dict, Set
+from typing import Callable, List, Tuple, Dict
 
 from bdmc import CloseLoopController
-from mentabotix import MovingChainComposer, Botix, Menta, MovingState, MovingTransition, SamplerUsage
+from mentabotix import (
+    MovingChainComposer,
+    Botix,
+    Menta,
+    MovingState,
+    MovingTransition,
+    SamplerUsage,
+)
 from pyuptech import OnBoardSensors
 
 from .config import APPConfig, RunConfig, ContextVar
@@ -41,7 +48,6 @@ class SamplerIndexes:
 def make_edge_handler(app_config: APPConfig, run_config: RunConfig) -> Tuple[List[MovingState], List[MovingTransition]]:
     lt_seq = run_config.edge.lower_threshold
     ut_seq = run_config.edge.upper_threshold
-    sensor_name = [f"s{i}" for i in range(4)]
 
     edge_weight_seq = EdgeWeights.export_std_weight_seq()
 
@@ -61,8 +67,8 @@ def make_edge_handler(app_config: APPConfig, run_config: RunConfig) -> Tuple[Lis
         judging_source=(
             "ret=sum("
             + ",".join(
-                f"({lt}>{s_name} or {s_name}<{ut})*{wt}"
-                for s_name, lt, ut, wt in zip(sensor_name, lt_seq, ut_seq, edge_weight_seq)
+                f"({lt}>s{s_id} or {s_id}<{ut})*{wt}"
+                for s_id, lt, ut, wt in zip(range(4), lt_seq, ut_seq, edge_weight_seq)
             )
             + ")"
         ),
@@ -125,18 +131,25 @@ def make_edge_handler(app_config: APPConfig, run_config: RunConfig) -> Tuple[Lis
 
     right_turn_state = MovingState.turn("r", run_config.edge.turn_speed)
 
+    rand_lr_turn_state = MovingState.rand_turn(
+        controller, run_config.edge.turn_speed, turn_left_prob=run_config.edge.turn_left_prob
+    )
+
     half_turn_transition = MovingTransition(run_config.edge.half_turn_duration)
 
     full_turn_transition = MovingTransition(run_config.edge.full_turn_duration)
 
-    states_pool: Set[MovingState] = {stop_state, continues_state}
+    drift_left_back_state = MovingState.drift("rl", run_config.edge.drift_speed)
+
+    drift_right_back_state = MovingState.drift("rr", run_config.edge.drift_speed)
+
+    drift_transition = MovingTransition(run_config.edge.drift_duration)
 
     transitions_pool: List[MovingTransition] = []
 
-    case_dict: Dict = {}
+    case_dict: Dict = {EdgeCodeSign.O_O_O_O: continues_state.clone()}
 
-    case_dict[EdgeCodeSign.O_O_O_O] = continues_state.clone()
-
+    # <editor-fold desc="1-Activation">
     # fallback and full turn right
     states, transition = (
         composer.init_container()
@@ -148,11 +161,10 @@ def make_edge_handler(app_config: APPConfig, run_config: RunConfig) -> Tuple[Lis
         .export_structure()
     )
 
-    states_pool.update(states)
-    transition.extend(transitions_pool)
+    transitions_pool.extend(transition)
 
     case_dict[EdgeCodeSign.X_O_O_O] = states[0]
-
+    # -----------------------------------------------------------------------------
     # fallback and full turn left
     states, transition = (
         composer.init_container()
@@ -164,10 +176,10 @@ def make_edge_handler(app_config: APPConfig, run_config: RunConfig) -> Tuple[Lis
         .export_structure()
     )
 
-    states_pool.update(states)
-    transition.extend(transitions_pool)
+    transitions_pool.extend(transition)
 
     case_dict[EdgeCodeSign.O_O_O_X] = states[0]
+    # -----------------------------------------------------------------------------
 
     # advance and half turn right
     states, transition = (
@@ -180,10 +192,10 @@ def make_edge_handler(app_config: APPConfig, run_config: RunConfig) -> Tuple[Lis
         .export_structure()
     )
 
-    states_pool.update(states)
-    transition.extend(transitions_pool)
+    transitions_pool.extend(transition)
 
     case_dict[EdgeCodeSign.O_X_O_O] = states[0]
+    # -----------------------------------------------------------------------------
 
     # advance and half turn left
     states, transition = (
@@ -196,19 +208,184 @@ def make_edge_handler(app_config: APPConfig, run_config: RunConfig) -> Tuple[Lis
         .export_structure()
     )
 
-    states_pool.update(states)
-    transition.extend(transitions_pool)
+    transitions_pool.extend(transition)
 
     case_dict[EdgeCodeSign.O_O_X_O] = states[0]
+    # </editor-fold>
 
-    head = (
+    # <editor-fold desc="2-Activation">
+    # half turn right
+    states, transition = (
+        composer.init_container()
+        .add(right_turn_state.clone())
+        .add(half_turn_transition.clone())
+        .add(stop_state)
+        .export_structure()
+    )
+
+    transitions_pool.extend(transition)
+
+    case_dict[EdgeCodeSign.X_X_O_O] = states[0]
+    # -----------------------------------------------------------------------------
+
+    # half turn left
+    states, transition = (
+        composer.init_container()
+        .add(left_turn_state.clone())
+        .add(half_turn_transition.clone())
+        .add(stop_state)
+        .export_structure()
+    )
+
+    transitions_pool.extend(transition)
+
+    case_dict[EdgeCodeSign.O_O_X_X] = states[0]
+    # -----------------------------------------------------------------------------
+
+    # fallback and full turn left or right
+    states, transition = (
+        composer.init_container()
+        .add(fallback_state.clone())
+        .add(fallback_transition.clone())
+        .add(rand_lr_turn_state.clone())
+        .add(full_turn_transition.clone())
+        .add(stop_state)
+        .export_structure()
+    )
+
+    transitions_pool.extend(transition)
+
+    case_dict[EdgeCodeSign.X_O_O_X] = states[0]
+    # -----------------------------------------------------------------------------
+
+    # advance
+    states, transition = (
+        composer.init_container()
+        .add(advance_state.clone())
+        .add(advance_transition.clone())
+        .add(stop_state)
+        .export_structure()
+    )
+
+    transitions_pool.extend(transition)
+
+    case_dict[EdgeCodeSign.O_X_X_O] = states[0]
+    # -----------------------------------------------------------------------------
+
+    # drift right back
+    states, transition = (
+        composer.init_container()
+        .add(drift_right_back_state.clone())
+        .add(drift_transition.clone())
+        .add(stop_state)
+        .export_structure()
+    )
+
+    transitions_pool.extend(transition)
+
+    case_dict[EdgeCodeSign.X_O_X_O] = states[0]
+    # -----------------------------------------------------------------------------
+
+    # drift left back
+    states, transition = (
+        composer.init_container()
+        .add(drift_left_back_state.clone())
+        .add(drift_transition.clone())
+        .add(stop_state)
+        .export_structure()
+    )
+
+    transitions_pool.extend(transition)
+
+    case_dict[EdgeCodeSign.O_X_O_X] = states[0]
+
+    # </editor-fold>
+
+    # <editor-fold desc="3-Activation">
+
+    # half turn left and advance
+    states, transition = (
+        composer.init_container()
+        .add(left_turn_state.clone())
+        .add(half_turn_transition.clone())
+        .add(advance_state.clone())
+        .add(advance_transition.clone())
+        .add(stop_state)
+        .export_structure()
+    )
+
+    transitions_pool.extend(transition)
+
+    case_dict[EdgeCodeSign.O_X_X_X] = states[0]
+    # -----------------------------------------------------------------------------
+
+    # half turn right and advance
+    states, transition = (
+        composer.init_container()
+        .add(right_turn_state.clone())
+        .add(half_turn_transition.clone())
+        .add(advance_state.clone())
+        .add(advance_transition.clone())
+        .add(stop_state)
+        .export_structure()
+    )
+
+    transitions_pool.extend(transition)
+
+    case_dict[EdgeCodeSign.X_X_X_O] = states[0]
+    # -----------------------------------------------------------------------------
+
+    # half turn right and fallback
+    states, transition = (
+        composer.init_container()
+        .add(right_turn_state.clone())
+        .add(half_turn_transition.clone())
+        .add(fallback_state.clone())
+        .add(fallback_transition.clone())
+        .add(stop_state)
+        .export_structure()
+    )
+
+    transitions_pool.extend(transition)
+
+    case_dict[EdgeCodeSign.X_O_X_X] = states[0]
+    # -----------------------------------------------------------------------------
+
+    # half turn left and fallback
+    states, transition = (
+        composer.init_container()
+        .add(left_turn_state.clone())
+        .add(half_turn_transition.clone())
+        .add(fallback_state.clone())
+        .add(fallback_transition.clone())
+        .add(stop_state)
+        .export_structure()
+    )
+
+    transitions_pool.extend(transition)
+
+    case_dict[EdgeCodeSign.X_X_O_X] = states[0]
+
+    # </editor-fold>
+
+    # <editor-fold desc="4-Activation">
+    # just stop immediately, since such case are extremely rare in the normal race
+    states, transition = composer.init_container().add(stop_state).export_structure()
+
+    transitions_pool.extend(transition)
+
+    case_dict[EdgeCodeSign.X_X_X_X] = states[0]
+    # </editor-fold>
+
+    head_state, head_trans = (
         composer.init_container()
         .add(continues_state)
         .add(MovingTransition(run_config.perf.min_sync_interval, breaker=edge_full_breaker, to_states=case_dict))
         .export_structure()
     )
 
-    botix.export_structure("strac.puml", head[-1])
+    transitions_pool.extend(head_trans)
+    botix.export_structure("strac.puml", transitions_pool)
 
     return
 

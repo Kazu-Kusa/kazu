@@ -22,6 +22,11 @@ class EdgeConfig(BaseModel):
     full_turn_duration: float = 0.9
     half_turn_duration: float = 0.5
 
+    turn_left_prob: float = 0.5
+
+    drift_speed: int = 6000
+    drift_duration: float = 0.5
+
 
 class SurroundingConfig(BaseModel):
     lower_threshold: List[float] = [1000] * 4
