@@ -2,7 +2,7 @@ from enum import Enum, auto
 from pathlib import Path
 from typing import Tuple, List, Self, Literal, TextIO, Optional, Any, Dict
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from toml import load, dump
 
 DEFAULT_APP_CONFIG_PATH = f"{Path.home().as_posix()}/.kazu/config.toml"
@@ -13,7 +13,7 @@ class TagGroup(BaseModel):
     team_color: Literal["yellow", "blue"] | str
     enemy_tag: int
     allay_tag: int
-    neutral_tag: int = Field(default=0, const=True)
+    neutral_tag: Literal[1] = 1
 
     def __init__(self, /, **data: Any):
         super().__init__(**data)

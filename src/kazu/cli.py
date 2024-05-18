@@ -76,7 +76,7 @@ def export_default_runconfig(ctx: click.Context, _, path: Path):
 @click.option(
     "-e",
     "--export-path",
-    help=f"Path of the exported config template file",
+    help=f"Path of the exported run config template file",
     type=click.Path(file_okay=True, dir_okay=False, path_type=Path),
     callback=export_default_runconfig,
 )
@@ -117,12 +117,18 @@ def configure(context: click.Context, kv: Optional[Tuple[str, str]] = None):
 @main.command("run")
 @click.pass_context
 @click.help_option("-h", "--help")
-@click.option("-e", "--use-camera", is_flag=True, default=True, show_default=True, help="If use camera")
+@click.option(
+    "-e",
+    "--disable-camera",
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help="Run with the camera disabled.",
+)
 @click.option(
     "-t",
     "--team-color",
-    default="blue",
-    show_default=True,
+    default=None,
     type=click.Choice(["blue", "yellow"]),
     help="Change allay team color temporarily.",
 )
@@ -144,7 +150,7 @@ def configure(context: click.Context, kv: Optional[Tuple[str, str]] = None):
     help=f"run mode, also can receive env {Env.KAZU_RUN_MODE}",
     envvar=Env.KAZU_RUN_MODE,
 )
-def run(ctx: click.Context, use_camera: bool, team_color: str, run_config: Path | None, mode: str):
+def run(ctx: click.Context, disable_camera: bool, team_color: str, run_config: Path | None, mode: str):
     """
     Run command for the main group.
     """
@@ -158,6 +164,13 @@ def run(ctx: click.Context, use_camera: bool, team_color: str, run_config: Path 
         secho(f"Loading DEFAULT run config", fg="yellow", bold=True)
         run_config = RunConfig()
 
+    if disable_camera:
+        secho("Disable camera", fg="red", bold=True)
+        internal_config.app_config.vision.use_camera = False
+
+    if team_color:
+        secho(f"Change team color to {team_color}", fg=team_color, bold=True)
+        internal_config.app_config.vision.team_color = team_color
     edge_pack = make_edge_handler(internal_config.app_config, run_config)
 
     boot_pack = make_reboot_handler(internal_config.app_config, run_config)
@@ -166,7 +179,7 @@ def run(ctx: click.Context, use_camera: bool, team_color: str, run_config: Path 
     botix.export_structure("edge.puml", edge_pack[-1])
     botix.export_structure("boot.puml", boot_pack[-1])
     botix.export_structure("backstage.puml", backstage_pack[-1])
-    print(use_camera, team_color, run_config, mode)
+    print(disable_camera, team_color, run_config, mode)
 
 
 @main.command("check")
