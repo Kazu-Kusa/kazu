@@ -53,51 +53,76 @@ def main(ctx: click.Context, app_config_path):
     _set_all_log_level(ctx.obj.app_config.logger.log_level)
 
 
-def reset_config(ctx: click.Context, *_):
-    ctx.obj.app_config = APPConfig()
-    with open(ctx.obj.app_config_file_path, "w") as fp:
-        APPConfig.dump_config(fp, ctx.obj.app_config)
-    secho(f"Reset config file at {Path(ctx.obj.app_config_file_path).absolute().as_posix()} to default.", fg="yellow")
-    ctx.exit(0)
-
-
-def export_default_runconfig(ctx: click.Context, _, path: Path):
+def export_default_app_config(ctx: click.Context, _, path):
+    """
+     Export the default application configuration to the specified path.
+    Args:
+        ctx (click.Context): The click context object.
+        _ (Any): Ignored parameter.
+        path (str): The path to export the default application configuration to.
+    Returns:
+        None: If the path is not provided.
+    """
     if path:
-        path = Path(path)
+        ctx.obj.app_config = APPConfig()
+        with open(ctx.obj.app_config_file_path, "w") as fp:
+            APPConfig.dump_config(fp, ctx.obj.app_config)
+        secho(
+            f"Exported DEFAULT app config file at {Path(ctx.obj.app_config_file_path).absolute().as_posix()} to default.",
+            fg="yellow",
+        )
+        ctx.exit(0)
+
+
+def export_default_run_config(ctx: click.Context, _, path: Path):
+    """
+    Export the default run configuration to a file.
+    Args:
+        ctx (click.Context): The click context object.
+        _ (Any): A placeholder parameter.
+        path (Path): The path to the file where the default run configuration will be exported.
+    Returns:
+        None
+    """
+    if path:
         path.parent.mkdir(exist_ok=True, parents=True)
         with open(path, mode="w") as fp:
             RunConfig.dump_config(fp, RunConfig())
-        secho(f"Exported config file at {path.absolute().as_posix()}", fg="yellow")
-    ctx.exit(0)
+        secho(f"Exported DEFAULT run config file at {path.absolute().as_posix()}", fg="yellow")
+        ctx.exit(0)
 
 
 @main.command("config")
+@click.pass_context
 @click.help_option("-h", "--help")
 @click.option(
-    "-e",
-    "--export-path",
+    "-r",
+    "--export-run-conf-path",
     help=f"Path of the exported run config template file",
+    default=None,
     type=click.Path(file_okay=True, dir_okay=False, path_type=Path),
-    callback=export_default_runconfig,
+    callback=export_default_run_config,
 )
 @click.option(
-    "-r",
-    "--reset",
-    is_flag=True,
-    default=False,
-    required=False,
-    show_default=True,
-    help="Reset config",
-    callback=reset_config,
+    "-a",
+    "--export-app-conf-path",
+    help="Path of the exported app config template file",
+    default=None,
+    type=click.Path(file_okay=True, dir_okay=False, path_type=Path),
+    callback=export_default_app_config,
 )
-@click.pass_context
-@click.argument("kv", type=(str, str), required=False)
-def configure(context: click.Context, kv: Optional[Tuple[str, str]] = None):
+@click.argument("kv", type=(str, str), required=False, default=None)
+def configure(
+    context: click.Context,
+    kv: Optional[Tuple[str, str]],
+    **_,
+):
     """
     Configure KAZU
     """
     config: _InternalConfig = context.obj
     app_config = config.app_config
+    print(f"kv: {kv}")
     if kv is None:
         from toml import dumps
 
