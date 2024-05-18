@@ -5,7 +5,7 @@
 groups = ["default"]
 strategy = ["cross_platform", "inherit_metadata"]
 lock_version = "4.4.1"
-content_hash = "sha256:617da826634b4a92c9b8717484c9d4b5b5938baccbe934502c8d4c09957978a8"
+content_hash = "sha256:5c47b4cbda6783f3021d044c2da1850abe829a367042da9629f3677b90cf7976"
 
 [[package]]
 name = "annotated-types"
@@ -20,7 +20,7 @@ files = [
 
 [[package]]
 name = "bdmc"
-version = "0.1.5.6"
+version = "0.1.5.8"
 requires_python = ">=3.11"
 summary = "An api wrapper lib designed for the uptech BDMC divers"
 groups = ["default"]
@@ -29,8 +29,8 @@ dependencies = [
     "pyserial>=3.5",
 ]
 files = [
-    {file = "bdmc-0.1.5.6-py3-none-any.whl", hash = "sha256:709cd10c3e4d57bfe795ab6f3e315e7569c59d20e4952f984782169049fa3552"},
-    {file = "bdmc-0.1.5.6.tar.gz", hash = "sha256:6bd0b62c2ba2d2f18183d319a23f78a92ca4ad6898bb11df36ec29bfc350cad7"},
+    {file = "bdmc-0.1.5.8-py3-none-any.whl", hash = "sha256:25e110ee68ca129e2a995deb1eb701642cc42f846f1e3f49b236a4a723e8aa64"},
+    {file = "bdmc-0.1.5.8.tar.gz", hash = "sha256:cac8f470b72484032ac68e7627e4d8eebe499e1de36a8fd8166721c0142e596d"},
 ]
 
 [[package]]
@@ -88,12 +88,12 @@ files = [
 
 [[package]]
 name = "mentabotix"
-version = "0.1.4"
+version = "0.1.4.5"
 requires_python = ">=3.11"
 summary = "A Bot control lib"
 groups = ["default"]
 dependencies = [
-    "bdmc>=0.1.5.6",
+    "bdmc>=0.1.5.8",
     "coloredlogs>=15.0.1",
     "numpy>=1.26.4",
     "opencv-python-headless>=4.9.0.80",
@@ -101,8 +101,8 @@ dependencies = [
     "terminaltables>=3.1.10",
 ]
 files = [
-    {file = "mentabotix-0.1.4-py3-none-any.whl", hash = "sha256:b7d51ce9302fbdd902222e981807823db925d34e8cfd0cd3862b6f3238ce52ae"},
-    {file = "mentabotix-0.1.4.tar.gz", hash = "sha256:5db8e98491500c6e2db86e89e4aad0651b1c87484c01b95cb2ce1c446841add7"},
+    {file = "mentabotix-0.1.4.5-py3-none-any.whl", hash = "sha256:9142ecbbfd74e5ff8d2b283c7c8b7cdf7aa37620f06fc2574338a333460ec7bb"},
+    {file = "mentabotix-0.1.4.5.tar.gz", hash = "sha256:f990f766dd659dd91fb61899d1f7cc641fdc208cd0d6c6f99bce4129ba61acb7"},
 ]
 
 [[package]]
