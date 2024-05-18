@@ -57,6 +57,8 @@ class PerformanceConfig(BaseModel):
 
 
 class BootConfig(BaseModel):
+    time_to_stabilize: float = 0.3
+
     max_holding_duration: float = 180
 
     left_threshold: int = 2050
@@ -67,7 +69,20 @@ class BootConfig(BaseModel):
 
     turn_speed: int = 5000
     full_turn_duration: float = 0.9
-    half_turn_duration: float = 0.5
+    turn_left_prob: float = 0.5
+
+
+class BackStageConfig(BaseModel):
+    time_to_stabilize: float = 0.3
+
+    small_advance_speed: int = 3000
+    small_advance_duration: float = 0.5
+
+    dash_speed: int = 8000
+    dash_duration: float = 0.7
+
+    turn_speed: int = 5000
+    full_turn_duration: float = 0.9
     turn_left_prob: float = 0.5
 
 
@@ -79,6 +94,7 @@ class RunConfig(BaseModel):
     fence: fenceConfig = fenceConfig()
 
     boot: BootConfig = BootConfig()
+    backstage: BackStageConfig = BackStageConfig()
     strategy: StrategyConfig = StrategyConfig()
     perf: PerformanceConfig = PerformanceConfig()
     # TODO fill the configs that still remain

@@ -461,6 +461,30 @@ def make_fence_handler() -> Callable:
     raise NotImplementedError
 
 
+def make_back_to_stage_handler(run_config: RunConfig) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
+
+    small_advance = MovingState(run_config.backstage.small_advance_speed)
+    small_advance_transition = MovingTransition(run_config.backstage.small_advance_duration)
+    # waiting for a booting signal, and dash on to the stage once received
+    states, transitions = (
+        composer.init_container()
+        .add(small_advance)
+        .add(small_advance_transition)
+        .add(MovingState(0))
+        .add(stab_trans := MovingTransition(run_config.backstage.time_to_stabilize))
+        .add(MovingState.straight(-run_config.boot.dash_speed))
+        .add(MovingTransition(run_config.boot.dash_duration))
+        .add(MovingState(0))
+        .add(stab_trans.clone())
+        .add(
+            MovingState.rand_turn(controller, run_config.boot.turn_speed, turn_left_prob=run_config.boot.turn_left_prob)
+        )
+        .export_structure()
+    )
+
+    return states[0], states[-1], transitions
+
+
 def make_reboot_handler(
     app_config: APPConfig, run_config: RunConfig
 ) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
@@ -478,20 +502,21 @@ def make_reboot_handler(
         return_raw=False,
     )
 
-    holding_state = MovingState(0)
     holding_transition = MovingTransition(run_config.boot.max_holding_duration, breaker=activation_breaker)
     # waiting for a booting signal, and dash on to the stage once received
     states, transitions = (
         composer.init_container()
-        .add(holding_state)
+        .add(MovingState(0))
         .add(holding_transition)
         .add(MovingState.straight(-run_config.boot.dash_speed))
         .add(MovingTransition(run_config.boot.dash_duration))
         .add(MovingState(0))
-        .add(MovingTransition(0))
+        .add(MovingTransition(run_config.boot.time_to_stabilize))
         .add(
             MovingState.rand_turn(controller, run_config.boot.turn_speed, turn_left_prob=run_config.boot.turn_left_prob)
         )
+        .add(MovingTransition(run_config.boot.full_turn_duration))
+        .add(MovingState(0))
         .export_structure()
     )
 
