@@ -68,10 +68,6 @@ class SurroundingWeights:
     LEFT_OBJECT = 1
     RIGHT_OBJECT = 2
     BEHIND_OBJECT = 4
-    LEFT_RIGHT_OBJECTS = 3
-    LEFT_BEHIND_OBJECTS = 5
-    RIGHT_BEHIND_OBJECTS = 6
-    LEFT_RIGHT_BEHIND_OBJECTS = 7
     # endregion
 
     # region BASIC KEYS
@@ -131,21 +127,23 @@ class SurroundingCodeSign(Enum):
     """
 
     # region SURROUNDING KEYS
-    LEFT_OBJECT = 1
-    RIGHT_OBJECT = 2
-    BEHIND_OBJECT = 4
-    LEFT_RIGHT_OBJECTS = 3
-    LEFT_BEHIND_OBJECTS = 5
-    RIGHT_BEHIND_OBJECTS = 6
-    LEFT_RIGHT_BEHIND_OBJECTS = 7
+    LEFT_OBJECT = SurroundingWeights.LEFT_OBJECT
+    RIGHT_OBJECT = SurroundingWeights.RIGHT_OBJECT
+    BEHIND_OBJECT = SurroundingWeights.BEHIND_OBJECT
+    LEFT_RIGHT_OBJECTS = SurroundingWeights.LEFT_OBJECT + SurroundingWeights.RIGHT_OBJECT
+    LEFT_BEHIND_OBJECTS = SurroundingWeights.LEFT_OBJECT + SurroundingWeights.BEHIND_OBJECT
+    RIGHT_BEHIND_OBJECTS = SurroundingWeights.RIGHT_OBJECT + SurroundingWeights.BEHIND_OBJECT
+    LEFT_RIGHT_BEHIND_OBJECTS = (
+        SurroundingWeights.LEFT_OBJECT + SurroundingWeights.RIGHT_OBJECT + SurroundingWeights.BEHIND_OBJECT
+    )
     # endregion
 
     # region BASIC KEYS
-    FRONT_ENEMY_CAR = 400
-    FRONT_ENEMY_BOX = 300
-    FRONT_NEUTRAL_BOX = 200
-    FRONT_ALLY_BOX = 100
-    NOTHING = 0
+    FRONT_ENEMY_CAR = SurroundingWeights.FRONT_ENEMY_CAR
+    FRONT_ENEMY_BOX = SurroundingWeights.FRONT_ENEMY_BOX
+    FRONT_NEUTRAL_BOX = SurroundingWeights.FRONT_NEUTRAL_BOX
+    FRONT_ALLY_BOX = SurroundingWeights.FRONT_ALLY_BOX
+    NOTHING = SurroundingWeights.NOTHING
 
     # endregion
     def __add__(self, other: "SurroundingCodeSign"):
@@ -214,6 +212,7 @@ class SurroundingCodeSign(Enum):
     FRONT_ENEMY_CAR_RIGHT_BEHIND_OBJECTS = FRONT_ENEMY_CAR + RIGHT_BEHIND_OBJECTS
 
     FRONT_ENEMY_CAR_LEFT_RIGHT_BEHIND_OBJECTS = FRONT_ENEMY_CAR + LEFT_RIGHT_BEHIND_OBJECTS
+    # endregion
 
 
 class FenceCodeSign(Enum):
