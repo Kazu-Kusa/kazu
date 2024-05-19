@@ -159,6 +159,14 @@ def configure(
     help="Change allay team color temporarily.",
 )
 @click.option(
+    "-l",
+    "--log-level",
+    type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
+    help="Change log level temporarily.",
+    default=None,
+    show_default=True,
+)
+@click.option(
     "-c",
     "--run-config",
     show_default=True,
@@ -176,7 +184,7 @@ def configure(
     help=f"run mode, also can receive env {Env.KAZU_RUN_MODE}",
     envvar=Env.KAZU_RUN_MODE,
 )
-def run(ctx: click.Context, disable_camera: bool, team_color: str, run_config: Path | None, mode: str):
+def run(ctx: click.Context, disable_camera: bool, team_color: str, log_level: str, run_config: Path | None, mode: str):
     """
     Run command for the main group.
     """
@@ -191,6 +199,9 @@ def run(ctx: click.Context, disable_camera: bool, team_color: str, run_config: P
         run_config = RunConfig()
 
     app_config = internal_config.app_config
+    if log_level:
+        secho(f"Change log level to {log_level}", fg="magenta", bold=True)
+        app_config.logger.log_level = log_level
     if disable_camera:
         secho("Disable camera", fg="red", bold=True)
         app_config.vision.use_camera = False
@@ -215,8 +226,19 @@ def run(ctx: click.Context, disable_camera: bool, team_color: str, run_config: P
         from .compile import tag_detector
         from .config import TagGroup
 
+        secho(f"Open Camera-{app_config.vision.camera_device_id}", fg="yellow", bold=True)
         tag_detector.open_camera(app_config.vision.camera_device_id)
-        tag_group = TagGroup(team_color=app_config.vision.team_color)
+        success, _ = tag_detector.camera_device.read()
+        if success:
+            secho("Camera opened successfully", fg="green", bold=True)
+            tag_group = TagGroup(team_color=app_config.vision.team_color)
+            secho(f"Team color: {tag_group.team_color}", fg=tag_group.team_color, bold=True)
+            secho(f"Enemy tag: {tag_group.enemy_tag}", fg="red", bold=True)
+            secho(f"Allay tag: {tag_group.allay_tag}", fg="green", bold=True)
+            secho(f"Neutral tag: {tag_group.neutral_tag}", fg="cyan", bold=True)
+        else:
+            secho(f"Failed to open Camera-{app_config.vision.camera_device_id}", fg="red", bold=True)
+            app_config.vision.use_camera = False
 
     edge_pack = make_edge_handler(app_config, run_config)
 
@@ -226,7 +248,6 @@ def run(ctx: click.Context, disable_camera: bool, team_color: str, run_config: P
     botix.export_structure("edge.puml", edge_pack[-1])
     botix.export_structure("boot.puml", boot_pack[-1])
     botix.export_structure("backstage.puml", backstage_pack[-1])
-    print(disable_camera, team_color, run_config, mode)
 
 
 @main.command("check")
