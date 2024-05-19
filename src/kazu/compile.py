@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Callable, List, Tuple, Dict, Optional
 
 from bdmc import CloseLoopController
@@ -41,6 +42,88 @@ class SamplerIndexes:
     acc_all: int = 6
 
 
+class Breakers:
+
+    @staticmethod
+    @lru_cache(maxsize=None)
+    def make_std_edge_rear_breaker(app_config: APPConfig, run_config: RunConfig):
+        lt_seq = run_config.edge.lower_threshold
+        ut_seq = run_config.edge.upper_threshold
+        return menta.construct_inlined_function(
+            usages=[
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.adc_all,
+                    required_data_indexes=[
+                        app_config.sensor.edge_rl_index,
+                        app_config.sensor.edge_rr_index,
+                    ],
+                )
+            ],
+            judging_source=f"ret= ({lt_seq[1]}>s0 or s0<{ut_seq[1]}) or ({lt_seq[2]}>s1 or s1<{ut_seq[2]})",
+            extra_context={"bool": bool},
+            return_type_varname="bool",
+            return_raw=False,
+        )
+
+    @staticmethod
+    @lru_cache(maxsize=None)
+    def make_std_edge_front_breaker(app_config: APPConfig, run_config: RunConfig):
+        lt_seq = run_config.edge.lower_threshold
+        ut_seq = run_config.edge.upper_threshold
+        return menta.construct_inlined_function(
+            usages=[
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.io_all,
+                    required_data_indexes=[app_config.sensor.gray_io_left_index, app_config.sensor.gray_io_right_index],
+                ),
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.adc_all,
+                    required_data_indexes=[
+                        app_config.sensor.edge_fl_index,
+                        app_config.sensor.edge_fr_index,
+                    ],
+                ),
+            ],
+            judging_source=f"ret=s0=={app_config.sensor.gray_io_off_stage_case} "
+            f"or s1=={app_config.sensor.gray_io_off_stage_case} "
+            f"or ({lt_seq[0]}>s2 or s2<{ut_seq[0]}) "
+            f"or ({lt_seq[-1]}>s3 or s3<{ut_seq[-1]})",
+            extra_context={"bool": bool},
+            return_type_varname="bool",
+            return_raw=False,
+        )
+
+    @staticmethod
+    @lru_cache(maxsize=None)
+    def make_std_edge_full_breaker(app_config: APPConfig, run_config: RunConfig):
+        lt_seq = run_config.edge.lower_threshold
+        ut_seq = run_config.edge.upper_threshold
+        return menta.construct_inlined_function(
+            usages=[
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.adc_all,
+                    required_data_indexes=[
+                        app_config.sensor.edge_fl_index,
+                        app_config.sensor.edge_rl_index,
+                        app_config.sensor.edge_rr_index,
+                        app_config.sensor.edge_fr_index,
+                    ],
+                )
+            ],
+            judging_source=(
+                "ret=sum("
+                + ",".join(
+                    f"({lt}>s{s_id} or {s_id}<{ut})*{wt}"
+                    for s_id, lt, ut, wt in zip(range(4), lt_seq, ut_seq, EdgeWeights.export_std_weight_seq())
+                )
+                + ")"
+            ),
+            extra_context={"int": int},
+            return_type_varname="int",
+            return_raw=False,
+        )
+
+
 def make_edge_handler(
     app_config: APPConfig, run_config: RunConfig
 ) -> Tuple[MovingState, MovingState, MovingState, List[MovingTransition]]:
@@ -57,77 +140,19 @@ def make_edge_handler(
         abnormal_exit: 异常退出的移动状态。
         transitions_pool: 状态转换列表。
     """
-    # <editor-fold desc="Read Config">
-    # 根据运行配置获取上下阈值序列
-    lt_seq = run_config.edge.lower_threshold
-    ut_seq = run_config.edge.upper_threshold
-    # </editor-fold>
 
     # <editor-fold desc="Breakers">
     # 创建不同类型的边缘中断器（breaker），用于处理边缘检测逻辑
     # 边缘全中断器：用于实施分支逻辑
-    # build edge full breaker, which used to implement the branching logic. It uses CodeSign to distinguish the edge case
-    edge_full_breaker: Callable[[], int] = menta.construct_inlined_function(
-        usages=[
-            SamplerUsage(
-                used_sampler_index=SamplerIndexes.adc_all,
-                required_data_indexes=[
-                    app_config.sensor.edge_fl_index,
-                    app_config.sensor.edge_rl_index,
-                    app_config.sensor.edge_rr_index,
-                    app_config.sensor.edge_fr_index,
-                ],
-            )
-        ],
-        judging_source=(
-            "ret=sum("
-            + ",".join(
-                f"({lt}>s{s_id} or {s_id}<{ut})*{wt}"
-                for s_id, lt, ut, wt in zip(range(4), lt_seq, ut_seq, EdgeWeights.export_std_weight_seq())
-            )
-            + ")"
-        ),
-        extra_context={"int": int},
-        return_type_varname="int",
-        return_raw=False,
-    )
+    # build edge full breaker, which used to implement the branching logic.
+    # It uses CodeSign to distinguish the edge case
+    edge_full_breaker: Callable[[], int] = Breakers.make_std_edge_full_breaker(app_config, run_config)
     # 边缘前中断器：用于在检测到前方边缘时立即停止机器人
-    # build edge front breaker, used to halt the bot as soon as the edge is detected at the front, using gray io and two front edge sensors
-    edge_front_breaker: Callable[[], bool] = menta.construct_inlined_function(
-        usages=[
-            SamplerUsage(
-                used_sampler_index=SamplerIndexes.io_all,
-                required_data_indexes=[app_config.sensor.gray_io_left_index, app_config.sensor.gray_io_right_index],
-            ),
-            SamplerUsage(
-                used_sampler_index=SamplerIndexes.adc_all,
-                required_data_indexes=[
-                    app_config.sensor.edge_fl_index,
-                    app_config.sensor.edge_fr_index,
-                ],
-            ),
-        ],
-        judging_source=f"ret=s0=={app_config.sensor.gray_io_off_stage_case} or s1=={app_config.sensor.gray_io_off_stage_case} or ({lt_seq[0]}>s2 or s2<{ut_seq[0]}) or ({lt_seq[-1]}>s3 or s3<{ut_seq[-1]})",
-        extra_context={"bool": bool},
-        return_type_varname="bool",
-        return_raw=False,
-    )
+    # build edge front breaker, used to halt the bot as soon as the edge is detected at the front,
+    # using gray io and two front edge sensors
+    edge_front_breaker: Callable[[], bool] = Breakers.make_std_edge_front_breaker(app_config, run_config)
     # 边缘后中断器：用于在检测到后方边缘时停止机器人
-    edge_rear_breaker: Callable[[], bool] = menta.construct_inlined_function(
-        usages=[
-            SamplerUsage(
-                used_sampler_index=SamplerIndexes.adc_all,
-                required_data_indexes=[
-                    app_config.sensor.edge_rl_index,
-                    app_config.sensor.edge_rr_index,
-                ],
-            )
-        ],
-        judging_source=f"ret= ({lt_seq[1]}>s0 or s0<{ut_seq[1]}) or ({lt_seq[2]}>s1 or s1<{ut_seq[2]})",
-        extra_context={"bool": bool},
-        return_type_varname="bool",
-        return_raw=False,
-    )
+    edge_rear_breaker: Callable[[], bool] = Breakers.make_std_edge_rear_breaker(app_config, run_config)
     # </editor-fold>
 
     # <editor-fold desc="Case Setter">
@@ -518,6 +543,8 @@ def make_surrounding_handler(
         extra_context={"bool": bool},
         return_raw=False,
     )
+
+    edge_rear_breaker = Breakers.make_std_edge_rear_breaker(app_config, run_config)
 
 
 def make_normal_handler() -> Callable:

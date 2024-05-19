@@ -9,6 +9,18 @@ from upic import TagDetector
 DEFAULT_APP_CONFIG_PATH = f"{Path.home().as_posix()}/.kazu/config.toml"
 
 
+class CounterHashable(BaseModel):
+
+    def __hash__(self) -> int:
+        return id(self)
+
+    def __eq__(self, other) -> bool:
+        return id(self) == id(other)
+
+    def __int__(self) -> int:
+        return id(self)
+
+
 class TagGroup(BaseModel):
 
     team_color: Literal["yellow", "blue"] | str
@@ -120,7 +132,7 @@ class BackStageConfig(BaseModel):
     turn_left_prob: float = 0.5
 
 
-class RunConfig(BaseModel):
+class RunConfig(CounterHashable):
 
     edge: EdgeConfig = EdgeConfig()
     surrounding: SurroundingConfig = SurroundingConfig()
@@ -237,7 +249,7 @@ class SensorConfig(BaseModel):
     # TODO fill the configs that still remain
 
 
-class APPConfig(BaseModel):
+class APPConfig(CounterHashable):
     motion: MotionConfig = MotionConfig()
     vision: VisionConfig = VisionConfig()
     logger: LoggerConfig = LoggerConfig()
