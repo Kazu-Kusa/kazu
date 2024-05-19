@@ -232,22 +232,22 @@ class FenceCodeSign(Enum):
 
     O_O_O_O = 0  # Front,Rear,Left,Right all four direction are not encountering edge
 
-    X_O_O_O = 1  # Front encounter Fence
-    O_X_O_O = 4  # Rear encounter Fence
-    O_O_X_O = 8  # Right encounter Fence
-    O_O_O_X = 2  # Left encounter Fence
+    X_O_O_O = FenceWeights.Front  # Front encounter Fence
+    O_X_O_O = FenceWeights.Rear  # Rear encounter Fence
+    O_O_X_O = FenceWeights.Left  # Right encounter Fence
+    O_O_O_X = FenceWeights.Right  # Left encounter Fence
 
     # A bunches of combinations
-    X_X_O_O = 5
-    X_O_X_O = 9
-    X_O_O_X = 3
-    O_X_X_O = 12
-    O_X_O_X = 6
-    O_O_X_X = 10
+    X_X_O_O = FenceWeights.Front + FenceWeights.Rear
+    X_O_X_O = FenceWeights.Front + FenceWeights.Left
+    X_O_O_X = FenceWeights.Front + FenceWeights.Right
+    O_X_X_O = FenceWeights.Rear + FenceWeights.Left
+    O_X_O_X = FenceWeights.Rear + FenceWeights.Right
+    O_O_X_X = FenceWeights.Left + FenceWeights.Right
 
-    X_X_X_O = 13
-    X_X_O_X = 7
-    X_O_X_X = 11
-    O_X_X_X = 14
+    X_X_X_O = FenceWeights.Front + FenceWeights.Rear + FenceWeights.Left
+    X_X_O_X = FenceWeights.Front + FenceWeights.Rear + FenceWeights.Right
+    X_O_X_X = FenceWeights.Front + FenceWeights.Left + FenceWeights.Right
+    O_X_X_X = FenceWeights.Rear + FenceWeights.Left + FenceWeights.Right
 
-    X_X_X_X = 15
+    X_X_X_X = FenceWeights.Front + FenceWeights.Rear + FenceWeights.Left + FenceWeights.Right

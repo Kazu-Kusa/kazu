@@ -182,7 +182,7 @@ def make_edge_handler(
 
     # <editor-fold desc="Initialize Containers">
     transitions_pool: List[MovingTransition] = []
-    case_dict: Dict = {EdgeCodeSign.O_O_O_O: (normal_exit := continues_state.clone())}
+    case_dict: Dict = {EdgeCodeSign.O_O_O_O.value: (normal_exit := continues_state.clone())}
     normal_exit.after_exiting.append(edge_setter_false)
     # </editor-fold>
 
@@ -200,7 +200,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.X_O_O_O] = head_state
+    case_dict[EdgeCodeSign.X_O_O_O.value] = head_state
 
     # -----------------------------------------------------------------------------
     # fallback and full turn left
@@ -216,7 +216,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.O_O_O_X] = head_state
+    case_dict[EdgeCodeSign.O_O_O_X.value] = head_state
 
     # -----------------------------------------------------------------------------
 
@@ -233,7 +233,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.O_X_O_O] = head_state
+    case_dict[EdgeCodeSign.O_X_O_O.value] = head_state
 
     # -----------------------------------------------------------------------------
 
@@ -250,7 +250,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.O_O_X_O] = head_state
+    case_dict[EdgeCodeSign.O_O_X_O.value] = head_state
 
     # </editor-fold>
 
@@ -266,7 +266,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.X_X_O_O] = head_state
+    case_dict[EdgeCodeSign.X_X_O_O.value] = head_state
 
     # -----------------------------------------------------------------------------
 
@@ -281,7 +281,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.O_O_X_X] = head_state
+    case_dict[EdgeCodeSign.O_O_X_X.value] = head_state
 
     # -----------------------------------------------------------------------------
 
@@ -298,7 +298,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.X_O_O_X] = head_state
+    case_dict[EdgeCodeSign.X_O_O_X.value] = head_state
 
     # -----------------------------------------------------------------------------
 
@@ -313,7 +313,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.O_X_X_O] = head_state
+    case_dict[EdgeCodeSign.O_X_X_O.value] = head_state
 
     # -----------------------------------------------------------------------------
 
@@ -328,7 +328,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.X_O_X_O] = head_state
+    case_dict[EdgeCodeSign.X_O_X_O.value] = head_state
 
     # -----------------------------------------------------------------------------
 
@@ -343,7 +343,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.O_X_O_X] = head_state
+    case_dict[EdgeCodeSign.O_X_O_X.value] = head_state
 
     # </editor-fold>
 
@@ -362,7 +362,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.O_X_X_X] = head_state
+    case_dict[EdgeCodeSign.O_X_X_X.value] = head_state
 
     # -----------------------------------------------------------------------------
 
@@ -379,7 +379,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.X_X_X_O] = head_state
+    case_dict[EdgeCodeSign.X_X_X_O.value] = head_state
 
     # -----------------------------------------------------------------------------
 
@@ -396,7 +396,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.X_O_X_X] = head_state
+    case_dict[EdgeCodeSign.X_O_X_X.value] = head_state
 
     # -----------------------------------------------------------------------------
 
@@ -413,7 +413,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.X_X_O_X] = head_state
+    case_dict[EdgeCodeSign.X_X_O_X.value] = head_state
 
     # </editor-fold>
 
@@ -423,7 +423,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.X_X_X_X] = head_state
+    case_dict[EdgeCodeSign.X_X_X_X.value] = head_state
 
     # </editor-fold>
 
