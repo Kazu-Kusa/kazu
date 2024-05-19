@@ -4,6 +4,7 @@ from typing import Tuple, List, Self, Literal, TextIO, Optional, Any, Dict
 
 from pydantic import BaseModel
 from toml import load, dump
+from upic import TagDetector
 
 DEFAULT_APP_CONFIG_PATH = f"{Path.home().as_posix()}/.kazu/config.toml"
 
@@ -14,6 +15,7 @@ class TagGroup(BaseModel):
     enemy_tag: Literal[1, 2] = None
     allay_tag: Literal[1, 2] = None
     neutral_tag: Literal[1] = 1
+    default_tag: int = TagDetector.Config.default_tag_id
 
     def __init__(self, /, **data: Any):
         super().__init__(**data)
@@ -50,10 +52,21 @@ class EdgeConfig(BaseModel):
 
 
 class SurroundingConfig(BaseModel):
-    lower_threshold: List[float] = [1000] * 4
-    upper_threshold: List[float] = [2300] * 4
 
-    action_speed: float = 3000
+    left_adc_lower_threshold: int = 1700
+    right_adc_lower_threshold: int = 1700
+
+    front_adc_lower_threshold: int = 1700
+    back_adc_lower_threshold: int = 1700
+
+    dash_speed_enemy_car: int = 3500
+    dash_speed_enemy_box: int = 3000
+    dash_speed_neutral_box: int = 3000
+    fallback_speed_ally_box: int = 4000
+
+    fallback_duration: float = 0.5
+
+    dash_break_front_lower_threshold: int = 1700
 
 
 class NormalConfig(BaseModel):

@@ -65,17 +65,17 @@ class FenceWeights:
 @dataclass(frozen=True)
 class SurroundingWeights:
     # region SURROUNDING KEYS
-    LEFT_OBJECT = 1
-    RIGHT_OBJECT = 2
-    BEHIND_OBJECT = 4
+    LEFT_OBJECT: int = 1
+    RIGHT_OBJECT: int = 2
+    BEHIND_OBJECT: int = 4
     # endregion
 
     # region BASIC KEYS
-    FRONT_ENEMY_CAR = 400
-    FRONT_ENEMY_BOX = 300
-    FRONT_NEUTRAL_BOX = 200
-    FRONT_ALLY_BOX = 100
-    NOTHING = 0
+    FRONT_ENEMY_CAR: int = 400
+    FRONT_ENEMY_BOX: int = 300
+    FRONT_NEUTRAL_BOX: int = 200
+    FRONT_ALLY_BOX: int = 100
+    NOTHING: int = 0
 
     # endregion
 

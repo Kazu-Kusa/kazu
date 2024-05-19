@@ -1,12 +1,13 @@
 from dataclasses import dataclass
-from typing import Callable, List, Tuple, Dict
+from typing import Callable, List, Tuple, Dict, Optional
 
 from bdmc import CloseLoopController
-from mentabotix import MovingChainComposer, Botix, Menta, MovingState, MovingTransition, SamplerUsage, TagDetector
+from mentabotix import MovingChainComposer, Botix, Menta, MovingState, MovingTransition, SamplerUsage
 from pyuptech import OnBoardSensors
+from upic import TagDetector
 
-from .config import APPConfig, RunConfig, ContextVar
-from .constant import EdgeWeights, EdgeCodeSign
+from .config import APPConfig, RunConfig, ContextVar, TagGroup
+from .constant import EdgeWeights, EdgeCodeSign, SurroundingWeights
 
 sensors = OnBoardSensors()
 menta = Menta(
@@ -444,8 +445,79 @@ def make_edge_handler(
     return start_state, normal_exit, abnormal_exit, transitions_pool
 
 
-def make_surrounding_handler() -> Callable:
-    raise NotImplementedError
+def make_surrounding_handler(
+    app_config: APPConfig, run_config: RunConfig, tag_group: Optional[TagGroup] = None
+) -> Tuple[MovingState, MovingState, MovingState, List[MovingTransition]]:
+    if app_config.vision.use_camera:
+
+        query_table: Dict[Tuple[int, bool], int] = {
+            (tag_group.default_tag, True): SurroundingWeights.FRONT_ENEMY_CAR,
+            (tag_group.default_tag, False): SurroundingWeights.NOTHING,
+            (tag_group.allay_tag, True): SurroundingWeights.FRONT_ALLY_BOX,
+            (tag_group.allay_tag, False): SurroundingWeights.FRONT_ALLY_BOX,
+            (tag_group.neutral_tag, True): SurroundingWeights.FRONT_NEUTRAL_BOX,
+            (tag_group.neutral_tag, False): SurroundingWeights.NOTHING,
+            (tag_group.enemy_tag, True): SurroundingWeights.FRONT_ENEMY_BOX,
+            (tag_group.enemy_tag, False): SurroundingWeights.FRONT_ENEMY_BOX,
+        }
+
+        surr_full_breaker = menta.construct_inlined_function(
+            usages=[
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.io_all,
+                    required_data_indexes=[
+                        app_config.sensor.fl_io_index,  # s0
+                        app_config.sensor.fr_io_index,  # s1
+                        app_config.sensor.rl_io_index,  # s2
+                        app_config.sensor.rr_io_index,  # s3
+                    ],
+                ),
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.adc_all,
+                    required_data_indexes=[
+                        app_config.sensor.front_adc_index,  # s4
+                        app_config.sensor.left_adc_index,  # s5
+                        app_config.sensor.right_adc_index,  # s6
+                        app_config.sensor.rb_adc_index,  # s7
+                    ],
+                ),
+            ],
+            judging_source=(
+                f"ret=q_tb.get((tag_d.tag_id, bool(s0 or s1 or s4>{run_config.surrounding.front_adc_lower_threshold})))"
+                f"+(s5>{run_config.surrounding.left_adc_lower_threshold})*{SurroundingWeights.LEFT_OBJECT}"
+                f"+(s6>{run_config.surrounding.right_adc_lower_threshold})*{SurroundingWeights.RIGHT_OBJECT}"
+                f"+s2 or s3 or s7>{run_config.surrounding.right_adc_lower_threshold}*{SurroundingWeights.BEHIND_OBJECT}"
+            ),
+            return_type_varname="int",
+            extra_context={"int": int, "tag_d": tag_detector, "q_tb": query_table},
+            return_raw=False,
+        )
+
+    else:
+        raise NotImplementedError
+
+    dash_breaker = menta.construct_inlined_function(
+        usages=[
+            SamplerUsage(
+                used_sampler_index=SamplerIndexes.io_all,
+                required_data_indexes=[
+                    app_config.sensor.gray_io_left_index,  # s0
+                    app_config.sensor.gray_io_right_index,  # s1
+                    app_config.sensor.fl_io_index,  # s2
+                    app_config.sensor.fr_io_index,  # s3
+                ],
+            ),
+            SamplerUsage(
+                used_sampler_index=SamplerIndexes.adc_all,
+                required_data_indexes=[app_config.sensor.front_adc_index],  # s4
+            ),
+        ],
+        judging_source=f"ret=not s0 or not s1  "  # use gray scaler, indicating the edge is encountered
+        f"or not any( (s2 , s3 , s4>{run_config.surrounding.dash_break_front_lower_threshold}))",  # indicating front is empty
+        return_type_varname="bool",
+        extra_context={"bool": bool},
+        return_raw=False,
+    )
 
 
 def make_normal_handler() -> Callable:
