@@ -11,6 +11,13 @@ from click import secho
 from mentabotix import MovingState, MovingTransition
 
 from . import __version__, __command__
+from .callbacks import (
+    export_default_app_config,
+    export_default_run_config,
+    disable_cam_callback,
+    log_level_callback,
+    team_color_callback,
+)
 from .compile import botix, make_edge_handler, make_reboot_handler, make_back_to_stage_handler
 from .config import DEFAULT_APP_CONFIG_PATH, APPConfig, _InternalConfig, RunConfig
 from .constant import Env, RunMode
@@ -52,45 +59,6 @@ def main(ctx: click.Context, app_config_path):
 
     ctx.obj = _InternalConfig(app_config=app_config, app_config_file_path=app_config_path)
     _set_all_log_level(ctx.obj.app_config.logger.log_level)
-
-
-def export_default_app_config(ctx: click.Context, _, path):
-    """
-     Export the default application configuration to the specified path.
-    Args:
-        ctx (click.Context): The click context object.
-        _ (Any): Ignored parameter.
-        path (str): The path to export the default application configuration to.
-    Returns:
-        None: If the path is not provided.
-    """
-    if path:
-        ctx.obj.app_config = APPConfig()
-        with open(ctx.obj.app_config_file_path, "w") as fp:
-            APPConfig.dump_config(fp, ctx.obj.app_config)
-        secho(
-            f"Exported DEFAULT app config file at {Path(ctx.obj.app_config_file_path).absolute().as_posix()} to default.",
-            fg="yellow",
-        )
-        ctx.exit(0)
-
-
-def export_default_run_config(ctx: click.Context, _, path: Path):
-    """
-    Export the default run configuration to a file.
-    Args:
-        ctx (click.Context): The click context object.
-        _ (Any): A placeholder parameter.
-        path (Path): The path to the file where the default run configuration will be exported.
-    Returns:
-        None
-    """
-    if path:
-        path.parent.mkdir(exist_ok=True, parents=True)
-        with open(path, mode="w") as fp:
-            RunConfig.dump_config(fp, RunConfig())
-        secho(f"Exported DEFAULT run config file at {path.absolute().as_posix()}", fg="yellow")
-        ctx.exit(0)
 
 
 @main.command("config")
@@ -150,6 +118,7 @@ def configure(
     default=False,
     show_default=True,
     help="Run with the camera disabled.",
+    callback=disable_cam_callback,
 )
 @click.option(
     "-t",
@@ -157,6 +126,7 @@ def configure(
     default=None,
     type=click.Choice(["blue", "yellow"]),
     help="Change allay team color temporarily.",
+    callback=team_color_callback,
 )
 @click.option(
     "-l",
@@ -165,6 +135,7 @@ def configure(
     help="Change log level temporarily.",
     default=None,
     show_default=True,
+    callback=log_level_callback,
 )
 @click.option(
     "-c",
@@ -184,7 +155,7 @@ def configure(
     help=f"run mode, also can receive env {Env.KAZU_RUN_MODE}",
     envvar=Env.KAZU_RUN_MODE,
 )
-def run(ctx: click.Context, disable_camera: bool, team_color: str, log_level: str, run_config: Path | None, mode: str):
+def run(ctx: click.Context, run_config: Path | None, mode: str, **_):
     """
     Run command for the main group.
     """
@@ -199,16 +170,6 @@ def run(ctx: click.Context, disable_camera: bool, team_color: str, log_level: st
         run_config = RunConfig()
 
     app_config = internal_config.app_config
-    if log_level:
-        secho(f"Change log level to {log_level}", fg="magenta", bold=True)
-        app_config.logger.log_level = log_level
-    if disable_camera:
-        secho("Disable camera", fg="red", bold=True)
-        app_config.vision.use_camera = False
-
-    if team_color:
-        secho(f"Change team color to {team_color}", fg=team_color, bold=True)
-        app_config.vision.team_color = team_color
 
     from .compile import controller
 
