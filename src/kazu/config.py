@@ -90,6 +90,8 @@ class fenceConfig(BaseModel):
     lower_threshold: List[float] = [1700] * 4
     upper_threshold: List[float] = [2200] * 4
 
+    max_yaw_tolerance: float = 20.0
+
 
 class StrategyConfig(BaseModel):
     use_edge_component: bool = True

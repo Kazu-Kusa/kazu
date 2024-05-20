@@ -8,7 +8,7 @@ from pyuptech import OnBoardSensors, Screen
 from upic import TagDetector
 
 from .config import APPConfig, RunConfig, ContextVar, TagGroup
-from .constant import EdgeWeights, EdgeCodeSign, SurroundingWeights
+from .constant import EdgeWeights, EdgeCodeSign, SurroundingWeights, Attitude
 
 sensors = OnBoardSensors()
 menta = Menta(
@@ -154,6 +154,83 @@ class Breakers:
     def make_std_scanning_breaker(app_config: APPConfig, run_config: RunConfig):
         # TODO impl
         raise NotImplementedError
+
+    @staticmethod
+    @lru_cache(maxsize=None)
+    def make_std_atk_breaker(app_config: APPConfig, run_config: RunConfig):
+        return menta.construct_inlined_function(
+            usages=[
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.io_all,
+                    required_data_indexes=[
+                        app_config.sensor.gray_io_left_index,  # s0
+                        app_config.sensor.gray_io_right_index,  # s1
+                        app_config.sensor.fl_io_index,  # s2
+                        app_config.sensor.fr_io_index,  # s3
+                    ],
+                ),
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.adc_all,
+                    required_data_indexes=[app_config.sensor.front_adc_index],  # s4
+                ),
+            ],
+            judging_source=f"ret=not s0 or not s1  "  # use gray scaler, indicating the edge is encountered
+            f"or not any( (s2 , s3 , s4>{run_config.surrounding.dash_break_front_lower_threshold}))",  # indicating front is empty
+            return_type_varname="bool",
+            extra_context={"bool": bool},
+            return_raw=False,
+        )
+
+    @staticmethod
+    @lru_cache(maxsize=None)
+    def make_std_stage_align_breaker(app_config: APPConfig, run_config: RunConfig):
+        return menta.construct_inlined_function(
+            usages=[
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.io_level_idx,
+                    required_data_indexes=[
+                        app_config.sensor.fl_io_index,  # s0
+                        app_config.sensor.fr_io_index,  # s1
+                        app_config.sensor.rl_io_index,  # s2
+                        app_config.sensor.rr_io_index,  # s3
+                    ],
+                ),
+            ],
+            judging_source=f"ret=bool(s0 or s1 and not s2 and not s3)",
+            return_type_varname="bool",
+            extra_context={"bool": bool},
+            return_raw=False,
+        )
+
+    @staticmethod
+    @lru_cache(maxsize=None)
+    def make_stage_align_breaker_mpu(app_config: APPConfig, run_config: RunConfig):
+
+        invalid_lower_bound, invalid_upper_bound = (
+            run_config.fence.max_yaw_tolerance,
+            90 - run_config.fence.max_yaw_tolerance,
+        )
+        return menta.construct_inlined_function(
+            usages=[
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.atti_all,
+                    required_data_indexes=[
+                        Attitude.yaw,  # s0
+                    ],
+                ),
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.io_level_idx,
+                    required_data_indexes=[
+                        app_config.sensor.fl_io_index,  # s1
+                        app_config.sensor.fr_io_index,  # s2
+                    ],
+                ),
+            ],
+            judging_source=f"ret=bool(not ({invalid_lower_bound}<abs(s0)//90<{invalid_upper_bound}) and (s1 or s2))",
+            return_type_varname="bool",
+            extra_context={"bool": bool},
+            return_raw=False,
+        )
 
 
 def make_edge_handler(
@@ -553,33 +630,16 @@ def make_surrounding_handler(
     else:
         raise NotImplementedError
 
-    dash_breaker = menta.construct_inlined_function(
-        usages=[
-            SamplerUsage(
-                used_sampler_index=SamplerIndexes.io_all,
-                required_data_indexes=[
-                    app_config.sensor.gray_io_left_index,  # s0
-                    app_config.sensor.gray_io_right_index,  # s1
-                    app_config.sensor.fl_io_index,  # s2
-                    app_config.sensor.fr_io_index,  # s3
-                ],
-            ),
-            SamplerUsage(
-                used_sampler_index=SamplerIndexes.adc_all,
-                required_data_indexes=[app_config.sensor.front_adc_index],  # s4
-            ),
-        ],
-        judging_source=f"ret=not s0 or not s1  "  # use gray scaler, indicating the edge is encountered
-        f"or not any( (s2 , s3 , s4>{run_config.surrounding.dash_break_front_lower_threshold}))",  # indicating front is empty
-        return_type_varname="bool",
-        extra_context={"bool": bool},
-        return_raw=False,
-    )
+    atk_breaker = Breakers.make_std_atk_breaker(app_config, run_config)
 
     edge_rear_breaker = Breakers.make_std_edge_rear_breaker(app_config, run_config)
 
+    turn_to_front_breaker = Breakers.make_std_turn_to_front_breaker(app_config, run_config)
 
-def make_normal_handler() -> Callable:
+    # TODO impl
+
+
+def make_scan_handler() -> Callable:
     raise NotImplementedError
 
 

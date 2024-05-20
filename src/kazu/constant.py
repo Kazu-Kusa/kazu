@@ -4,6 +4,20 @@ from typing import List, Tuple
 
 
 @dataclass(frozen=True)
+class Attitude:
+    pitch: int = 0
+    roll: int = 1
+    yaw: int = 2
+
+
+@dataclass(frozen=True)
+class Axis:
+    x: int = 0
+    y: int = 1
+    z: int = 2
+
+
+@dataclass(frozen=True)
 class Env:
     """
     KAZU_CONFIG_PATH: str = "KAZU_CONFIG_PATH"
