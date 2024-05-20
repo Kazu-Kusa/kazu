@@ -123,6 +123,37 @@ class Breakers:
             return_raw=False,
         )
 
+    @staticmethod
+    @lru_cache(maxsize=None)
+    def make_std_turn_to_front_breaker(app_config: APPConfig, run_config: RunConfig):
+        return menta.construct_inlined_function(
+            usages=[
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.io_level_idx,
+                    required_data_indexes=[
+                        app_config.sensor.fl_io_index,  # s0
+                        app_config.sensor.fr_io_index,  # s1
+                    ],
+                ),
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.adc_all,
+                    required_data_indexes=[
+                        app_config.sensor.front_adc_index,  # s2
+                    ],
+                ),
+            ],
+            judging_source=f"ret=bool(s0 or s1 or s2>{run_config.surrounding.front_adc_lower_threshold})",
+            extra_context={"bool": bool},
+            return_type_varname="bool",
+            return_raw=False,
+        )
+
+    @staticmethod
+    @lru_cache(maxsize=None)
+    def make_std_scanning_breaker(app_config: APPConfig, run_config: RunConfig):
+        # TODO impl
+        raise NotImplementedError
+
 
 def make_edge_handler(
     app_config: APPConfig, run_config: RunConfig
