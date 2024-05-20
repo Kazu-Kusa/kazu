@@ -302,20 +302,24 @@ def test(ctx: click.Context, device: str = ("all",)):
 @click.pass_context
 @click.argument(
     "device",
-    type=click.Choice(["adio", "mpu", "all"]),
+    type=click.Choice(["adc", "io", "mpu", "all"]),
     nargs=-1,
 )
 def read(ctx: click.Context, device: str = ("all",)):
-    from pyuptech import make_mpu_table, make_adc_io_table
+    from pyuptech import make_mpu_table, make_io_table, make_adc_table
     from .compile import sensors
 
+    device = set(device)
     if "all" in device:
         echo(make_mpu_table(sensors))
-        echo(make_adc_io_table(sensors))
-    if "adio" in device:
-        echo(make_adc_io_table(sensors))
+        echo(make_adc_table(sensors))
+        echo(make_io_table(sensors))
+    if "io" in device:
+        echo(make_io_table(sensors))
     if "mpu" in device:
         echo(make_mpu_table(sensors))
+    if "adc" in device:
+        echo(make_adc_table(sensors))
 
 
 @main.command("cmd")
