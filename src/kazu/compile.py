@@ -4,7 +4,7 @@ from typing import Callable, List, Tuple, Dict, Optional
 
 from bdmc import CloseLoopController
 from mentabotix import MovingChainComposer, Botix, Menta, MovingState, MovingTransition, SamplerUsage
-from pyuptech import OnBoardSensors
+from pyuptech import OnBoardSensors, Screen
 from upic import TagDetector
 
 from .config import APPConfig, RunConfig, ContextVar, TagGroup
@@ -29,6 +29,7 @@ botix = Botix(controller=controller)
 composer = MovingChainComposer()
 
 tag_detector = TagDetector()
+screen = Screen()
 
 
 @dataclass

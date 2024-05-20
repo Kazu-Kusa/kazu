@@ -7,7 +7,7 @@ import click
 import mentabotix
 import pyuptech
 from bdmc import MotorInfo, CMD
-from click import secho
+from click import secho, echo
 from mentabotix import MovingState, MovingTransition
 
 from . import __version__, __command__
@@ -300,32 +300,22 @@ def test(ctx: click.Context, device: str = ("all",)):
 @main.command("read")
 @click.help_option("-h", "--help")
 @click.pass_context
-@click.help_option(
-    "-m",
-    "--emulation",
-    is_flag=True,
-    default=False,
-)
 @click.argument(
     "device",
     type=click.Choice(["adio", "mpu", "all"]),
     nargs=-1,
 )
-def read(ctx: click.Context, emulation: bool = False, device: str = ("all",)):
-    from pyuptech import mpu_display_on_console, adc_io_display_on_console, set_emulation_mode
-
-    set_emulation_mode("on" if emulation else "off")
+def read(ctx: click.Context, device: str = ("all",)):
+    from pyuptech import make_mpu_table, make_adc_io_table
+    from .compile import sensors
 
     if "all" in device:
-
-        mpu_display_on_console()
-        adc_io_display_on_console()
+        echo(make_mpu_table(sensors))
+        echo(make_adc_io_table(sensors))
     if "adio" in device:
-
-        adc_io_display_on_console()
+        echo(make_adc_io_table(sensors))
     if "mpu" in device:
-
-        mpu_display_on_console()
+        echo(make_mpu_table(sensors))
 
 
 @main.command("cmd")
