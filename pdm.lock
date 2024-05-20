@@ -5,7 +5,7 @@
 groups = ["default"]
 strategy = ["cross_platform", "inherit_metadata"]
 lock_version = "4.4.1"
-content_hash = "sha256:c27d5ce00d31fe3492a637be1cd3355c6c88f93a964d54a2f03dec111dcb34b4"
+content_hash = "sha256:788efb491c062eca209076142e49574bd6af08b43128732ce5af0c65cd95f5c7"
 
 [[package]]
 name = "annotated-types"
@@ -247,7 +247,7 @@ files = [
 
 [[package]]
 name = "pyuptech"
-version = "0.1.4.2"
+version = "0.1.5"
 requires_python = ">=3.11"
 summary = "A Python wrapper for the uptech binary lib"
 groups = ["default"]
@@ -256,8 +256,8 @@ dependencies = [
     "terminaltables>=3.1.10",
 ]
 files = [
-    {file = "pyuptech-0.1.4.2-py3-none-any.whl", hash = "sha256:6904169a477b0d5d07d160c53719bdd70d1b8c7dacab75c209eb991b664a5063"},
-    {file = "pyuptech-0.1.4.2.tar.gz", hash = "sha256:28a5585ef55c8a78f64c00f111eb862a3c0148f5876ad6c7951322870023db30"},
+    {file = "pyuptech-0.1.5-py3-none-any.whl", hash = "sha256:2548644dbce43d93343188d7c224dff0e93ad2d4dd5ca744888e7ec45528a4ba"},
+    {file = "pyuptech-0.1.5.tar.gz", hash = "sha256:39acccdbeee8060e376c62a84a8b5c38652a77e62754199c5ce8a7af4de485fb"},
 ]
 
 [[package]]
