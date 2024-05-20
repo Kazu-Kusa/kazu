@@ -216,7 +216,7 @@ def run(ctx: click.Context, run_config: Path | None, mode: str, **_):
 @click.pass_context
 @click.argument(
     "device",
-    type=click.Choice(devs := ["mot", "cam", "adc", "io", "mpu", "pow", "all"]),
+    type=click.Choice(["mot", "cam", "adc", "io", "mpu", "pow", "all"]),
     nargs=-1,
 )
 def test(ctx: click.Context, device: str = ("all",)):
@@ -295,6 +295,37 @@ def test(ctx: click.Context, device: str = ("all",)):
     secho(
         SingleTable(table).table,
     )
+
+
+@main.command("read")
+@click.help_option("-h", "--help")
+@click.pass_context
+@click.help_option(
+    "-m",
+    "--emulation",
+    is_flag=True,
+    default=False,
+)
+@click.argument(
+    "device",
+    type=click.Choice(["adio", "mpu", "all"]),
+    nargs=-1,
+)
+def read(ctx: click.Context, emulation: bool = False, device: str = ("all",)):
+    from pyuptech import mpu_display_on_console, adc_io_display_on_console, set_emulation_mode
+
+    set_emulation_mode("on" if emulation else "off")
+
+    if "all" in device:
+
+        mpu_display_on_console()
+        adc_io_display_on_console()
+    if "adio" in device:
+
+        adc_io_display_on_console()
+    if "mpu" in device:
+
+        mpu_display_on_console()
 
 
 @main.command("cmd")
