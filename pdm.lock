@@ -247,7 +247,7 @@ files = [
 
 [[package]]
 name = "pyuptech"
-version = "0.1.5"
+version = "0.1.5.2"
 requires_python = ">=3.11"
 summary = "A Python wrapper for the uptech binary lib"
 groups = ["default"]
@@ -256,8 +256,8 @@ dependencies = [
     "terminaltables>=3.1.10",
 ]
 files = [
-    {file = "pyuptech-0.1.5-py3-none-any.whl", hash = "sha256:2548644dbce43d93343188d7c224dff0e93ad2d4dd5ca744888e7ec45528a4ba"},
-    {file = "pyuptech-0.1.5.tar.gz", hash = "sha256:39acccdbeee8060e376c62a84a8b5c38652a77e62754199c5ce8a7af4de485fb"},
+    {file = "pyuptech-0.1.5.2-py3-none-any.whl", hash = "sha256:66ae256a8fd5555a889d98d87ba5021c1b96394b53c919edef8003d237e8c677"},
+    {file = "pyuptech-0.1.5.2.tar.gz", hash = "sha256:821e74912a84304b27c76a8bafd002651f13b3f9cac11a5142d7824b12cc20b9"},
 ]
 
 [[package]]
