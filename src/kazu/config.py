@@ -70,15 +70,25 @@ class SurroundingConfig(BaseModel):
 
     front_adc_lower_threshold: int = 1700
     back_adc_lower_threshold: int = 1700
+    atk_break_front_lower_threshold: int = 1700
 
-    dash_speed_enemy_car: int = 3500
-    dash_speed_enemy_box: int = 3000
-    dash_speed_neutral_box: int = 3000
+    atk_speed_enemy_car: int = 3500
+    atk_speed_enemy_box: int = 3000
+    atk_speed_neutral_box: int = 3000
     fallback_speed_ally_box: int = 4000
+    fallback_speed_edge: int = 5000
 
-    fallback_duration: float = 0.5
+    atk_enemy_car_duration: float = 12.0
+    atk_enemy_box_duration: float = 5.0
+    atk_neutral_box_duration: float = 8.0
+    fallback_duration_ally_box: float = 0.5
+    fallback_duration_edge: float = 0.4
 
-    dash_break_front_lower_threshold: int = 1700
+    turn_speed: int = 5000
+    turn_left_prob: float = 0.5
+
+    full_turn_duration: float = 0.9
+    half_turn_duration: float = 0.5
 
 
 class NormalConfig(BaseModel):
