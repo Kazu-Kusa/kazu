@@ -274,6 +274,7 @@ def test(ctx: click.Context, device: str = ("all",)):
     if "mpu" in device:
         from .compile import sensors
 
+        sensors.MPU6500_Open()
         table.append(shader("MPU", check_mpu(sensors)))
 
     if "pow" in device:
@@ -327,6 +328,7 @@ def read_sensors(ctx: click.Context, device: str = ("all",)):
         echo(make_mpu_table(sensors))
     if "adc" in device:
         echo(make_adc_table(sensors))
+    sensors.adc_io_close()
 
 
 @main.command("cmd")
