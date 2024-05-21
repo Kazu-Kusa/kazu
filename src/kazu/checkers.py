@@ -29,7 +29,7 @@ def check_camera(camera: VideoCapture) -> bool:
 def check_adc(sensors: OnBoardSensors) -> bool:
     _logger.info("Start checking ADC device.")
     try:
-        first = sensors.adc_io_open().adc_all_channels()
+        first = sensors.adc_all_channels()
     except Exception as e:
         _logger.error(f"Encounter exception: {e}")
         return False
@@ -44,7 +44,7 @@ def check_adc(sensors: OnBoardSensors) -> bool:
 def check_io(sensors: OnBoardSensors) -> bool:
     _logger.info("Start checking IO device.")
     try:
-        first = sensors.adc_io_open().set_all_io_mode(0).set_all_io_level(1).io_all_channels()
+        first = sensors.set_all_io_mode(0).io_all_channels()
     except Exception as e:
         _logger.error(f"Encounter exception: {e}")
         return False
@@ -62,7 +62,7 @@ def check_mpu(sensors: OnBoardSensors) -> bool:
     _logger.info("Start checking MPU device.")
 
     try:
-        sensors.MPU6500_Open()
+
         atti_data = sensors.atti_all()
         gyro_data = sensors.gyro_all()
         acc_data = sensors.acc_all()
@@ -81,7 +81,7 @@ def check_power(sensors: OnBoardSensors) -> bool:
     _logger.info("Start checking power supply.")
 
     try:
-        voltage = sensors.adc_io_open().adc_all_channels()[-1] * 3.3 * 4.0 / 4096
+        voltage = sensors.adc_all_channels()[-1] * 3.3 * 4.0 / 4096
     except Exception as e:
         _logger.error(f"Encounter exception: {e}")
         return False

@@ -235,11 +235,12 @@ def test(ctx: click.Context, device: str = ("all",)):
     ]
 
     table = [[f"{Fore.YELLOW}Device{Fore.RESET}", f"{Fore.GREEN}Success{Fore.RESET}"]]
-    if "all" in device or device == ():
+    if "all" in device:
         from bdmc import CMD
         from cv2 import VideoCapture
         from .compile import controller, sensors
 
+        sensors.adc_io_open().MPU6500_Open()
         controller.serial_client.port = app_config.motion.port
 
         controller.serial_client.open()
@@ -255,18 +256,21 @@ def test(ctx: click.Context, device: str = ("all",)):
             fg="green",
         )
         controller.stop_msg_sending()
+        sensors.adc_io_close()
         return
 
     if "adc" in device:
         from .compile import sensors
 
+        sensors.adc_io_open()
         table.append(shader("ADC", check_adc(sensors)))
-
+        sensors.adc_io_close()
     if "io" in device:
         from .compile import sensors
 
+        sensors.adc_io_open()
         table.append(shader("IO", check_io(sensors)))
-
+        sensors.adc_io_close()
     if "mpu" in device:
         from .compile import sensors
 
@@ -292,9 +296,7 @@ def test(ctx: click.Context, device: str = ("all",)):
         controller.start_msg_sending().send_cmd(CMD.RESET)
         table.append(shader("MOTOR", check_motor(controller)))
 
-    secho(
-        SingleTable(table).table,
-    )
+    secho(SingleTable(table).table)
 
 
 @main.command("read")
@@ -305,15 +307,20 @@ def test(ctx: click.Context, device: str = ("all",)):
     type=click.Choice(["adc", "io", "mpu", "all"]),
     nargs=-1,
 )
-def read(ctx: click.Context, device: str = ("all",)):
+def read_sensors(ctx: click.Context, device: str = ("all",)):
+    """
+    Read sensors data and print to terminal
+    """
     from pyuptech import make_mpu_table, make_io_table, make_adc_table
     from .compile import sensors
 
-    device = set(device)
+    sensors.adc_io_open().MPU6500_Open().set_all_io_mode(0)
+
     if "all" in device:
         echo(make_mpu_table(sensors))
         echo(make_adc_table(sensors))
         echo(make_io_table(sensors))
+        return
     if "io" in device:
         echo(make_io_table(sensors))
     if "mpu" in device:
