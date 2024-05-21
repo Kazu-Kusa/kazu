@@ -69,7 +69,7 @@ def check_mpu(sensors: OnBoardSensors) -> bool:
     except Exception as e:
         _logger.error(f"Encounter exception: {e}")
         return False
-    if all(acc_data) and all(atti_data) and all(gyro_data):
+    if all(acc_data) and all(gyro_data):
         _logger.info("MPU communication channel is ready.")
         return True
     else:

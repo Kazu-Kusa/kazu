@@ -219,7 +219,7 @@ def run(ctx: click.Context, run_config: Path | None, mode: str, **_):
     type=click.Choice(["mot", "cam", "adc", "io", "mpu", "pow", "all"]),
     nargs=-1,
 )
-def test(ctx: click.Context, device: str = ("all",)):
+def test(ctx: click.Context, device: str):
     """
     Check devices' normal functions
     """
@@ -229,6 +229,7 @@ def test(ctx: click.Context, device: str = ("all",)):
     from terminaltables import SingleTable
     from colorama import Fore
 
+    device = device or ("all",)
     shader = lambda dev_name, success: [
         f"{Fore.LIGHTYELLOW_EX if success else Fore.RED}{dev_name}{Fore.RESET}",
         f"{Fore.GREEN if success else Fore.RED}{success}{Fore.RESET}",
@@ -315,6 +316,7 @@ def read_sensors(ctx: click.Context, device: str = ("all",)):
     from pyuptech import make_mpu_table, make_io_table, make_adc_table
     from .compile import sensors
 
+    device = device or ("all",)
     sensors.adc_io_open().MPU6500_Open().set_all_io_mode(0)
 
     if "all" in device:
