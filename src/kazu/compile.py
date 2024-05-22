@@ -610,7 +610,20 @@ def make_edge_handler(
 def make_surrounding_handler(
     app_config: APPConfig, run_config: RunConfig, tag_group: Optional[TagGroup] = None
 ) -> Tuple[MovingState, MovingState, MovingState, List[MovingTransition]]:
+    """
+    构造一个处理周围环境信息的策略处理器。
 
+    Args:
+        app_config: APPConfig, 应用配置对象，包含传感器和行为配置。
+        run_config: RunConfig, 运行时配置对象，包含执行环境和策略细节。
+        tag_group: TagGroup, 标签组对象，用于识别不同物体标签，默认为None。
+
+    Returns:
+        Tuple[MovingState, MovingState, MovingState, List[MovingTransition]]:
+      一个四元组，包含开始状态、正常退出状态、异常退出状态和一系列可能的状态转换。
+    """
+
+    # <editor-fold desc="Breakers">
     if app_config.vision.use_camera:
 
         query_table: Dict[Tuple[int, bool], int] = {
@@ -664,7 +677,9 @@ def make_surrounding_handler(
     edge_rear_breaker = Breakers.make_std_edge_rear_breaker(app_config, run_config)
 
     turn_to_front_breaker = Breakers.make_std_turn_to_front_breaker(app_config, run_config)
+    # </editor-fold>
 
+    # <editor-fold desc="Templates">
     stop_state = MovingState(0)
     continues_state = MovingState(
         speed_expressions=ContextVar.prev_salvo_speed.name, used_context_variables=[ContextVar.prev_salvo_speed.name]
@@ -705,9 +720,14 @@ def make_surrounding_handler(
 
     full_turn_transition = MovingTransition(run_config.surrounding.full_turn_duration, breaker=turn_to_front_breaker)
     half_turn_transition = MovingTransition(run_config.surrounding.half_turn_duration, breaker=turn_to_front_breaker)
+    # </editor-fold>
+
+    # <editor-fold desc="Init Container">
     transitions_pool: List[MovingTransition] = []
 
     case_dict: Dict[int, MovingState] = {SurroundingCodeSign.NOTHING.value: (normal_exit := continues_state.clone())}
+    # </editor-fold>
+
     # <editor-fold desc="Front enemy car">
     # ---------------------------------------------------------------------
 
@@ -738,9 +758,7 @@ def make_surrounding_handler(
 
     # <editor-fold desc="Target switch">
     # ---------------------------------------------------------------------
-
     # full random turn atk and fallback and full random turn then stop
-
     [head_state, *_], transitions = (
         composer.init_container()
         .add(rand_turn_state.clone())
@@ -766,7 +784,6 @@ def make_surrounding_handler(
     case_dict[SurroundingCodeSign.FRONT_ENEMY_BOX_LEFT_RIGHT_BEHIND_OBJECTS.value] = head_state
     # ---------------------------------------------------------------------
     # half turn left atk and fallback and full random turn then stop
-
     [head_state, *_], transitions = (
         composer.init_container()
         .add(left_turn_state.clone())
@@ -788,7 +805,6 @@ def make_surrounding_handler(
     case_dict[SurroundingCodeSign.FRONT_NEUTRAL_BOX_LEFT_OBJECT.value] = head_state
     # ---------------------------------------------------------------------
     # half turn right atk and fallback and full random turn then stop
-
     [head_state, *_], transitions = (
         composer.init_container()
         .add(right_turn_state.clone())
@@ -810,7 +826,6 @@ def make_surrounding_handler(
     case_dict[SurroundingCodeSign.FRONT_NEUTRAL_BOX_RIGHT_OBJECT.value] = head_state
     # ---------------------------------------------------------------------
     # half random turn atk and fallback and full random turn then stop
-
     [head_state, *_], transitions = (
         composer.init_container()
         .add(rand_turn_state.clone())
@@ -832,6 +847,7 @@ def make_surrounding_handler(
     case_dict[SurroundingCodeSign.FRONT_NEUTRAL_BOX_LEFT_RIGHT_OBJECTS.value] = head_state
 
     # ---------------------------------------------------------------------
+    # random spd turn left atk and fallback and full random turn then stop
     [head_state, *_], transitions = (
         composer.init_container()
         .add(rand_spd_turn_left_state.clone())
@@ -851,8 +867,8 @@ def make_surrounding_handler(
     case_dict[SurroundingCodeSign.FRONT_ENEMY_BOX_LEFT_BEHIND_OBJECTS.value] = head_state
     case_dict[SurroundingCodeSign.FRONT_ALLY_BOX_LEFT_BEHIND_OBJECTS.value] = head_state
     case_dict[SurroundingCodeSign.FRONT_NEUTRAL_BOX_LEFT_BEHIND_OBJECTS.value] = head_state
-
     # ---------------------------------------------------------------------
+    # random spd turn right atk and fallback and full random turn then stop
     [head_state, *_], transitions = (
         composer.init_container()
         .add(rand_spd_turn_right_state.clone())
@@ -873,15 +889,11 @@ def make_surrounding_handler(
     case_dict[SurroundingCodeSign.FRONT_ALLY_BOX_RIGHT_BEHIND_OBJECTS.value] = head_state
     case_dict[SurroundingCodeSign.FRONT_NEUTRAL_BOX_RIGHT_BEHIND_OBJECTS.value] = head_state
     # ---------------------------------------------------------------------
-
     # </editor-fold>
 
     # <editor-fold desc="Front box only">
-
     # ---------------------------------------------------------------------
-
     # atk and fallback and full random turn then stop
-
     [head_state, *_], transitions = (
         composer.init_container()
         .add(atk_enemy_box_state.clone())
@@ -897,7 +909,6 @@ def make_surrounding_handler(
     transitions_pool.extend(transitions)
     case_dict[SurroundingCodeSign.FRONT_ENEMY_BOX.value] = head_state
     # ---------------------------------------------------------------------
-
     # atk and fallback and full random turn then stop
     [head_state, *_], transitions = (
         composer.init_container()
@@ -910,7 +921,6 @@ def make_surrounding_handler(
         .add(stop_state)
         .export_structure()
     )
-
     transitions_pool.extend(transitions)
     case_dict[SurroundingCodeSign.FRONT_NEUTRAL_BOX.value] = head_state
     # ---------------------------------------------------------------------
@@ -924,25 +934,28 @@ def make_surrounding_handler(
         .add(stop_state)
         .export_structure()
     )
-
     transitions_pool.extend(transitions)
     case_dict[SurroundingCodeSign.FRONT_ALLY_BOX.value] = head_state
     # ---------------------------------------------------------------------
     # </editor-fold>
 
+    # <editor-fold desc="Assembly">
     _, head_trans = (
         composer.init_container()
         .add(continues_state)
         .add(MovingTransition(run_config.perf.min_sync_interval, breaker=surr_full_breaker, to_states=case_dict))
         .export_structure()
     )
+    # </editor-fold>
 
+    # <editor-fold desc="Make Return">
     transitions_pool.extend(head_trans)
     start_state = continues_state
     abnormal_exit = stop_state
-    # </editor-fold>
+
     check_all_case_defined(case_dict, SurroundingCodeSign)
     return start_state, normal_exit, abnormal_exit, transitions_pool
+    # </editor-fold>
 
 
 def make_scan_handler() -> Callable:
