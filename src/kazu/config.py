@@ -235,8 +235,8 @@ class LoggerConfig(BaseModel):
 
 class SensorConfig(BaseModel):
 
-    gyro_fsr: Literal[250, 500, 1000, 2000] = 250
-    accel_fsr: Literal[2, 4, 8, 16] = 2
+    gyro_fsr: Literal[250, 500, 1000, 2000] = 1000
+    accel_fsr: Literal[2, 4, 8, 16] = 8
 
     adc_min_sample_interval: int = 5
 

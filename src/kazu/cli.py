@@ -7,7 +7,7 @@ import click
 import mentabotix
 import pyuptech
 from bdmc import MotorInfo, CMD
-from click import secho, echo
+from click import secho, echo, clear
 from mentabotix import MovingState, MovingTransition
 
 from . import __version__, __command__
@@ -319,27 +319,51 @@ def test(ctx: click.Context, device: str):
     type=click.Choice(["adc", "io", "mpu", "all"]),
     nargs=-1,
 )
-def read_sensors(ctx: click.Context, device: str = ("all",)):
+@click.option("-i", "interval", type=click.FLOAT, default=0.1, show_default=True)
+def read_sensors(ctx: click.Context, interval: float, device: str):
     """
     Read sensors data and print to terminal
     """
-    from pyuptech import make_mpu_table, make_io_table, make_adc_table
+    from pyuptech import (
+        make_mpu_table,
+        make_io_table,
+        make_adc_table,
+    )
     from .compile import sensors
 
-    device = device or ("all",)
-    sensors.adc_io_open().MPU6500_Open().set_all_io_mode(0)
+    app_config: APPConfig = ctx.obj.app_config
+    device = set(device) or ("all",)
+    (
+        sensors.adc_io_open()
+        .MPU6500_Open()
+        .set_all_io_mode(0)
+        .mpu_set_gyro_fsr(app_config.sensor.gyro_fsr)
+        .mpu_set_accel_fsr(app_config.sensor.accel_fsr)
+    )
 
     if "all" in device:
-        echo(make_mpu_table(sensors))
-        echo(make_adc_table(sensors))
-        echo(make_io_table(sensors))
-        return
-    if "io" in device:
-        echo(make_io_table(sensors))
-    if "mpu" in device:
-        echo(make_mpu_table(sensors))
-    if "adc" in device:
-        echo(make_adc_table(sensors))
+        device = ("adc", "io", "mpu")
+
+    packs = []
+    for dev in device:
+        match dev:
+            case "adc":
+                packs.append(lambda: make_adc_table(sensors))
+
+            case "io":
+                packs.append(lambda: make_io_table(sensors))
+            case "mpu":
+                packs.append(lambda: make_mpu_table(sensors))
+
+    try:
+        while 1:
+            stdout: str = "\n".join(pack() for pack in packs)
+            clear()
+            echo(stdout)
+            sleep(interval)
+    except KeyboardInterrupt:
+        echo("Exit reading.")
+
     sensors.adc_io_close()
 
 
