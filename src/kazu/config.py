@@ -87,6 +87,9 @@ class SurroundingConfig(BaseModel):
     turn_speed: int = 5000
     turn_left_prob: float = 0.5
 
+    rand_turn_speeds: List[int] = [4000, 8000]
+    rand_turn_speed_weights: List[float] = [1, 3]
+
     full_turn_duration: float = 0.9
     half_turn_duration: float = 0.5
 

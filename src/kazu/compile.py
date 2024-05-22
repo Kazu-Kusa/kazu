@@ -1,6 +1,7 @@
 from dataclasses import dataclass
+from enum import Enum
 from functools import lru_cache
-from typing import Callable, List, Tuple, Dict, Optional
+from typing import Callable, List, Tuple, Dict, Optional, Iterable, TypeVar, Type
 
 from bdmc import CloseLoopController
 from mentabotix import MovingChainComposer, Botix, Menta, MovingState, MovingTransition, SamplerUsage
@@ -8,7 +9,7 @@ from pyuptech import OnBoardSensors, Screen
 from upic import TagDetector
 
 from .config import APPConfig, RunConfig, ContextVar, TagGroup
-from .constant import EdgeWeights, EdgeCodeSign, SurroundingWeights, Attitude
+from .constant import EdgeWeights, EdgeCodeSign, SurroundingWeights, Attitude, SurroundingCodeSign
 
 sensors = OnBoardSensors()
 menta = Menta(
@@ -41,6 +42,31 @@ class SamplerIndexes:
     atti_all: int = 4
     gyro_all: int = 5
     acc_all: int = 6
+
+
+T = TypeVar("T")
+
+
+def check_all_case_defined(branch_dict: Dict[T, MovingState], case_list: Iterable[T] | Type[Enum]) -> None:
+    """
+    Check if all cases in the `case_list` are defined in the `branch_dict`.
+
+    Args:
+        branch_dict (Dict[T, MovingState]): A dictionary mapping cases to their corresponding MovingState.
+        case_list (Iterable[T] | Type[Enum]): An iterable of cases or an Enum class.
+
+    Raises:
+        ValueError: If any case in the `case_list` is not defined in the `branch_dict`.
+
+    Returns:
+        None
+    """
+    if issubclass(case_list, Enum):
+        undefined_cases = list(filter(lambda x: x.value not in branch_dict, case_list))
+    else:
+        undefined_cases = list(filter(lambda x: x not in branch_dict, case_list))
+    if undefined_cases:
+        raise ValueError(f"Case not defined: {undefined_cases}")
 
 
 class Breakers:
@@ -175,7 +201,7 @@ class Breakers:
                 ),
             ],
             judging_source=f"ret=not s0 or not s1  "  # use gray scaler, indicating the edge is encountered
-            f"or not any( (s2 , s3 , s4>{run_config.surrounding.dash_break_front_lower_threshold}))",  # indicating front is empty
+            f"or not any( (s2 , s3 , s4>{run_config.surrounding.atk_break_front_lower_threshold}))",  # indicating front is empty
             return_type_varname="bool",
             extra_context={"bool": bool},
             return_raw=False,
@@ -300,7 +326,7 @@ def make_edge_handler(
 
     right_turn_state = MovingState.turn("r", run_config.edge.turn_speed)
 
-    rand_lr_turn_state = MovingState.rand_turn(
+    rand_lr_turn_state = MovingState.rand_dir_turn(
         controller, run_config.edge.turn_speed, turn_left_prob=run_config.edge.turn_left_prob
     )
 
@@ -576,12 +602,15 @@ def make_edge_handler(
     start_state = continues_state
     abnormal_exit = stop_state
     # </editor-fold>
+
+    check_all_case_defined(branch_dict=case_dict, case_list=EdgeCodeSign)
     return start_state, normal_exit, abnormal_exit, transitions_pool
 
 
 def make_surrounding_handler(
     app_config: APPConfig, run_config: RunConfig, tag_group: Optional[TagGroup] = None
 ) -> Tuple[MovingState, MovingState, MovingState, List[MovingTransition]]:
+
     if app_config.vision.use_camera:
 
         query_table: Dict[Tuple[int, bool], int] = {
@@ -636,7 +665,284 @@ def make_surrounding_handler(
 
     turn_to_front_breaker = Breakers.make_std_turn_to_front_breaker(app_config, run_config)
 
-    # TODO impl
+    stop_state = MovingState(0)
+    continues_state = MovingState(
+        speed_expressions=ContextVar.prev_salvo_speed.name, used_context_variables=[ContextVar.prev_salvo_speed.name]
+    )
+    atk_enemy_car_state = MovingState.straight(run_config.surrounding.atk_speed_enemy_car)
+    atk_enemy_box_state = MovingState.straight(run_config.surrounding.atk_speed_enemy_box)
+    atk_neutral_box_state = MovingState.straight(run_config.surrounding.atk_speed_neutral_box)
+    allay_fallback_state = MovingState.straight(-run_config.surrounding.fallback_speed_ally_box)
+    edge_fallback_state = MovingState.straight(-run_config.surrounding.fallback_speed_edge)
+
+    atk_enemy_car_transition = MovingTransition(run_config.surrounding.atk_speed_enemy_car, breaker=atk_breaker)
+    atk_enemy_box_transition = MovingTransition(run_config.surrounding.atk_speed_enemy_box, breaker=atk_breaker)
+    atk_neutral_box_transition = MovingTransition(run_config.surrounding.atk_neutral_box_duration, breaker=atk_breaker)
+    allay_fallback_transition = MovingTransition(
+        run_config.surrounding.fallback_duration_ally_box, breaker=edge_rear_breaker
+    )
+    edge_fallback_transition = MovingTransition(
+        run_config.surrounding.fallback_duration_edge, breaker=edge_rear_breaker
+    )
+
+    rand_turn_state = MovingState.rand_dir_turn(
+        controller, run_config.surrounding.turn_speed, turn_left_prob=run_config.surrounding.turn_left_prob
+    )
+    left_turn_state = MovingState.turn("l", run_config.surrounding.turn_speed)
+    right_turn_state = MovingState.turn("r", run_config.surrounding.turn_speed)
+    rand_spd_turn_left_state = MovingState.rand_spd_turn(
+        controller,
+        "l",
+        run_config.surrounding.rand_turn_speeds,
+        weights=run_config.surrounding.rand_turn_speed_weights,
+    )
+    rand_spd_turn_right_state = MovingState.rand_spd_turn(
+        controller,
+        "r",
+        run_config.surrounding.rand_turn_speeds,
+        weights=run_config.surrounding.rand_turn_speed_weights,
+    )
+
+    full_turn_transition = MovingTransition(run_config.surrounding.full_turn_duration, breaker=turn_to_front_breaker)
+    half_turn_transition = MovingTransition(run_config.surrounding.half_turn_duration, breaker=turn_to_front_breaker)
+    transitions_pool: List[MovingTransition] = []
+
+    case_dict: Dict[int, MovingState] = {SurroundingCodeSign.NOTHING.value: (normal_exit := continues_state.clone())}
+    # <editor-fold desc="Front enemy car">
+    # ---------------------------------------------------------------------
+
+    # atk and fallback and full random turn then stop
+    [head_state, *_], transitions = (
+        composer.init_container()
+        .add(atk_enemy_car_state.clone())
+        .add(atk_enemy_car_transition.clone())
+        .add(edge_fallback_state.clone())
+        .add(edge_fallback_transition.clone())
+        .add(rand_turn_state.clone())
+        .add(full_turn_transition.clone())
+        .add(stop_state)
+        .export_structure()
+    )
+
+    transitions_pool.extend(transitions)
+    case_dict[SurroundingCodeSign.FRONT_ENEMY_CAR.value] = head_state
+    case_dict[SurroundingCodeSign.FRONT_ENEMY_CAR_RIGHT_OBJECT.value] = head_state
+    case_dict[SurroundingCodeSign.FRONT_ENEMY_CAR_LEFT_OBJECT.value] = head_state
+    case_dict[SurroundingCodeSign.FRONT_ENEMY_CAR_BEHIND_OBJECT.value] = head_state
+    case_dict[SurroundingCodeSign.FRONT_ENEMY_CAR_LEFT_RIGHT_OBJECTS.value] = head_state
+    case_dict[SurroundingCodeSign.FRONT_ENEMY_CAR_RIGHT_BEHIND_OBJECTS.value] = head_state
+    case_dict[SurroundingCodeSign.FRONT_ENEMY_CAR_LEFT_BEHIND_OBJECTS.value] = head_state
+    case_dict[SurroundingCodeSign.FRONT_ENEMY_CAR_LEFT_RIGHT_BEHIND_OBJECTS.value] = head_state
+    # ---------------------------------------------------------------------
+    # </editor-fold>
+
+    # <editor-fold desc="Target switch">
+    # ---------------------------------------------------------------------
+
+    # full random turn atk and fallback and full random turn then stop
+
+    [head_state, *_], transitions = (
+        composer.init_container()
+        .add(rand_turn_state.clone())
+        .add(full_turn_transition.clone())
+        .add(atk_enemy_car_state.clone())
+        .add(atk_enemy_car_transition.clone())
+        .add(edge_fallback_state.clone())
+        .add(edge_fallback_transition.clone())
+        .add(rand_turn_state.clone())
+        .add(full_turn_transition.clone())
+        .add(stop_state)
+        .export_structure()
+    )
+
+    transitions_pool.extend(transitions)
+    case_dict[SurroundingCodeSign.BEHIND_OBJECT.value] = head_state
+    case_dict[SurroundingCodeSign.LEFT_RIGHT_BEHIND_OBJECTS.value] = head_state
+    case_dict[SurroundingCodeSign.FRONT_ENEMY_BOX_BEHIND_OBJECT.value] = head_state
+    case_dict[SurroundingCodeSign.FRONT_ALLY_BOX_BEHIND_OBJECT.value] = head_state
+    case_dict[SurroundingCodeSign.FRONT_NEUTRAL_BOX_BEHIND_OBJECT.value] = head_state
+    case_dict[SurroundingCodeSign.FRONT_ALLY_BOX_LEFT_RIGHT_BEHIND_OBJECTS.value] = head_state
+    case_dict[SurroundingCodeSign.FRONT_NEUTRAL_BOX_LEFT_RIGHT_BEHIND_OBJECTS.value] = head_state
+    case_dict[SurroundingCodeSign.FRONT_ENEMY_BOX_LEFT_RIGHT_BEHIND_OBJECTS.value] = head_state
+    # ---------------------------------------------------------------------
+    # half turn left atk and fallback and full random turn then stop
+
+    [head_state, *_], transitions = (
+        composer.init_container()
+        .add(left_turn_state.clone())
+        .add(half_turn_transition.clone())
+        .add(atk_enemy_car_state.clone())
+        .add(atk_enemy_car_transition.clone())
+        .add(edge_fallback_state.clone())
+        .add(edge_fallback_transition.clone())
+        .add(rand_turn_state.clone())
+        .add(full_turn_transition.clone())
+        .add(stop_state)
+        .export_structure()
+    )
+
+    transitions_pool.extend(transitions)
+    case_dict[SurroundingCodeSign.LEFT_OBJECT.value] = head_state
+    case_dict[SurroundingCodeSign.FRONT_ENEMY_BOX_LEFT_OBJECT.value] = head_state
+    case_dict[SurroundingCodeSign.FRONT_ALLY_BOX_LEFT_OBJECT.value] = head_state
+    case_dict[SurroundingCodeSign.FRONT_NEUTRAL_BOX_LEFT_OBJECT.value] = head_state
+    # ---------------------------------------------------------------------
+    # half turn right atk and fallback and full random turn then stop
+
+    [head_state, *_], transitions = (
+        composer.init_container()
+        .add(right_turn_state.clone())
+        .add(half_turn_transition.clone())
+        .add(atk_enemy_car_state.clone())
+        .add(atk_enemy_car_transition.clone())
+        .add(edge_fallback_state.clone())
+        .add(edge_fallback_transition.clone())
+        .add(rand_turn_state.clone())
+        .add(full_turn_transition.clone())
+        .add(stop_state)
+        .export_structure()
+    )
+
+    transitions_pool.extend(transitions)
+    case_dict[SurroundingCodeSign.RIGHT_OBJECT.value] = head_state
+    case_dict[SurroundingCodeSign.FRONT_ENEMY_BOX_RIGHT_OBJECT.value] = head_state
+    case_dict[SurroundingCodeSign.FRONT_ALLY_BOX_RIGHT_OBJECT.value] = head_state
+    case_dict[SurroundingCodeSign.FRONT_NEUTRAL_BOX_RIGHT_OBJECT.value] = head_state
+    # ---------------------------------------------------------------------
+    # half random turn atk and fallback and full random turn then stop
+
+    [head_state, *_], transitions = (
+        composer.init_container()
+        .add(rand_turn_state.clone())
+        .add(half_turn_transition.clone())
+        .add(atk_enemy_car_state.clone())
+        .add(atk_enemy_car_transition.clone())
+        .add(edge_fallback_state.clone())
+        .add(edge_fallback_transition.clone())
+        .add(rand_turn_state.clone())
+        .add(full_turn_transition.clone())
+        .add(stop_state)
+        .export_structure()
+    )
+
+    transitions_pool.extend(transitions)
+    case_dict[SurroundingCodeSign.LEFT_RIGHT_OBJECTS.value] = head_state
+    case_dict[SurroundingCodeSign.FRONT_ENEMY_BOX_LEFT_RIGHT_OBJECTS.value] = head_state
+    case_dict[SurroundingCodeSign.FRONT_ALLY_BOX_LEFT_RIGHT_OBJECTS.value] = head_state
+    case_dict[SurroundingCodeSign.FRONT_NEUTRAL_BOX_LEFT_RIGHT_OBJECTS.value] = head_state
+
+    # ---------------------------------------------------------------------
+    [head_state, *_], transitions = (
+        composer.init_container()
+        .add(rand_spd_turn_left_state.clone())
+        .add(full_turn_transition.clone())
+        .add(atk_enemy_car_state.clone())
+        .add(atk_enemy_car_transition.clone())
+        .add(edge_fallback_state.clone())
+        .add(edge_fallback_transition.clone())
+        .add(rand_turn_state.clone())
+        .add(full_turn_transition.clone())
+        .add(stop_state)
+        .export_structure()
+    )
+
+    transitions_pool.extend(transitions)
+    case_dict[SurroundingCodeSign.LEFT_BEHIND_OBJECTS.value] = head_state
+    case_dict[SurroundingCodeSign.FRONT_ENEMY_BOX_LEFT_BEHIND_OBJECTS.value] = head_state
+    case_dict[SurroundingCodeSign.FRONT_ALLY_BOX_LEFT_BEHIND_OBJECTS.value] = head_state
+    case_dict[SurroundingCodeSign.FRONT_NEUTRAL_BOX_LEFT_BEHIND_OBJECTS.value] = head_state
+
+    # ---------------------------------------------------------------------
+    [head_state, *_], transitions = (
+        composer.init_container()
+        .add(rand_spd_turn_right_state.clone())
+        .add(full_turn_transition.clone())
+        .add(atk_enemy_car_state.clone())
+        .add(atk_enemy_car_transition.clone())
+        .add(edge_fallback_state.clone())
+        .add(edge_fallback_transition.clone())
+        .add(rand_turn_state.clone())
+        .add(full_turn_transition.clone())
+        .add(stop_state)
+        .export_structure()
+    )
+
+    transitions_pool.extend(transitions)
+    case_dict[SurroundingCodeSign.RIGHT_BEHIND_OBJECTS.value] = head_state
+    case_dict[SurroundingCodeSign.FRONT_ENEMY_BOX_RIGHT_BEHIND_OBJECTS.value] = head_state
+    case_dict[SurroundingCodeSign.FRONT_ALLY_BOX_RIGHT_BEHIND_OBJECTS.value] = head_state
+    case_dict[SurroundingCodeSign.FRONT_NEUTRAL_BOX_RIGHT_BEHIND_OBJECTS.value] = head_state
+    # ---------------------------------------------------------------------
+
+    # </editor-fold>
+
+    # <editor-fold desc="Front box only">
+
+    # ---------------------------------------------------------------------
+
+    # atk and fallback and full random turn then stop
+
+    [head_state, *_], transitions = (
+        composer.init_container()
+        .add(atk_enemy_box_state.clone())
+        .add(atk_enemy_box_transition.clone())
+        .add(edge_fallback_state.clone())
+        .add(edge_fallback_transition.clone())
+        .add(rand_turn_state.clone())
+        .add(full_turn_transition.clone())
+        .add(stop_state)
+        .export_structure()
+    )
+
+    transitions_pool.extend(transitions)
+    case_dict[SurroundingCodeSign.FRONT_ENEMY_BOX.value] = head_state
+    # ---------------------------------------------------------------------
+
+    # atk and fallback and full random turn then stop
+    [head_state, *_], transitions = (
+        composer.init_container()
+        .add(atk_neutral_box_state.clone())
+        .add(atk_neutral_box_transition.clone())
+        .add(edge_fallback_state.clone())
+        .add(edge_fallback_transition.clone())
+        .add(rand_turn_state.clone())
+        .add(full_turn_transition.clone())
+        .add(stop_state)
+        .export_structure()
+    )
+
+    transitions_pool.extend(transitions)
+    case_dict[SurroundingCodeSign.FRONT_NEUTRAL_BOX.value] = head_state
+    # ---------------------------------------------------------------------
+    # fallback and full random turn then stop
+    [head_state, *_], transitions = (
+        composer.init_container()
+        .add(allay_fallback_state.clone())
+        .add(allay_fallback_transition.clone())
+        .add(rand_turn_state.clone())
+        .add(full_turn_transition.clone())
+        .add(stop_state)
+        .export_structure()
+    )
+
+    transitions_pool.extend(transitions)
+    case_dict[SurroundingCodeSign.FRONT_ALLY_BOX.value] = head_state
+    # ---------------------------------------------------------------------
+    # </editor-fold>
+
+    _, head_trans = (
+        composer.init_container()
+        .add(continues_state)
+        .add(MovingTransition(run_config.perf.min_sync_interval, breaker=surr_full_breaker, to_states=case_dict))
+        .export_structure()
+    )
+
+    transitions_pool.extend(head_trans)
+    start_state = continues_state
+    abnormal_exit = stop_state
+    # </editor-fold>
+    check_all_case_defined(case_dict, SurroundingCodeSign)
+    return start_state, normal_exit, abnormal_exit, transitions_pool
 
 
 def make_scan_handler() -> Callable:
@@ -663,7 +969,9 @@ def make_back_to_stage_handler(run_config: RunConfig) -> Tuple[MovingState, Movi
         .add(MovingState(0))
         .add(stab_trans.clone())
         .add(
-            MovingState.rand_turn(controller, run_config.boot.turn_speed, turn_left_prob=run_config.boot.turn_left_prob)
+            MovingState.rand_dir_turn(
+                controller, run_config.boot.turn_speed, turn_left_prob=run_config.boot.turn_left_prob
+            )
         )
         .export_structure()
     )
@@ -699,7 +1007,9 @@ def make_reboot_handler(
         .add(MovingState(0))
         .add(MovingTransition(run_config.boot.time_to_stabilize))
         .add(
-            MovingState.rand_turn(controller, run_config.boot.turn_speed, turn_left_prob=run_config.boot.turn_left_prob)
+            MovingState.rand_dir_turn(
+                controller, run_config.boot.turn_speed, turn_left_prob=run_config.boot.turn_left_prob
+            )
         )
         .add(MovingTransition(run_config.boot.full_turn_duration))
         .add(MovingState(0))

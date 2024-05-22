@@ -18,7 +18,7 @@ from .callbacks import (
     log_level_callback,
     team_color_callback,
 )
-from .compile import botix, make_edge_handler, make_reboot_handler, make_back_to_stage_handler
+from .compile import botix, make_edge_handler, make_reboot_handler, make_back_to_stage_handler, make_surrounding_handler
 from .config import DEFAULT_APP_CONFIG_PATH, APPConfig, _InternalConfig, RunConfig
 from .constant import Env, RunMode
 from .logger import set_log_level
@@ -198,17 +198,27 @@ def run(ctx: click.Context, run_config: Path | None, mode: str, **_):
             secho(f"Allay tag: {tag_group.allay_tag}", fg="green", bold=True)
             secho(f"Neutral tag: {tag_group.neutral_tag}", fg="cyan", bold=True)
         else:
+            from .config import TagGroup
+
+            # TODO remove this debug code
+            tag_group = TagGroup(team_color=app_config.vision.team_color)
             secho(f"Failed to open Camera-{app_config.vision.camera_device_id}", fg="red", bold=True)
             app_config.vision.use_camera = False
+    # TODO remove this debug code below
+    app_config.vision.use_camera = True
 
     edge_pack = make_edge_handler(app_config, run_config)
 
     boot_pack = make_reboot_handler(app_config, run_config)
 
     backstage_pack = make_back_to_stage_handler(run_config)
+
+    surr_pack = make_surrounding_handler(app_config, run_config, tag_group)
+
     botix.export_structure("edge.puml", edge_pack[-1])
     botix.export_structure("boot.puml", boot_pack[-1])
     botix.export_structure("backstage.puml", backstage_pack[-1])
+    botix.export_structure("surr.puml", surr_pack[-1])
 
 
 @main.command("check")
