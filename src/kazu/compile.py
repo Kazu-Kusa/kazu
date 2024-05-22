@@ -111,8 +111,8 @@ class Breakers:
                     ],
                 ),
             ],
-            judging_source=f"ret=s0=={app_config.sensor.gray_io_off_stage_case} "
-            f"or s1=={app_config.sensor.gray_io_off_stage_case} "
+            judging_source=f"ret=s0=={app_config.sensor.io_activating_value} "
+            f"or s1=={app_config.sensor.io_activating_value} "
             f"or ({lt_seq[0]}>s2 or s2<{ut_seq[0]}) "
             f"or ({lt_seq[-1]}>s3 or s3<{ut_seq[-1]})",
             extra_context={"bool": bool},
@@ -255,6 +255,33 @@ class Breakers:
             judging_source=f"ret=bool(not ({invalid_lower_bound}<abs(s0)//90<{invalid_upper_bound}) and (s1 or s2))",
             return_type_varname="bool",
             extra_context={"bool": bool},
+            return_raw=False,
+        )
+
+    @staticmethod
+    @lru_cache(maxsize=None)
+    def make_std_on_stage_breaker(app_config: APPConfig, run_config: RunConfig):
+        from .constant import StageWeight
+
+        return menta.construct_inlined_function(
+            usages=[
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.io_all,
+                    required_data_indexes=[
+                        app_config.sensor.reboot_button_index,  # s0
+                    ],
+                ),
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.adc_all,
+                    required_data_indexes=[
+                        app_config.sensor.gray_adc_index,  # s1
+                    ],
+                ),
+            ],
+            judging_source=f"ret={StageWeight.REBOOT}*(s0=={app_config.sensor.io_activating_value})"
+            f"+{StageWeight.OFF}*(s1<{run_config.perf.gray_adc_lower_threshold})",
+            return_type_varname="int",
+            extra_context={"int": int},
             return_raw=False,
         )
 

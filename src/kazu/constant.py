@@ -229,6 +229,20 @@ class SurroundingCodeSign(Enum):
     # endregion
 
 
+@dataclass(frozen=True)
+class StageWeight:
+    ON: int = 0
+    OFF: int = 1
+    REBOOT: int = 2
+
+
+class StageCodeSign(Enum):
+    ON_STAGE = StageWeight.ON
+    OFF_STAGE = StageWeight.OFF
+    ON_STAGE_REBOOT = StageWeight.ON + StageWeight.REBOOT
+    OFF_STAGE_REBOOT = StageWeight.OFF + StageWeight.REBOOT
+
+
 class FenceCodeSign(Enum):
     """
           front:0

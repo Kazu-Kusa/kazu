@@ -116,6 +116,8 @@ class StrategyConfig(BaseModel):
 class PerformanceConfig(BaseModel):
     min_sync_interval: float = 0.007
 
+    gray_adc_lower_threshold: int = 2000
+
 
 class BootConfig(BaseModel):
     time_to_stabilize: float = 0.3
@@ -253,7 +255,7 @@ class SensorConfig(BaseModel):
 
     gray_adc_index: int = 8
     # ---------IO----------
-    gray_io_off_stage_case: int = 0
+    io_activating_value: int = 0
 
     gray_io_left_index: int = 0
     gray_io_right_index: int = 1
@@ -263,6 +265,8 @@ class SensorConfig(BaseModel):
 
     rl_io_index: int = 4
     rr_io_index: int = 5
+
+    reboot_button_index: int = 7
     ...
     # TODO fill the configs that still remain
 
