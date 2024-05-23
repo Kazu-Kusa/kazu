@@ -285,6 +285,59 @@ class Breakers:
             return_raw=False,
         )
 
+    @staticmethod
+    @lru_cache(maxsize=None)
+    def make_std_fence_breaker(app_config: APPConfig, run_config: RunConfig):
+        from .constant import FenceWeights
+
+        conf = run_config.fence
+        return menta.construct_inlined_function(
+            usages=[
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.adc_all,
+                    required_data_indexes=[
+                        app_config.sensor.front_adc_index,  # s0
+                        app_config.sensor.rb_adc_index,  # s1
+                        app_config.sensor.left_adc_index,  # s2
+                        app_config.sensor.right_adc_index,  # s3
+                    ],
+                ),
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.io_all,
+                    required_data_indexes=[
+                        app_config.sensor.fl_io_index,  # s4
+                        app_config.sensor.fr_io_index,  # s5
+                        app_config.sensor.rl_io_index,  # s6
+                        app_config.sensor.rr_io_index,  # s7
+                    ],
+                ),
+            ],
+            judging_source=f"ret={FenceWeights.Front}*(s0>{conf.front_adc_lower_threshold} or s4 == {conf.io_activated_value} or s5 == {conf.io_activated_value})"
+            f"+{FenceWeights.Rear}*(s1>{conf.rear_adc_lower_threshold} or s6 == {conf.io_activated_value} or s7 == {conf.io_activated_value})"
+            f"+{FenceWeights.Left}*(s2>{conf.left_adc_lower_threshold})"
+            f"+{FenceWeights.Rear}*(s3>{conf.right_adc_lower_threshold})",
+            return_type_varname="int",
+            extra_context={"int": int},
+            return_raw=False,
+        )
+
+    @staticmethod
+    @lru_cache(maxsize=None)
+    def make_align_direction_breaker(app_config: APPConfig, run_config: RunConfig):
+        from .constant import Attitude
+
+        invalid_lower_bound, invalid_upper_bound = (
+            run_config.fence.max_yaw_tolerance,
+            90 - run_config.fence.max_yaw_tolerance,
+        )
+        return menta.construct_inlined_function(
+            usages=[SamplerUsage(used_sampler_index=SamplerIndexes.atti_all, required_data_indexes=[Attitude.yaw])],
+            judging_source=["diff=abs(s0)//90", f"ret={invalid_lower_bound}>diff or diff>{invalid_upper_bound}"],
+            return_type_varname="bool",
+            extra_context={"bool": bool},
+            return_raw=False,
+        )
+
 
 def make_edge_handler(
     app_config: APPConfig, run_config: RunConfig

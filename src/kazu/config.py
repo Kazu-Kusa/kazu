@@ -100,9 +100,12 @@ class NormalConfig(BaseModel):
 
 
 class fenceConfig(BaseModel):
-    lower_threshold: List[float] = [1700] * 4
-    upper_threshold: List[float] = [2200] * 4
+    front_adc_lower_threshold: int = 1750
+    rear_adc_lower_threshold: int = 1750
+    left_adc_lower_threshold: int = 1750
+    right_adc_lower_threshold: int = 1750
 
+    io_activated_value: int = 0
     max_yaw_tolerance: float = 20.0
 
 
