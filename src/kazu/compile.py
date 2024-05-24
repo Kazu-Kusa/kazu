@@ -1042,34 +1042,49 @@ def make_scan_handler() -> Callable:
     raise NotImplementedError
 
 
-def make_fence_handler() -> Callable:
-    raise NotImplementedError
+def make_fence_handler(app_config: APPConfig, run_config: RunConfig) -> Callable:
+
+    fence_breaker = Breakers.make_std_fence_breaker(app_config, run_config)
+
+    align_direction_breaker = Breakers.make_align_direction_breaker(app_config, run_config)
+
+    align_stage_breaker = Breakers.make_stage_align_breaker_mpu(app_config, run_config)
+
+    back_stage_pack = make_back_to_stage_handler(
+        run_config,
+    )
 
 
-def make_back_to_stage_handler(run_config: RunConfig) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
+def make_back_to_stage_handler(
+    run_config: RunConfig, end_state: Optional[MovingState] = MovingState(0)
+) -> Tuple[List[MovingState], List[MovingTransition]]:
 
+    stop_state = MovingState(0)
     small_advance = MovingState(run_config.backstage.small_advance_speed)
     small_advance_transition = MovingTransition(run_config.backstage.small_advance_duration)
+    stab_trans = MovingTransition(run_config.backstage.time_to_stabilize)
     # waiting for a booting signal, and dash on to the stage once received
     states, transitions = (
         composer.init_container()
         .add(small_advance)
         .add(small_advance_transition)
-        .add(MovingState(0))
-        .add(stab_trans := MovingTransition(run_config.backstage.time_to_stabilize))
+        .add(stop_state.clone())
+        .add(stab_trans.clone())
         .add(MovingState.straight(-run_config.boot.dash_speed))
         .add(MovingTransition(run_config.boot.dash_duration))
-        .add(MovingState(0))
+        .add(stop_state.clone())
         .add(stab_trans.clone())
         .add(
             MovingState.rand_dir_turn(
                 controller, run_config.boot.turn_speed, turn_left_prob=run_config.boot.turn_left_prob
             )
         )
+        .add(MovingTransition(run_config.backstage.full_turn_duration))
+        .add(end_state)
         .export_structure()
     )
 
-    return states[0], states[-1], transitions
+    return states, transitions
 
 
 def make_reboot_handler(
