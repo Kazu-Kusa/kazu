@@ -340,14 +340,21 @@ class Breakers:
 
 
 def make_edge_handler(
-    app_config: APPConfig, run_config: RunConfig
+    app_config: APPConfig,
+    run_config: RunConfig,
+    start_state: Optional[MovingState] = None,
+    normal_exit: Optional[MovingState] = None,
+    abnormal_exit: Optional[MovingState] = MovingState(0),
 ) -> Tuple[MovingState, MovingState, MovingState, List[MovingTransition]]:
     """
     根据应用和运行配置创建边缘处理函数。
 
     Args:
-        app_config: APPConfig 类型，应用配置，包含传感器和其它配置。
-        run_config: RunConfig 类型，运行时配置，包含边缘检测的阈值和行为配置。
+        app_config (APPConfig):  应用配置，包含传感器和其它配置。
+        run_config (RunConfig):  运行时配置，包含边缘检测的阈值和行为配置。
+        start_state (MovingState):  开始的移动状态。
+        normal_exit (MovingState):  正常退出的移动状态。
+        abnormal_exit (MovingTransition):  异常退出的移动状态。
 
     Returns:
         start_state: 开始的移动状态。
@@ -370,29 +377,13 @@ def make_edge_handler(
     edge_rear_breaker: Callable[[], bool] = Breakers.make_std_edge_rear_breaker(app_config, run_config)
     # </editor-fold>
 
-    # <editor-fold desc="Case Setter">
-    # 创建上下文更新器（case setter），用于设置遇到边缘的上下文变量
-    edge_setter_true = controller.register_context_updater(
-        lambda: True,
-        input_keys=[],
-        output_keys=[ContextVar.had_encountered_edge.name],
-    )
-
-    edge_setter_false = controller.register_context_updater(
-        lambda: False,
-        input_keys=[],
-        output_keys=[ContextVar.had_encountered_edge.name],
-    )
-    # </editor-fold>
-
     # <editor-fold desc="Templates">
 
     # 定义不同移动状态，如停止、继续、后退等
-    stop_state = MovingState(0, after_exiting=[edge_setter_true])
-
-    continues_state = MovingState(
+    start_state = start_state or MovingState(
         speed_expressions=ContextVar.prev_salvo_speed.name, used_context_variables=[ContextVar.prev_salvo_speed.name]
     )
+    normal_exit = normal_exit or start_state.clone()
 
     fallback_state = MovingState.straight(-run_config.edge.fallback_speed)
 
@@ -423,8 +414,7 @@ def make_edge_handler(
 
     # <editor-fold desc="Initialize Containers">
     transitions_pool: List[MovingTransition] = []
-    case_dict: Dict = {EdgeCodeSign.O_O_O_O.value: (normal_exit := continues_state.clone())}
-    normal_exit.after_exiting.append(edge_setter_false)
+    case_dict: Dict = {EdgeCodeSign.O_O_O_O.value: (start_state.clone())}
     # </editor-fold>
 
     # <editor-fold desc="1-Activation Cases">
@@ -435,7 +425,7 @@ def make_edge_handler(
         .add(fallback_transition.clone())
         .add(right_turn_state.clone())
         .add(full_turn_transition.clone())
-        .add(stop_state)
+        .add(abnormal_exit)
         .export_structure()
     )
 
@@ -451,7 +441,7 @@ def make_edge_handler(
         .add(fallback_transition.clone())
         .add(left_turn_state.clone())
         .add(full_turn_transition.clone())
-        .add(stop_state)
+        .add(abnormal_exit)
         .export_structure()
     )
 
@@ -468,7 +458,7 @@ def make_edge_handler(
         .add(advance_transition.clone())
         .add(right_turn_state.clone())
         .add(half_turn_transition.clone())
-        .add(stop_state)
+        .add(abnormal_exit)
         .export_structure()
     )
 
@@ -485,7 +475,7 @@ def make_edge_handler(
         .add(advance_transition.clone())
         .add(left_turn_state.clone())
         .add(half_turn_transition.clone())
-        .add(stop_state)
+        .add(abnormal_exit)
         .export_structure()
     )
 
@@ -501,7 +491,7 @@ def make_edge_handler(
         composer.init_container()
         .add(right_turn_state.clone())
         .add(half_turn_transition.clone())
-        .add(stop_state)
+        .add(abnormal_exit)
         .export_structure()
     )
 
@@ -516,7 +506,7 @@ def make_edge_handler(
         composer.init_container()
         .add(left_turn_state.clone())
         .add(half_turn_transition.clone())
-        .add(stop_state)
+        .add(abnormal_exit)
         .export_structure()
     )
 
@@ -533,7 +523,7 @@ def make_edge_handler(
         .add(fallback_transition.clone())
         .add(rand_lr_turn_state.clone())
         .add(full_turn_transition.clone())
-        .add(stop_state)
+        .add(abnormal_exit)
         .export_structure()
     )
 
@@ -548,7 +538,7 @@ def make_edge_handler(
         composer.init_container()
         .add(advance_state.clone())
         .add(advance_transition.clone())
-        .add(stop_state)
+        .add(abnormal_exit)
         .export_structure()
     )
 
@@ -563,7 +553,7 @@ def make_edge_handler(
         composer.init_container()
         .add(drift_right_back_state.clone())
         .add(drift_transition.clone())
-        .add(stop_state)
+        .add(abnormal_exit)
         .export_structure()
     )
 
@@ -578,7 +568,7 @@ def make_edge_handler(
         composer.init_container()
         .add(drift_left_back_state.clone())
         .add(drift_transition.clone())
-        .add(stop_state)
+        .add(abnormal_exit)
         .export_structure()
     )
 
@@ -597,7 +587,7 @@ def make_edge_handler(
         .add(half_turn_transition.clone())
         .add(advance_state.clone())
         .add(advance_transition.clone())
-        .add(stop_state)
+        .add(abnormal_exit)
         .export_structure()
     )
 
@@ -614,7 +604,7 @@ def make_edge_handler(
         .add(half_turn_transition.clone())
         .add(advance_state.clone())
         .add(advance_transition.clone())
-        .add(stop_state)
+        .add(abnormal_exit)
         .export_structure()
     )
 
@@ -631,7 +621,7 @@ def make_edge_handler(
         .add(half_turn_transition.clone())
         .add(fallback_state.clone())
         .add(fallback_transition.clone())
-        .add(stop_state)
+        .add(abnormal_exit)
         .export_structure()
     )
 
@@ -648,7 +638,7 @@ def make_edge_handler(
         .add(half_turn_transition.clone())
         .add(fallback_state.clone())
         .add(fallback_transition.clone())
-        .add(stop_state)
+        .add(abnormal_exit)
         .export_structure()
     )
 
@@ -660,7 +650,7 @@ def make_edge_handler(
 
     # <editor-fold desc="4-Activation Cases">
     # just stop immediately, since such case are extremely rare in the normal race
-    [head_state, *_], transition = composer.init_container().add(stop_state).export_structure()
+    [head_state, *_], transition = composer.init_container().add(abnormal_exit).export_structure()
 
     transitions_pool.extend(transition)
 
@@ -671,7 +661,7 @@ def make_edge_handler(
     # <editor-fold desc="Assembly">
     _, head_trans = (
         composer.init_container()
-        .add(continues_state)
+        .add(start_state)
         .add(MovingTransition(run_config.perf.min_sync_interval, breaker=edge_full_breaker, to_states=case_dict))
         .export_structure()
     )
@@ -679,8 +669,7 @@ def make_edge_handler(
     transitions_pool.extend(head_trans)
 
     botix.export_structure("strac.puml", transitions_pool)
-    start_state = continues_state
-    abnormal_exit = stop_state
+
     # </editor-fold>
 
     check_all_case_defined(branch_dict=case_dict, case_list=EdgeCodeSign)
@@ -688,7 +677,12 @@ def make_edge_handler(
 
 
 def make_surrounding_handler(
-    app_config: APPConfig, run_config: RunConfig, tag_group: Optional[TagGroup] = None
+    app_config: APPConfig,
+    run_config: RunConfig,
+    tag_group: Optional[TagGroup] = None,
+    start_state: Optional[MovingState] = None,
+    normal_exit: Optional[MovingState] = None,
+    abnormal_exit: Optional[MovingState] = MovingState(0),
 ) -> Tuple[MovingState, MovingState, MovingState, List[MovingTransition]]:
     """
     构造一个处理周围环境信息的策略处理器。
@@ -697,6 +691,9 @@ def make_surrounding_handler(
         app_config: APPConfig, 应用配置对象，包含传感器和行为配置。
         run_config: RunConfig, 运行时配置对象，包含执行环境和策略细节。
         tag_group: TagGroup, 标签组对象，用于识别不同物体标签，默认为None。
+        start_state: MovingState, 开始状态，默认为None。
+        normal_exit: MovingState, 正常退出状态，默认为None。
+        abnormal_exit: MovingState, 异常退出状态，默认为None。
 
     Returns:
         Tuple[MovingState, MovingState, MovingState, List[MovingTransition]]:
@@ -760,10 +757,11 @@ def make_surrounding_handler(
     # </editor-fold>
 
     # <editor-fold desc="Templates">
-    stop_state = MovingState(0)
-    continues_state = MovingState(
+    start_state = start_state or MovingState(
         speed_expressions=ContextVar.prev_salvo_speed.name, used_context_variables=[ContextVar.prev_salvo_speed.name]
     )
+    normal_exit = normal_exit or start_state.clone()
+
     atk_enemy_car_state = MovingState.straight(run_config.surrounding.atk_speed_enemy_car)
     atk_enemy_box_state = MovingState.straight(run_config.surrounding.atk_speed_enemy_box)
     atk_neutral_box_state = MovingState.straight(run_config.surrounding.atk_speed_neutral_box)
@@ -805,7 +803,7 @@ def make_surrounding_handler(
     # <editor-fold desc="Init Container">
     transitions_pool: List[MovingTransition] = []
 
-    case_dict: Dict[int, MovingState] = {SurroundingCodeSign.NOTHING.value: (normal_exit := continues_state.clone())}
+    case_dict: Dict[int, MovingState] = {SurroundingCodeSign.NOTHING.value: normal_exit}
     # </editor-fold>
 
     # <editor-fold desc="Front enemy car">
@@ -820,7 +818,7 @@ def make_surrounding_handler(
         .add(edge_fallback_transition.clone())
         .add(rand_turn_state.clone())
         .add(full_turn_transition.clone())
-        .add(stop_state)
+        .add(abnormal_exit)
         .export_structure()
     )
 
@@ -849,7 +847,7 @@ def make_surrounding_handler(
         .add(edge_fallback_transition.clone())
         .add(rand_turn_state.clone())
         .add(full_turn_transition.clone())
-        .add(stop_state)
+        .add(abnormal_exit)
         .export_structure()
     )
 
@@ -874,7 +872,7 @@ def make_surrounding_handler(
         .add(edge_fallback_transition.clone())
         .add(rand_turn_state.clone())
         .add(full_turn_transition.clone())
-        .add(stop_state)
+        .add(abnormal_exit)
         .export_structure()
     )
 
@@ -895,7 +893,7 @@ def make_surrounding_handler(
         .add(edge_fallback_transition.clone())
         .add(rand_turn_state.clone())
         .add(full_turn_transition.clone())
-        .add(stop_state)
+        .add(abnormal_exit)
         .export_structure()
     )
 
@@ -916,7 +914,7 @@ def make_surrounding_handler(
         .add(edge_fallback_transition.clone())
         .add(rand_turn_state.clone())
         .add(full_turn_transition.clone())
-        .add(stop_state)
+        .add(abnormal_exit)
         .export_structure()
     )
 
@@ -938,7 +936,7 @@ def make_surrounding_handler(
         .add(edge_fallback_transition.clone())
         .add(rand_turn_state.clone())
         .add(full_turn_transition.clone())
-        .add(stop_state)
+        .add(abnormal_exit)
         .export_structure()
     )
 
@@ -959,7 +957,7 @@ def make_surrounding_handler(
         .add(edge_fallback_transition.clone())
         .add(rand_turn_state.clone())
         .add(full_turn_transition.clone())
-        .add(stop_state)
+        .add(abnormal_exit)
         .export_structure()
     )
 
@@ -982,7 +980,7 @@ def make_surrounding_handler(
         .add(edge_fallback_transition.clone())
         .add(rand_turn_state.clone())
         .add(full_turn_transition.clone())
-        .add(stop_state)
+        .add(abnormal_exit)
         .export_structure()
     )
 
@@ -998,7 +996,7 @@ def make_surrounding_handler(
         .add(edge_fallback_transition.clone())
         .add(rand_turn_state.clone())
         .add(full_turn_transition.clone())
-        .add(stop_state)
+        .add(abnormal_exit)
         .export_structure()
     )
     transitions_pool.extend(transitions)
@@ -1011,7 +1009,7 @@ def make_surrounding_handler(
         .add(allay_fallback_transition.clone())
         .add(rand_turn_state.clone())
         .add(full_turn_transition.clone())
-        .add(stop_state)
+        .add(abnormal_exit)
         .export_structure()
     )
     transitions_pool.extend(transitions)
@@ -1022,7 +1020,7 @@ def make_surrounding_handler(
     # <editor-fold desc="Assembly">
     _, head_trans = (
         composer.init_container()
-        .add(continues_state)
+        .add(start_state)
         .add(MovingTransition(run_config.perf.min_sync_interval, breaker=surr_full_breaker, to_states=case_dict))
         .export_structure()
     )
@@ -1030,8 +1028,6 @@ def make_surrounding_handler(
 
     # <editor-fold desc="Make Return">
     transitions_pool.extend(head_trans)
-    start_state = continues_state
-    abnormal_exit = stop_state
 
     check_all_case_defined(case_dict, SurroundingCodeSign)
     return start_state, normal_exit, abnormal_exit, transitions_pool
@@ -1042,7 +1038,12 @@ def make_scan_handler() -> Callable:
     raise NotImplementedError
 
 
-def make_fence_handler(app_config: APPConfig, run_config: RunConfig) -> Callable:
+def make_fence_handler(
+    app_config: APPConfig,
+    run_config: RunConfig,
+    start_state: Optional[MovingState] = None,
+    end_state: Optional[MovingState] = MovingState(0),
+) -> Tuple[List[MovingState], List[MovingTransition]]:
 
     fence_breaker = Breakers.make_std_fence_breaker(app_config, run_config)
 
@@ -1052,6 +1053,10 @@ def make_fence_handler(app_config: APPConfig, run_config: RunConfig) -> Callable
 
     back_stage_pack = make_back_to_stage_handler(
         run_config,
+    )
+
+    start_state = start_state or MovingState(
+        speed_expressions=ContextVar.prev_salvo_speed.name, used_context_variables=[ContextVar.prev_salvo_speed.name]
     )
 
 
@@ -1088,9 +1093,19 @@ def make_back_to_stage_handler(
 
 
 def make_reboot_handler(
-    app_config: APPConfig, run_config: RunConfig
-) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
+    app_config: APPConfig, run_config: RunConfig, end_state: Optional[MovingState] = MovingState(0)
+) -> Tuple[List[MovingState], List[MovingTransition]]:
+    """
+    Constructs a state machine handler for reboot sequences.
 
+    Parameters:
+        app_config: APPConfig, configuration object for application specifics including sensor details.
+        run_config: RunConfig, runtime configuration object with parameters for bootup and movement actions.
+        end_state: Optional[MovingState], the final state of the state machine, defaults to MovingState(0).
+
+    Returns:
+        Tuple[List[MovingState], List[MovingTransition]], a tuple containing lists of states and transitions.
+    """
     activation_breaker = menta.construct_inlined_function(
         usages=[
             SamplerUsage(
@@ -1106,13 +1121,14 @@ def make_reboot_handler(
 
     holding_transition = MovingTransition(run_config.boot.max_holding_duration, breaker=activation_breaker)
     # waiting for a booting signal, and dash on to the stage once received
+    stop_state = MovingState(0)
     states, transitions = (
         composer.init_container()
-        .add(MovingState(0))
+        .add(stop_state.clone())
         .add(holding_transition)
         .add(MovingState.straight(-run_config.boot.dash_speed))
         .add(MovingTransition(run_config.boot.dash_duration))
-        .add(MovingState(0))
+        .add(stop_state.clone())
         .add(MovingTransition(run_config.boot.time_to_stabilize))
         .add(
             MovingState.rand_dir_turn(
@@ -1120,8 +1136,8 @@ def make_reboot_handler(
             )
         )
         .add(MovingTransition(run_config.boot.full_turn_duration))
-        .add(MovingState(0))
+        .add(end_state)
         .export_structure()
     )
 
-    return states[0], states[-1], transitions
+    return states, transitions
