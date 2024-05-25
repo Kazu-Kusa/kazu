@@ -1211,6 +1211,53 @@ def make_scan_handler(
     return states, transitions
 
 
+def make_rand_turn_handler(
+    app_config: APPConfig, run_config: RunConfig, end_state: MovingState = MovingState(0)
+) -> Tuple[List[MovingState], List[MovingTransition]]:
+
+    conf = run_config.search.rand_turn
+
+    rand_lr_turn_state = MovingState.rand_dir_turn(controller, conf.turn_speed, turn_left_prob=conf.turn_left_prob)
+
+    half_turn_transition = MovingTransition(conf.half_turn_duration)
+
+    states, transitions = composer.add(rand_lr_turn_state).add(half_turn_transition).add(end_state).export_structure()
+    return states, transitions
+
+
+def make_gradient_move(
+    app_config: APPConfig, run_config: RunConfig, end_state: MovingState = MovingState(0)
+) -> MovingState:
+    conf = run_config.search.gradient_move
+
+    speed_range = conf.max_speed - conf.min_speed
+
+    speed_calc_func = menta.construct_inlined_function(
+        usages=[
+            SamplerUsage(
+                used_sampler_index=SamplerIndexes.adc_all, required_data_indexes=[app_config.sensor.gray_adc_index]
+            )
+        ],
+        judging_source=f"ret={conf.min_speed}+int({speed_range}*(s0-{conf.min_speed})/({conf.max_speed}-{conf.min_speed}))",
+        return_type_varname="int",
+        extra_context={"int": int},
+        return_raw=False,
+    )
+    speed_updater = controller.register_context_updater(speed_calc_func, [], [ContextVar.gradient_speed.name])
+    return MovingState(
+        speed_expressions=ContextVar.gradient_speed.name,
+        used_context_variables=[ContextVar.gradient_speed.name],
+        before_entering=[speed_updater],
+    )
+
+
+def make_search_handler(
+    app_config: APPConfig,
+    run_config: RunConfig,
+) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
+    pass
+
+
 def make_fence_handler(
     app_config: APPConfig,
     run_config: RunConfig,

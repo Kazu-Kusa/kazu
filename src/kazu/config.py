@@ -266,9 +266,11 @@ class ContextVar(Enum):
 
     recorded_pack: tuple = auto()
 
+    gradient_speed: int = auto()
+
     @property
     def default(self) -> Any:
-        defaults = {"prev_salvo_speed": 0, "is_aligned": False, "recorded_pack": ()}
+        defaults = {"prev_salvo_speed": 0, "is_aligned": False, "recorded_pack": (), "gradient_speed": 0}
         assert self.name in defaults, "should always find a default value!"
         return defaults.get(self.name)
 
