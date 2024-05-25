@@ -4,12 +4,21 @@ from functools import lru_cache
 from typing import Callable, List, Tuple, Dict, Optional, Iterable, TypeVar, Type
 
 from bdmc import CloseLoopController
-from mentabotix import MovingChainComposer, Botix, Menta, MovingState, MovingTransition, SamplerUsage
+from mentabotix import MovingChainComposer, CaseRegistry, Botix, Menta, MovingState, MovingTransition, SamplerUsage
 from pyuptech import OnBoardSensors, Screen
 from upic import TagDetector
 
 from .config import APPConfig, RunConfig, ContextVar, TagGroup
-from .constant import EdgeWeights, EdgeCodeSign, SurroundingWeights, Attitude, SurroundingCodeSign
+from .constant import (
+    EdgeWeights,
+    EdgeCodeSign,
+    SurroundingWeights,
+    Attitude,
+    SurroundingCodeSign,
+    FenceCodeSign,
+    ScanWeights,
+    ScanCodesign,
+)
 
 sensors = OnBoardSensors()
 menta = Menta(
@@ -28,9 +37,10 @@ controller = CloseLoopController()
 botix = Botix(controller=controller)
 
 composer = MovingChainComposer()
-
 tag_detector = TagDetector()
 screen = Screen()
+
+T = TypeVar("T")
 
 
 @dataclass
@@ -42,9 +52,6 @@ class SamplerIndexes:
     atti_all: int = 4
     gyro_all: int = 5
     acc_all: int = 6
-
-
-T = TypeVar("T")
 
 
 def check_all_case_defined(branch_dict: Dict[T, MovingState], case_list: Iterable[T] | Type[Enum]) -> None:
@@ -201,7 +208,8 @@ class Breakers:
                 ),
             ],
             judging_source=f"ret=not s0 or not s1  "  # use gray scaler, indicating the edge is encountered
-            f"or not any( (s2 , s3 , s4>{run_config.surrounding.atk_break_front_lower_threshold}))",  # indicating front is empty
+            f"or not any( (s2 , s3 , s4>{run_config.surrounding.atk_break_front_lower_threshold}))",
+            # indicating front is empty
             return_type_varname="bool",
             extra_context={"bool": bool},
             return_raw=False,
@@ -231,7 +239,6 @@ class Breakers:
     @staticmethod
     @lru_cache(maxsize=None)
     def make_stage_align_breaker_mpu(app_config: APPConfig, run_config: RunConfig):
-
         invalid_lower_bound, invalid_upper_bound = (
             run_config.fence.max_yaw_tolerance,
             90 - run_config.fence.max_yaw_tolerance,
@@ -335,6 +342,49 @@ class Breakers:
             judging_source=["diff=abs(s0)//90", f"ret={invalid_lower_bound}>diff or diff>{invalid_upper_bound}"],
             return_type_varname="bool",
             extra_context={"bool": bool},
+            return_raw=False,
+        )
+
+    @staticmethod
+    @lru_cache(maxsize=None)
+    def make_std_scan_breaker(app_config: APPConfig, run_config: RunConfig):
+
+        adc_pack_getter: Callable[[], Tuple] = controller.register_context_getter(ContextVar.recorded_pack.name)
+        conf = run_config.search.scan_move
+        return menta.construct_inlined_function(
+            usages=[
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.adc_all,
+                    required_data_indexes=[
+                        app_config.sensor.front_adc_index,  # s0
+                        app_config.sensor.rb_adc_index,  # s1
+                        app_config.sensor.left_adc_index,  # s2
+                        app_config.sensor.right_adc_index,  # s3
+                    ],
+                ),
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.io_all,
+                    required_data_indexes=[
+                        app_config.sensor.fl_io_index,  # s4
+                        app_config.sensor.fr_io_index,  # s5
+                        app_config.sensor.rl_io_index,  # s6
+                        app_config.sensor.rr_io_index,  # s7
+                    ],
+                ),
+            ],
+            judging_source=[  # activate once the deviation surpluses the tolerance
+                "pack=adc_pack_getter()",
+                f"front=pack[{app_config.sensor.front_adc_index}]",
+                f"rear=pack[{app_config.sensor.rb_adc_index}]",
+                f"left=pack[{app_config.sensor.left_adc_index}]",
+                f"right=pack[{app_config.sensor.right_adc_index}]",
+                f"ret={ScanWeights.Front}*(s0-front>{conf.front_max_tolerance} or s4 == {conf.io_activated_value} or s5 == {conf.io_activated_value})"
+                f"+{ScanWeights.Rear}*(s1-rear>{conf.rear_max_tolerance} or s6 == {conf.io_activated_value} or s7 == {conf.io_activated_value})"
+                f"+{ScanWeights.Left}*(s2-left>{conf.left_max_tolerance})"
+                f"+{ScanWeights.Rear}*(s3-right>{conf.right_max_tolerance})",
+            ],
+            return_type_varname="int",
+            extra_context={"int": int, "adc_pack_getter": adc_pack_getter},
             return_raw=False,
         )
 
@@ -1034,8 +1084,131 @@ def make_surrounding_handler(
     # </editor-fold>
 
 
-def make_scan_handler() -> Callable:
-    raise NotImplementedError
+def make_scan_handler(
+    app_config: APPConfig,
+    run_config: RunConfig,
+    end_state: Optional[MovingState] = MovingState(0),
+) -> Tuple[List[MovingState], List[MovingTransition]]:
+    """
+    Generates a scan handler for the given application configuration, run configuration, and optional end state.
+
+    Args:
+        app_config (APPConfig): The application configuration.
+        run_config (RunConfig): The run configuration.
+        end_state (Optional[MovingState], optional): The optional end state. Defaults to MovingState(0).
+
+    Returns:
+        Tuple[List[MovingState], List[MovingTransition]]: A tuple containing the list of states and the list of transitions.
+    """
+    scan_breaker = Breakers.make_std_scan_breaker(app_config, run_config)
+    rear_edge_breaker = Breakers.make_std_edge_rear_breaker(app_config, run_config)
+    turn_to_front_breaker = Breakers.make_std_turn_to_front_breaker(app_config, run_config)
+    conf = run_config.search.scan_move
+    case_reg = CaseRegistry({}, to_cover=ScanCodesign)
+
+    scan_state = MovingState.rand_dir_turn(controller, conf.scan_speed, conf.scan_turn_left_prob)
+
+    rand_turn_state = MovingState.rand_dir_turn(controller, conf.turn_speed, conf.turn_left_prob)
+
+    turn_left_state = MovingState.turn("l", conf.turn_speed)
+    turn_right_state = MovingState.turn("r", conf.turn_speed)
+
+    full_turn_transition = MovingTransition(run_config.surrounding.full_turn_duration, breaker=turn_to_front_breaker)
+    half_turn_transition = MovingTransition(run_config.surrounding.half_turn_duration, breaker=turn_to_front_breaker)
+
+    fall_back_state = MovingState.straight(-conf.fall_back_speed)
+    fall_back_transition = MovingTransition(conf.fall_back_duration, breaker=rear_edge_breaker)
+
+    transitions_pool: List[MovingTransition] = []
+    # ---------------------------------------------------------------------
+    [head_state, *_], transitions = composer.init_container().add(end_state).export_structure()
+
+    transitions_pool.extend(transitions)
+    case_reg.register(ScanCodesign.O_O_O_O, head_state)
+    # ---------------------------------------------------------------------
+    [head_state, *_], transitions = (
+        composer.init_container().add(fall_back_state).add(fall_back_transition).add(end_state).export_structure()
+    )
+
+    transitions_pool.extend(transitions)
+    case_reg.register(ScanCodesign.X_O_O_O, head_state)
+    # ---------------------------------------------------------------------
+    [head_state, *_], transitions = (
+        composer.init_container().add(rand_turn_state).add(full_turn_transition).add(end_state).export_structure()
+    )
+
+    transitions_pool.extend(transitions)
+    case_reg.batch_register(
+        [
+            ScanCodesign.X_X_X_X,
+            ScanCodesign.X_X_X_O,
+            ScanCodesign.X_X_O_X,
+            ScanCodesign.O_X_X_X,
+            ScanCodesign.X_X_O_O,
+            ScanCodesign.O_X_X_O,
+            ScanCodesign.O_X_O_X,
+            ScanCodesign.O_X_O_O,
+        ],
+        head_state,
+    )
+    # ---------------------------------------------------------------------
+    [head_state, *_], transitions = (
+        composer.init_container().add(turn_left_state).add(half_turn_transition).add(end_state).export_structure()
+    )
+
+    transitions_pool.extend(transitions)
+    case_reg.batch_register(
+        [
+            ScanCodesign.O_O_X_O,
+            ScanCodesign.X_O_X_O,
+        ],
+        head_state,
+    )
+
+    # ---------------------------------------------------------------------
+    [head_state, *_], transitions = (
+        composer.init_container().add(turn_right_state).add(half_turn_transition).add(end_state).export_structure()
+    )
+
+    transitions_pool.extend(transitions)
+    case_reg.batch_register(
+        [
+            ScanCodesign.O_O_O_X,
+            ScanCodesign.X_O_O_X,
+        ],
+        head_state,
+    )
+
+    # ---------------------------------------------------------------------
+    [head_state, *_], transitions = (
+        composer.init_container().add(fall_back_state).add(fall_back_transition).add(end_state).export_structure()
+    )
+
+    transitions_pool.extend(transitions)
+    case_reg.register(ScanCodesign.X_O_X_X, head_state)
+    # ---------------------------------------------------------------------
+    [head_state, *_], transitions = (
+        composer.init_container()
+        .add(fall_back_state)
+        .add(fall_back_transition)
+        .add(rand_turn_state)
+        .add(half_turn_transition)
+        .add(end_state)
+        .export_structure()
+    )
+
+    transitions_pool.extend(transitions)
+    case_reg.register(ScanCodesign.O_O_X_X, head_state)
+    # ---------------------------------------------------------------------
+
+    states, transitions = (
+        composer.init_container()
+        .add(scan_state)
+        .add(MovingTransition(conf.scan_duration, breaker=scan_breaker, to_states=case_reg.export()))
+        .export_structure()
+    )
+
+    return states, transitions
 
 
 def make_fence_handler(
@@ -1043,27 +1216,112 @@ def make_fence_handler(
     run_config: RunConfig,
     start_state: Optional[MovingState] = None,
     end_state: Optional[MovingState] = MovingState(0),
-) -> Tuple[List[MovingState], List[MovingTransition]]:
+) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
+    is_align_setter_true = controller.register_context_updater(lambda: True, [], [ContextVar.is_aligned.name])
+    is_align_setter_false = controller.register_context_updater(lambda: False, [], [ContextVar.is_aligned.name])
+    is_align_getter = controller.register_context_getter(ContextVar.is_aligned.name)
 
     fence_breaker = Breakers.make_std_fence_breaker(app_config, run_config)
 
-    align_direction_breaker = Breakers.make_align_direction_breaker(app_config, run_config)
-
     align_stage_breaker = Breakers.make_stage_align_breaker_mpu(app_config, run_config)
 
-    back_stage_pack = make_back_to_stage_handler(
-        run_config,
-    )
+    back_stage_pack = make_back_to_stage_handler(run_config, end_state)
 
+    align_direction_pack = make_align_direction_handler(app_config, run_config, end_state)
+
+    conf = run_config.fence
+
+    stop_state = MovingState(0)
     start_state = start_state or MovingState(
         speed_expressions=ContextVar.prev_salvo_speed.name, used_context_variables=[ContextVar.prev_salvo_speed.name]
     )
+
+    rear_exit_corner_state = MovingState.straight(-conf.exit_corner_speed)
+    front_exit_corner_state = MovingState.straight(conf.exit_corner_speed)
+
+    exit_duration = MovingTransition(conf.max_exit_corner_duration)
+    match conf.stage_align_direction:
+        case "rand":
+            align_state = MovingState.rand_dir_turn(controller, conf.stage_align_speed)
+        case "l":
+            align_state = MovingState.turn("l", conf.stage_align_speed)
+        case "r":
+            align_state = MovingState.turn("r", conf.stage_align_speed)
+        case _:
+            raise ValueError(f"Invalid align direction: {conf.stage_align_direction}")
+
+    align_stage_transition = MovingTransition(conf.max_stage_align_duration, breaker=align_stage_breaker)
+
+    transitions_pool: List[MovingTransition] = []
+
+    case_reg = CaseRegistry({}, to_cover=FenceCodeSign)
+
+    # ---------------------------------------------------------------------
+    # TODO impl
+    [head_state, *_], transitions = composer.init_container().concat(*back_stage_pack).export_structure()
+    transitions_pool.extend(transitions)
+    case_reg.register(FenceCodeSign.O_X_O_O, head_state)
+
+    # ---------------------------------------------------------------------
+    [head_state, *_], transitions = (
+        composer.init_container()
+        .add(align_state.clone())
+        .add(align_stage_transition.clone())
+        .concat(*back_stage_pack)
+        .export_structure()
+    )
+    transitions_pool.extend(transitions)
+    case_reg.batch_register([FenceCodeSign.O_X_O_O, FenceCodeSign.O_O_X_O, FenceCodeSign.O_O_O_X], head_state)
+    # ---------------------------------------------------------------------
+
+    # ---------------------------------------------------------------------
+
+    # <editor-fold desc="Assembly">
+    _, head_trans = (
+        composer.init_container()
+        .add(start_state)
+        .add(MovingTransition(run_config.perf.min_sync_interval, breaker=fence_breaker, to_states=case_reg.export()))
+        .export_structure()
+    )
+    # </editor-fold>
+
+    # <editor-fold desc="Make Return">
+    transitions_pool.extend(head_trans)
+
+    return start_state, end_state, transitions_pool
+    # </editor-fold>
+
+
+def make_align_direction_handler(
+    app_config: APPConfig,
+    run_config: RunConfig,
+    end_state: Optional[MovingState] = MovingState(0),
+) -> Tuple[List[MovingState], List[MovingTransition]]:
+    # TODO impl
+    conf = run_config.fence
+
+    match conf.direction_align_direction:
+        case "rand":
+            align_state = MovingState.rand_dir_turn(controller, conf.direction_align_speed)
+        case "l":
+            align_state = MovingState.turn("l", conf.direction_align_speed)
+        case "r":
+            align_state = MovingState.turn("r", conf.direction_align_speed)
+        case _:
+            raise ValueError(f"Invalid align direction: {conf.direction_align_direction}")
+    align_direction_breaker = Breakers.make_align_direction_breaker(app_config, run_config)
+    align_direction_transition = MovingTransition(conf.max_direction_align_duration, breaker=align_direction_breaker)
+
+    states, transitions = (
+        composer.init_container().add(align_state).add(align_direction_transition).add(end_state).export_structure()
+    )
+
+    return states, transitions
 
 
 def make_back_to_stage_handler(
     run_config: RunConfig, end_state: Optional[MovingState] = MovingState(0)
 ) -> Tuple[List[MovingState], List[MovingTransition]]:
-
     stop_state = MovingState(0)
     small_advance = MovingState(run_config.backstage.small_advance_speed)
     small_advance_transition = MovingTransition(run_config.backstage.small_advance_duration)

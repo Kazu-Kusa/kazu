@@ -94,9 +94,58 @@ class SurroundingConfig(BaseModel):
     half_turn_duration: float = 0.5
 
 
-class NormalConfig(BaseModel):
+class GradientConfig(BaseModel):
 
-    use_gradient_speed: bool = True
+    max_speed: int = 5000
+    min_speed: int = 2500
+    lower_bound: int = 2200
+    upper_bound: int = 3200
+
+
+class ScanConfig(BaseModel):
+
+    front_max_tolerance: int = 300
+    rear_max_tolerance: int = 300
+    left_max_tolerance: int = 300
+    right_max_tolerance: int = 300
+
+    io_activated_value: int = 0
+
+    scan_speed: int = 1200
+    scan_duration: float = 5.0
+    scan_turn_left_prob: float = 0.5
+
+    fall_back_speed: int = 4000
+    fall_back_duration: float = 0.5
+
+    turn_speed: int = 5000
+    turn_left_prob: float = 0.5
+
+    full_turn_duration: float = 0.9
+    half_turn_duration: float = 0.5
+
+
+class RandTurn(BaseModel):
+
+    turn_speed: int = 5000
+    turn_left_prob: float = 0.5
+    full_turn_duration: float = 0.9
+    half_turn_duration: float = 0.5
+
+
+class SearchConfig(BaseModel):
+
+    use_gradient_move: bool = True
+    gradient_move_weight: int = 1
+    gradient_move: GradientConfig = GradientConfig()
+
+    use_scan_move: bool = True
+    scan_move_weight: int = 1
+    scan_move: ScanConfig = ScanConfig()
+
+    use_rand_turn: bool = True
+    rand_turn_weight: int = 1
+    rand_turn: RandTurn = RandTurn()
 
 
 class fenceConfig(BaseModel):
@@ -107,6 +156,17 @@ class fenceConfig(BaseModel):
 
     io_activated_value: int = 0
     max_yaw_tolerance: float = 20.0
+
+    stage_align_speed: int = 1500
+    max_stage_align_duration: float = 5.0
+    stage_align_direction: Literal["l", "r", "rand"] = "rand"
+
+    direction_align_speed: int = 1500
+    max_direction_align_duration: float = 5.0
+    direction_align_direction: Literal["l", "r", "rand"] = "rand"
+
+    exit_corner_speed: int = 2500
+    max_exit_corner_duration: float = 3.0
 
 
 class StrategyConfig(BaseModel):
@@ -156,11 +216,12 @@ class RunConfig(CounterHashable):
 
     edge: EdgeConfig = EdgeConfig()
     surrounding: SurroundingConfig = SurroundingConfig()
-    normal: NormalConfig = NormalConfig()
+    search: SearchConfig = SearchConfig()
     fence: fenceConfig = fenceConfig()
 
     boot: BootConfig = BootConfig()
     backstage: BackStageConfig = BackStageConfig()
+
     strategy: StrategyConfig = StrategyConfig()
     perf: PerformanceConfig = PerformanceConfig()
     # TODO fill the configs that still remain
@@ -199,19 +260,15 @@ class RunConfig(CounterHashable):
 
 class ContextVar(Enum):
 
-    on_stage: bool = auto()
-    reset: bool = auto()
     prev_salvo_speed: int = auto()
-    had_encountered_edge: bool = auto()
+
+    is_aligned: bool = auto()
+
+    recorded_pack: tuple = auto()
 
     @property
     def default(self) -> Any:
-        defaults = {
-            "on_stage": False,
-            "reset": False,
-            "prev_salvo_speed": 0,
-            "had_encountered_edge": False,
-        }
+        defaults = {"prev_salvo_speed": 0, "is_aligned": False, "recorded_pack": ()}
         assert self.name in defaults, "should always find a default value!"
         return defaults.get(self.name)
 

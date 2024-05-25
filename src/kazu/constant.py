@@ -77,6 +77,15 @@ class FenceWeights:
 
 
 @dataclass(frozen=True)
+class ScanWeights:
+    Front: int = 1
+    Rear: int = 2
+
+    Left: int = 4
+    Right: int = 8
+
+
+@dataclass(frozen=True)
 class SurroundingWeights:
     # region SURROUNDING KEYS
     LEFT_OBJECT: int = 1
@@ -278,3 +287,27 @@ class FenceCodeSign(Enum):
     O_X_X_X = FenceWeights.Rear + FenceWeights.Left + FenceWeights.Right
 
     X_X_X_X = FenceWeights.Front + FenceWeights.Rear + FenceWeights.Left + FenceWeights.Right
+
+
+class ScanCodesign(Enum):
+    O_O_O_O = 0
+
+    X_O_O_O = ScanWeights.Front
+    O_X_O_O = ScanWeights.Rear
+    O_O_X_O = ScanWeights.Left
+    O_O_O_X = ScanWeights.Right
+
+    # A bunches of combinations
+    X_X_O_O = ScanWeights.Front + ScanWeights.Rear
+    X_O_X_O = ScanWeights.Front + ScanWeights.Left
+    X_O_O_X = ScanWeights.Front + ScanWeights.Right
+    O_X_X_O = ScanWeights.Rear + ScanWeights.Left
+    O_X_O_X = ScanWeights.Rear + ScanWeights.Right
+    O_O_X_X = ScanWeights.Left + ScanWeights.Right
+
+    X_X_X_O = ScanWeights.Front + ScanWeights.Rear + ScanWeights.Left
+    X_X_O_X = ScanWeights.Front + ScanWeights.Rear + ScanWeights.Right
+    X_O_X_X = ScanWeights.Front + ScanWeights.Left + ScanWeights.Right
+    O_X_X_X = ScanWeights.Rear + ScanWeights.Left + ScanWeights.Right
+
+    X_X_X_X = ScanWeights.Front + ScanWeights.Rear + ScanWeights.Left + ScanWeights.Right
