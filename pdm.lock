@@ -5,7 +5,7 @@
 groups = ["default"]
 strategy = ["cross_platform", "inherit_metadata"]
 lock_version = "4.4.1"
-content_hash = "sha256:e386f44e48b43775b37b0a16ca9a66ee774d61b71f6107d537213a88fad49942"
+content_hash = "sha256:ad33ec848e74edf77597723fb5c187e870a971eedcf424712d4d5691213c62a2"
 
 [[package]]
 name = "annotated-types"
@@ -88,7 +88,7 @@ files = [
 
 [[package]]
 name = "mentabotix"
-version = "0.1.5.2"
+version = "0.1.5.4"
 requires_python = ">=3.11"
 summary = "A Bot control lib"
 groups = ["default"]
@@ -99,8 +99,8 @@ dependencies = [
     "terminaltables>=3.1.10",
 ]
 files = [
-    {file = "mentabotix-0.1.5.2-py3-none-any.whl", hash = "sha256:d75f0eeaccdfb6ce316d612842ce3252667bd6428b2d888ecc4c069969de6514"},
-    {file = "mentabotix-0.1.5.2.tar.gz", hash = "sha256:865f0f4166ba7e3a6ec8ad95f535159155f0d641a90bdf956510dba2520e8798"},
+    {file = "mentabotix-0.1.5.4-py3-none-any.whl", hash = "sha256:f18a14fd09775cd664022b4f233deaa3a3e37279bfb0c76f6770d0f7c58a6f79"},
+    {file = "mentabotix-0.1.5.4.tar.gz", hash = "sha256:f15e1f3f6f6393373ba31e0906684d060d11cd5268753f9855f5b1b85b390806"},
 ]
 
 [[package]]
