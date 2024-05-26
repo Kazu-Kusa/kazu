@@ -178,7 +178,7 @@ def run(ctx: click.Context, run_config: Path | None, mode: str, **_):
 
     app_config = internal_config.app_config
 
-    from .compile import controller
+    from .hardwares import controller
 
     controller.motor_infos = (
         MotorInfo(*app_config.motion.motor_fl),
@@ -191,7 +191,7 @@ def run(ctx: click.Context, run_config: Path | None, mode: str, **_):
     controller.start_msg_sending().send_cmd(CMD.RESET)
 
     if app_config.vision.use_camera:
-        from .compile import tag_detector
+        from .hardwares import tag_detector
         from .config import TagGroup
 
         secho(f"Open Camera-{app_config.vision.camera_device_id}", fg="yellow", bold=True)
@@ -256,7 +256,9 @@ def test(ctx: click.Context, device: str):
     table = [[f"{Fore.YELLOW}Device{Fore.RESET}", f"{Fore.GREEN}Success{Fore.RESET}"]]
     if "all" in device:
         from bdmc import CMD
-        from .compile import controller, sensors, tag_detector
+        from .hardwares import tag_detector
+        from .hardwares import controller
+        from .hardwares import sensors
 
         sensors.adc_io_open().MPU6500_Open()
         controller.serial_client.port = app_config.motion.port
@@ -275,36 +277,37 @@ def test(ctx: click.Context, device: str):
         return
 
     if "adc" in device:
-        from .compile import sensors
+        from .hardwares import sensors
 
         sensors.adc_io_open()
         table.append(shader("ADC", check_adc(sensors)))
         sensors.adc_io_close()
     if "io" in device:
-        from .compile import sensors
+        from .hardwares import sensors
 
         sensors.adc_io_open()
         table.append(shader("IO", check_io(sensors)))
         sensors.adc_io_close()
     if "mpu" in device:
-        from .compile import sensors
+        from .hardwares import sensors
 
         sensors.MPU6500_Open()
         table.append(shader("MPU", check_mpu(sensors)))
 
     if "pow" in device:
-        from .compile import sensors
+        from .hardwares import sensors
 
         table.append(shader("POWER", check_power(sensors)))
 
     if "cam" in device:
-        from .compile import tag_detector
+        from .hardwares import tag_detector
 
         tag_detector.open_camera(app_config.vision.camera_device_id)
         table.append(shader("CAMERA", check_camera(tag_detector)))
 
     if "mot" in device:
-        from .compile import controller, sensors
+        from .hardwares import controller
+        from .hardwares import sensors
         from bdmc import CMD
 
         controller.serial_client.port = app_config.motion.port
@@ -334,7 +337,7 @@ def read_sensors(ctx: click.Context, interval: float, device: str):
         make_io_table,
         make_adc_table,
     )
-    from .compile import sensors
+    from .hardwares import sensors
 
     app_config: APPConfig = ctx.obj.app_config
     device = set(device) or ("all",)
@@ -389,7 +392,8 @@ def control_motor(ctx: click.Context, duration: float, speeds: list[int]):
 
         DURATION: (float)
     """
-    from .compile import composer, botix, controller
+    from .compile import composer, botix
+    from .hardwares import controller
     from colorama import Fore
 
     internal_conf: _InternalConfig = ctx.obj
