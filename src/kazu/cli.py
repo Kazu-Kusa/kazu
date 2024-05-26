@@ -256,24 +256,20 @@ def test(ctx: click.Context, device: str):
     table = [[f"{Fore.YELLOW}Device{Fore.RESET}", f"{Fore.GREEN}Success{Fore.RESET}"]]
     if "all" in device:
         from bdmc import CMD
-        from cv2 import VideoCapture
-        from .compile import controller, sensors
+        from .compile import controller, sensors, tag_detector
 
         sensors.adc_io_open().MPU6500_Open()
         controller.serial_client.port = app_config.motion.port
-
+        tag_detector.open_camera(app_config.vision.camera_device_id)
         controller.serial_client.open()
         controller.start_msg_sending().send_cmd(CMD.RESET)
         table.append(shader("IO", check_io(sensors)))
         table.append(shader("ADC", check_adc(sensors)))
         table.append(shader("MPU", check_mpu(sensors)))
-        table.append(shader("POWER", check_power(sensors)))
+        table.append(shader("CAMERA", check_camera(tag_detector)))
         table.append(shader("MOTOR", check_motor(controller)))
-        table.append(shader("CAMERA", check_camera(VideoCapture(app_config.vision.camera_device_id))))
-        secho(
-            SingleTable(table).table,
-            fg="green",
-        )
+        table.append(shader("POWER", check_power(sensors)))
+        secho(SingleTable(table).table)
         controller.stop_msg_sending()
         sensors.adc_io_close()
         return
@@ -302,9 +298,10 @@ def test(ctx: click.Context, device: str):
         table.append(shader("POWER", check_power(sensors)))
 
     if "cam" in device:
-        from cv2 import VideoCapture
+        from .compile import tag_detector
 
-        table.append(shader("CAMERA", check_camera(VideoCapture(app_config.vision.camera_device_id))))
+        tag_detector.open_camera(app_config.vision.camera_device_id)
+        table.append(shader("CAMERA", check_camera(tag_detector)))
 
     if "mot" in device:
         from .compile import controller, sensors

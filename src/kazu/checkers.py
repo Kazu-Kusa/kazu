@@ -1,6 +1,7 @@
 from bdmc import CloseLoopController
 from cv2 import VideoCapture
 from pyuptech import OnBoardSensors
+from upic import TagDetector
 
 from .logger import _logger
 
@@ -15,8 +16,9 @@ def check_motor(controller: CloseLoopController) -> bool:
         return False
 
 
-def check_camera(camera: VideoCapture) -> bool:
-    camera: VideoCapture
+def check_camera(tag_detector: TagDetector) -> bool:
+
+    camera: VideoCapture = tag_detector.camera_device
     _logger.info("Start checking camera device.")
     if camera.isOpened():
         _logger.info("Camera communication channel is ready.")
