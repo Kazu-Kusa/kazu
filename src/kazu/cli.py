@@ -432,3 +432,25 @@ def control_motor(ctx: click.Context, duration: float, speeds: list[int]):
     t.start()
     fi()
     controller.stop_msg_sending()
+
+
+@main.command("light")
+@click.help_option("-h", "--help")
+@click.argument("channel", type=click.IntRange(0, 255), nargs=3, required=True)
+def control_display(channel: Tuple[int, int, int]):
+    """
+    Control LED display.
+    """
+    from .hardwares import screen, sensors
+    from pyuptech import Color
+
+    sensors.adc_io_open()
+    c = Color.new_color(*channel)
+    (
+        screen.set_led_0(c)
+        .set_led_1(c)
+        .open(2)
+        .set_back_color(c)
+        .print(f"R:{channel[0]}\nG:{channel[1]}\nB:{channel[2]}")
+        .refresh()
+    )
