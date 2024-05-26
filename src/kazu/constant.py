@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from enum import Enum
+from enum import IntEnum, auto
 from typing import List, Tuple
 
 
@@ -103,7 +103,7 @@ class SurroundingWeights:
     # endregion
 
 
-class EdgeCodeSign(Enum):
+class EdgeCodeSign(IntEnum):
     """
     fl           fr
         O-----O
@@ -138,7 +138,7 @@ class EdgeCodeSign(Enum):
     X_X_X_X = EdgeWeights.FL + EdgeWeights.RL + EdgeWeights.RR + EdgeWeights.FR
 
 
-class SurroundingCodeSign(Enum):
+class SurroundingCodeSign(IntEnum):
     """
     fl           fr
         O-----O
@@ -169,8 +169,6 @@ class SurroundingCodeSign(Enum):
     NOTHING = SurroundingWeights.NOTHING
 
     # endregion
-    def __add__(self, other: "SurroundingCodeSign"):
-        return self.value + other.value
 
     # region ALLY BOX AND SURROUNDINGS
     FRONT_ALLY_BOX_LEFT_OBJECT = FRONT_ALLY_BOX + LEFT_OBJECT
@@ -245,14 +243,14 @@ class StageWeight:
     REBOOT: int = 2
 
 
-class StageCodeSign(Enum):
+class StageCodeSign(IntEnum):
     ON_STAGE = StageWeight.ON
     OFF_STAGE = StageWeight.OFF
     ON_STAGE_REBOOT = StageWeight.ON + StageWeight.REBOOT
     OFF_STAGE_REBOOT = StageWeight.OFF + StageWeight.REBOOT
 
 
-class FenceCodeSign(Enum):
+class FenceCodeSign(IntEnum):
     """
           front:0
           O-----O
@@ -289,7 +287,7 @@ class FenceCodeSign(Enum):
     X_X_X_X = FenceWeights.Front + FenceWeights.Rear + FenceWeights.Left + FenceWeights.Right
 
 
-class ScanCodesign(Enum):
+class ScanCodesign(IntEnum):
     O_O_O_O = 0
 
     X_O_O_O = ScanWeights.Front
@@ -311,3 +309,9 @@ class ScanCodesign(Enum):
     O_X_X_X = ScanWeights.Rear + ScanWeights.Left + ScanWeights.Right
 
     X_X_X_X = ScanWeights.Front + ScanWeights.Rear + ScanWeights.Left + ScanWeights.Right
+
+
+class SearchCodesign(IntEnum):
+    GRADIENT_MOVE: int = auto()
+    SCAN_MOVE: int = auto()
+    RAND_TURN: int = auto()
