@@ -1,16 +1,18 @@
 from enum import Enum
 from typing import Callable, List, Tuple, Dict, Optional, Iterable, TypeVar, Type
 
-from mentabotix import MovingChainComposer, CaseRegistry, Botix, MovingState, MovingTransition, SamplerUsage
+from mentabotix import (
+    MovingChainComposer,
+    CaseRegistry,
+    Botix,
+    MovingState,
+    MovingTransition,
+    SamplerUsage,
+    make_weighted_selector,
+)
 
 from .config import APPConfig, RunConfig, ContextVar, TagGroup
-from .constant import (
-    EdgeCodeSign,
-    SurroundingWeights,
-    SurroundingCodeSign,
-    FenceCodeSign,
-    ScanCodesign,
-)
+from .constant import EdgeCodeSign, SurroundingWeights, SurroundingCodeSign, FenceCodeSign, ScanCodesign, SearchCodesign
 from .hardwares import controller, tag_detector, menta, SamplerIndexes
 from .judgers import Breakers
 from .static import continues_state
@@ -755,7 +757,7 @@ def make_scan_handler(
     rear_edge_breaker = Breakers.make_std_edge_rear_breaker(app_config, run_config)
     turn_to_front_breaker = Breakers.make_std_turn_to_front_breaker(app_config, run_config)
     conf = run_config.search.scan_move
-    case_reg = CaseRegistry({}, to_cover=ScanCodesign)
+    case_reg = CaseRegistry(to_cover=ScanCodesign)
 
     scan_state = MovingState.rand_dir_turn(controller, conf.scan_speed, conf.scan_turn_left_prob)
 
@@ -906,10 +908,37 @@ def make_search_handler(
     app_config: APPConfig,
     run_config: RunConfig,
     start_state: Optional[MovingState] = None,
-    normal_exit: Optional[MovingState] = None,
-    abnormal_exit: Optional[MovingState] = MovingState(0),
-) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
-    pass
+) -> Tuple[List[MovingState], List[MovingTransition]]:
+    start_state = start_state or continues_state.clone()
+    scan_states, scan_transitions = make_scan_handler(app_config, run_config)
+    rand_turn_states, rand_turn_transitions = make_rand_turn_handler(app_config, run_config)
+    grad_move_state = make_gradient_move(app_config, run_config)
+
+    pool = []
+    w = []
+    if run_config.search.use_gradient_move:
+        pool.append(SearchCodesign.GRADIENT_MOVE)
+        w.append(run_config.search.gradient_move_weight)
+    if run_config.search.use_rand_turn:
+        pool.append(SearchCodesign.RAND_TURN)
+        w.append(run_config.search.rand_turn_weight)
+    if run_config.search.use_scan_move:
+        pool.append(SearchCodesign.SCAN_MOVE)
+        w.append(run_config.search.scan_move_weight)
+
+    w_selector = make_weighted_selector(pool, w)
+    case_reg = CaseRegistry(SearchCodesign)
+
+    case_reg.register(SearchCodesign.GRADIENT_MOVE, grad_move_state)
+    case_reg.register(SearchCodesign.RAND_TURN, rand_turn_states[0])
+    case_reg.register(SearchCodesign.SCAN_MOVE, scan_states[0])
+
+    trans = MovingTransition(0, breaker=w_selector, to_states=case_reg.export())
+    states, transitions = composer.init_container().add(start_state).add(trans).export_structure()
+
+    states_pool = [*states, *scan_states, *rand_turn_states, grad_move_state]
+    transitions_pool = [*transitions, *scan_transitions, *rand_turn_transitions]
+    return states_pool, transitions_pool
 
 
 def make_fence_handler(
@@ -953,7 +982,7 @@ def make_fence_handler(
 
     transitions_pool: List[MovingTransition] = []
 
-    case_reg = CaseRegistry({}, to_cover=FenceCodeSign)
+    case_reg = CaseRegistry(FenceCodeSign)
 
     # ---------------------------------------------------------------------
     # TODO impl
