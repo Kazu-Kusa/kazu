@@ -7,7 +7,7 @@ authors = [
 ]
 dependencies = [
     "mentabotix>=0.1.5.2",
-    "pyuptech>=0.1.6",
+    "pyuptech>=0.1.6.3",
     "bdmc>=0.1.5.10",
     "coloredlogs>=15.0.1",
     "pydantic>=2.7.1",
