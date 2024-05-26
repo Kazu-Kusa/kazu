@@ -5,7 +5,7 @@
 groups = ["default"]
 strategy = ["cross_platform", "inherit_metadata"]
 lock_version = "4.4.1"
-content_hash = "sha256:5cee705a7821d914e59be1eefc98af157f5fe800e960efdd2769c502b1700560"
+content_hash = "sha256:b7a5793ebfef76bae2eb160a14ca4f25cdf169254cc16933eff8b57171c8afed"
 
 [[package]]
 name = "annotated-types"
@@ -247,7 +247,7 @@ files = [
 
 [[package]]
 name = "pyuptech"
-version = "0.1.6"
+version = "0.1.6.1"
 requires_python = ">=3.11"
 summary = "A Python wrapper for the uptech binary lib"
 groups = ["default"]
@@ -256,8 +256,8 @@ dependencies = [
     "terminaltables>=3.1.10",
 ]
 files = [
-    {file = "pyuptech-0.1.6-py3-none-any.whl", hash = "sha256:b038957f9b612c4091229ff223577812b7c19c7cf7c8a7c63bb1c552ccc16798"},
-    {file = "pyuptech-0.1.6.tar.gz", hash = "sha256:9a11a61ff3f1f047fe4838356be501d5f4f3145bd5aa7a31359a1efcf5741076"},
+    {file = "pyuptech-0.1.6.1-py3-none-any.whl", hash = "sha256:754f976408cc58c64c77cb027ca7d29939d66ca1a6e0a3f8c63f0541d313e523"},
+    {file = "pyuptech-0.1.6.1.tar.gz", hash = "sha256:11f89e3dd015aae009f64a546b668e21e77e8e24278539f1e81ae81b57930748"},
 ]
 
 [[package]]
@@ -295,7 +295,7 @@ files = [
 
 [[package]]
 name = "upicvision"
-version = "0.1.0"
+version = "0.1.0.2"
 requires_python = ">=3.11"
 summary = "pi vision lib"
 groups = ["default"]
@@ -306,6 +306,6 @@ dependencies = [
     "pyapriltags>=3.3.0.3",
 ]
 files = [
-    {file = "upicvision-0.1.0-py3-none-any.whl", hash = "sha256:34335a5a484f6e9df416fa9e177c719e6a6c573ac15244a8c7b47f03516711ff"},
-    {file = "upicvision-0.1.0.tar.gz", hash = "sha256:d7f2ff07afbd98bc10a05d4845cf9c354ea4f21748785d94aff6936e8b2b2f52"},
+    {file = "upicvision-0.1.0.2-py3-none-any.whl", hash = "sha256:239fbc8218386380823d47a45b48e4b5e2e192c7705933d3298bf8612ae6ac44"},
+    {file = "upicvision-0.1.0.2.tar.gz", hash = "sha256:a53e0198600d56a62954243f4b9c932338ddf5c9583d1b13bae922445606467c"},
 ]
