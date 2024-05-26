@@ -13,6 +13,7 @@ from .constant import (
 )
 from .hardwares import controller, tag_detector, menta, SamplerIndexes
 from .judgers import Breakers
+from .static import continues_state
 
 botix = Botix(controller=controller)
 
@@ -84,10 +85,8 @@ def make_edge_handler(
     # <editor-fold desc="Templates">
 
     # 定义不同移动状态，如停止、继续、后退等
-    start_state = start_state or MovingState(
-        speed_expressions=ContextVar.prev_salvo_speed.name, used_context_variables=[ContextVar.prev_salvo_speed.name]
-    )
-    normal_exit = normal_exit or start_state.clone()
+    start_state = start_state or continues_state.clone()
+    normal_exit = normal_exit or continues_state.clone()
 
     fallback_state = MovingState.straight(-run_config.edge.fallback_speed)
 
@@ -461,10 +460,8 @@ def make_surrounding_handler(
     # </editor-fold>
 
     # <editor-fold desc="Templates">
-    start_state = start_state or MovingState(
-        speed_expressions=ContextVar.prev_salvo_speed.name, used_context_variables=[ContextVar.prev_salvo_speed.name]
-    )
-    normal_exit = normal_exit or start_state.clone()
+    start_state = start_state or continues_state.clone()
+    normal_exit = normal_exit or continues_state.clone()
 
     atk_enemy_car_state = MovingState.straight(run_config.surrounding.atk_speed_enemy_car)
     atk_enemy_box_state = MovingState.straight(run_config.surrounding.atk_speed_enemy_box)
@@ -908,6 +905,9 @@ def make_gradient_move(
 def make_search_handler(
     app_config: APPConfig,
     run_config: RunConfig,
+    start_state: Optional[MovingState] = None,
+    normal_exit: Optional[MovingState] = None,
+    abnormal_exit: Optional[MovingState] = MovingState(0),
 ) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
     pass
 
@@ -933,9 +933,7 @@ def make_fence_handler(
     conf = run_config.fence
 
     stop_state = MovingState(0)
-    start_state = start_state or MovingState(
-        speed_expressions=ContextVar.prev_salvo_speed.name, used_context_variables=[ContextVar.prev_salvo_speed.name]
-    )
+    start_state = start_state or continues_state.clone()
 
     rear_exit_corner_state = MovingState.straight(-conf.exit_corner_speed)
     front_exit_corner_state = MovingState.straight(conf.exit_corner_speed)
