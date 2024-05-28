@@ -148,6 +148,22 @@ class SearchConfig(BaseModel):
     rand_turn: RandTurn = RandTurn()
 
 
+class RandWalk(BaseModel):
+
+    use_straight: bool = True
+    straight_weight: int | float = 2
+
+    rand_straight_speeds: List[int] = [2500, 3000]
+    rand_straight_speed_weights: List[int | float] = [1, 3]
+
+    use_turn: bool = True
+    turn_weight: int | float = 1
+    rand_turn_speeds: List[int] = [4000, 8000]
+    rand_turn_speed_weights: List[int | float] = [1, 3]
+
+    walk_duration: float = 0.5
+
+
 class fenceConfig(BaseModel):
     front_adc_lower_threshold: int = 1750
     rear_adc_lower_threshold: int = 1750
@@ -167,6 +183,8 @@ class fenceConfig(BaseModel):
 
     exit_corner_speed: int = 2500
     max_exit_corner_duration: float = 3.0
+
+    rand_walk: RandWalk = RandWalk()
 
 
 class StrategyConfig(BaseModel):

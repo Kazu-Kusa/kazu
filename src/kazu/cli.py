@@ -26,6 +26,8 @@ from .compile import (
     make_surrounding_handler,
     make_scan_handler,
     make_search_handler,
+    make_rand_walk_handler,
+    make_fence_handler,
 )
 from .config import DEFAULT_APP_CONFIG_PATH, APPConfig, _InternalConfig, RunConfig
 from .constant import Env, RunMode
@@ -220,7 +222,8 @@ def run(ctx: click.Context, run_config: Path | None, mode: str, **_):
     boot_pack = make_reboot_handler(app_config, run_config)
 
     backstage_pack = make_back_to_stage_handler(run_config)
-
+    fence_pack = make_fence_handler(app_config, run_config)
+    rand_walk_pack = make_rand_walk_handler(run_config)
     surr_pack = make_surrounding_handler(app_config, run_config, tag_group)
     scan_pack = make_scan_handler(app_config, run_config)
 
@@ -231,6 +234,8 @@ def run(ctx: click.Context, run_config: Path | None, mode: str, **_):
     botix.export_structure("surr.puml", surr_pack[-1])
     botix.export_structure("scan.puml", scan_pack[-1])
     botix.export_structure("search.puml", search_pack[-1])
+    botix.export_structure("fence.puml", fence_pack[-1])
+    botix.export_structure("rand_walk.puml", rand_walk_pack[-1])
 
 
 @main.command("check")
