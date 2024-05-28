@@ -4,7 +4,7 @@ from typing import Callable, Tuple
 from mentabotix import SamplerUsage
 
 from .config import APPConfig, RunConfig, ContextVar
-from .constant import EdgeWeights, Attitude, ScanWeights
+from .constant import EdgeWeights, Attitude, ScanWeights, StageWeight
 from .hardwares import controller, menta, SamplerIndexes
 
 
@@ -317,5 +317,31 @@ class Breakers:
             ],
             return_type_varname="int",
             extra_context={"int": int, "adc_pack_getter": adc_pack_getter},
+            return_raw=False,
+        )
+
+    @staticmethod
+    @lru_cache(maxsize=None)
+    def make_std_stage_breaker(app_config: APPConfig, run_config: RunConfig):
+        conf = run_config.stage
+        return menta.construct_inlined_function(
+            usages=[
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.adc_all,
+                    required_data_indexes=[
+                        app_config.sensor.gray_adc_index,  # s0
+                    ],
+                ),
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.io_all,
+                    required_data_indexes=[
+                        app_config.sensor.reboot_button_index,  # s1
+                    ],
+                ),
+            ],
+            judging_source=f"ret={StageWeight.STAGE}*(s0<{conf.gray_adc_upper_threshold})"
+            f"+{StageWeight.REBOOT}*(s1=={app_config.sensor.io_activating_value})",
+            return_type_varname="int",
+            extra_context={"int": int},
             return_raw=False,
         )

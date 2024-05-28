@@ -28,6 +28,7 @@ from .compile import (
     make_search_handler,
     make_rand_walk_handler,
     make_fence_handler,
+    make_stage_handler,
 )
 from .config import DEFAULT_APP_CONFIG_PATH, APPConfig, _InternalConfig, RunConfig
 from .constant import Env, RunMode
@@ -228,6 +229,7 @@ def run(ctx: click.Context, run_config: Path | None, mode: str, **_):
     scan_pack = make_scan_handler(app_config, run_config)
 
     search_pack = make_search_handler(app_config, run_config)
+    stage_pack = make_stage_handler(app_config, run_config, tag_group=tag_group)
     botix.export_structure("edge.puml", edge_pack[-1])
     botix.export_structure("boot.puml", boot_pack[-1])
     botix.export_structure("backstage.puml", backstage_pack[-1])
@@ -236,6 +238,7 @@ def run(ctx: click.Context, run_config: Path | None, mode: str, **_):
     botix.export_structure("search.puml", search_pack[-1])
     botix.export_structure("fence.puml", fence_pack[-1])
     botix.export_structure("rand_walk.puml", rand_walk_pack[-1])
+    botix.export_structure("stage.puml", stage_pack)
 
 
 @main.command("check")

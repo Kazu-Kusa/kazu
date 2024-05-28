@@ -12,7 +12,15 @@ from mentabotix import (
 )
 
 from .config import APPConfig, RunConfig, ContextVar, TagGroup
-from .constant import EdgeCodeSign, SurroundingWeights, SurroundingCodeSign, FenceCodeSign, ScanCodesign, SearchCodesign
+from .constant import (
+    EdgeCodeSign,
+    SurroundingWeights,
+    SurroundingCodeSign,
+    FenceCodeSign,
+    ScanCodesign,
+    SearchCodesign,
+    StageCodeSign,
+)
 from .hardwares import controller, tag_detector, menta, SamplerIndexes
 from .judgers import Breakers
 from .static import continues_state
@@ -119,7 +127,7 @@ def make_edge_handler(
 
     # <editor-fold desc="Initialize Containers">
     transitions_pool: List[MovingTransition] = []
-    case_dict: Dict = {EdgeCodeSign.O_O_O_O.value: (start_state.clone())}
+    case_dict: Dict = {EdgeCodeSign.O_O_O_O.value: normal_exit}
     # </editor-fold>
 
     # <editor-fold desc="1-Activation Cases">
@@ -1188,3 +1196,42 @@ def make_rand_walk_handler(
     rand_move_state = MovingState.rand_move(controller, moves_seq, weights)
     move_transition = MovingTransition(conf.walk_duration)
     return composer.init_container().add(rand_move_state).add(move_transition).add(end_state).export_structure()
+
+
+def make_stage_handler(
+    app_config: APPConfig,
+    run_config: RunConfig,
+    end_state: MovingState = MovingState.halt(),
+    tag_group: Optional[TagGroup] = None,
+) -> List[MovingTransition]:
+
+    start_state = continues_state.clone()
+
+    stage_breaker = Breakers.make_std_stage_breaker(app_config, run_config)
+
+    reboot_pack = make_reboot_handler(app_config, run_config)
+    fence_pack = make_fence_handler(app_config, run_config)
+    edge_pack = make_edge_handler(app_config, run_config)
+    surr_pack = make_surrounding_handler(app_config, run_config, tag_group, start_state=edge_pack[1])
+    search_pack = make_search_handler(app_config, run_config, start_state=surr_pack[1])
+
+    print(f"edge n end {edge_pack[1]}")
+    case_reg = CaseRegistry(StageCodeSign)
+    transition_pool = [*reboot_pack[-1], *edge_pack[-1], *fence_pack[-1], *surr_pack[-1], *search_pack[-1]]
+
+    (
+        case_reg.batch_register(
+            [StageCodeSign.ON_STAGE_REBOOT, StageCodeSign.OFF_STAGE_REBOOT],
+            reboot_pack[0][0],
+        )
+        .register(StageCodeSign.ON_STAGE, edge_pack[0])
+        .register(StageCodeSign.OFF_STAGE, fence_pack[0])
+    )
+
+    check_trans = MovingTransition(
+        run_config.perf.min_sync_interval, breaker=stage_breaker, to_states=case_reg.export()
+    )
+
+    _, trans = composer.init_container().add(start_state).add(check_trans).export_structure()
+    transition_pool.extend(trans)
+    return transition_pool

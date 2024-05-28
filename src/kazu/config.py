@@ -230,8 +230,13 @@ class BackStageConfig(BaseModel):
     turn_left_prob: float = 0.5
 
 
+class StageConfig(BaseModel):
+    gray_adc_upper_threshold: int = 2500
+
+
 class RunConfig(CounterHashable):
 
+    stage: StageConfig = StageConfig()
     edge: EdgeConfig = EdgeConfig()
     surrounding: SurroundingConfig = SurroundingConfig()
     search: SearchConfig = SearchConfig()
