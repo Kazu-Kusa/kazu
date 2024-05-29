@@ -293,7 +293,7 @@ class ContextVar(Enum):
 
     @property
     def default(self) -> Any:
-        defaults = {"prev_salvo_speed": 0, "is_aligned": False, "recorded_pack": (), "gradient_speed": 0}
+        defaults = {"prev_salvo_speed": (0, 0, 0, 0), "is_aligned": False, "recorded_pack": (), "gradient_speed": 0}
         assert self.name in defaults, "should always find a default value!"
         return defaults.get(self.name)
 
@@ -304,9 +304,9 @@ class ContextVar(Enum):
 
 class MotionConfig(BaseModel):
     motor_fr: Tuple[int, int] = (1, 1)
-    motor_fl: Tuple[int, int] = (1, 1)
-    motor_rr: Tuple[int, int] = (1, 1)
-    motor_rl: Tuple[int, int] = (1, 1)
+    motor_fl: Tuple[int, int] = (2, 1)
+    motor_rr: Tuple[int, int] = (3, 1)
+    motor_rl: Tuple[int, int] = (4, 1)
     port: str = "/dev/ttyUSB0"
 
 
