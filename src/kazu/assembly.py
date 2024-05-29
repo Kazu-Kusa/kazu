@@ -2,8 +2,8 @@ from typing import List
 
 from mentabotix.modules.botix import MovingTransition
 
-from .compile import make_reboot_handler, make_surrounding_handler, make_scan_handler, make_edge_handler
-from .config import APPConfig, RunConfig
+from kazu.compile import make_reboot_handler, make_surrounding_handler, make_scan_handler, make_edge_handler
+from kazu.config import APPConfig, RunConfig
 
 
 def assmbly_AFG_schema():

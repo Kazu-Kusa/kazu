@@ -3,7 +3,7 @@ from pathlib import Path
 import click
 from click import secho
 
-from .config import APPConfig, RunConfig
+from kazu.config import APPConfig, RunConfig
 
 
 def export_default_app_config(ctx: click.Context, _, path):

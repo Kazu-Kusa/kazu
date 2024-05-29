@@ -11,8 +11,8 @@ from mentabotix import (
     make_weighted_selector,
 )
 
-from .config import APPConfig, RunConfig, ContextVar, TagGroup
-from .constant import (
+from kazu.config import APPConfig, RunConfig, ContextVar, TagGroup
+from kazu.constant import (
     EdgeCodeSign,
     SurroundingWeights,
     SurroundingCodeSign,
@@ -21,9 +21,9 @@ from .constant import (
     SearchCodesign,
     StageCodeSign,
 )
-from .hardwares import controller, tag_detector, menta, SamplerIndexes
-from .judgers import Breakers
-from .static import continues_state
+from kazu.hardwares import controller, tag_detector, menta, SamplerIndexes
+from kazu.judgers import Breakers
+from kazu.static import continues_state
 
 botix = Botix(controller=controller)
 

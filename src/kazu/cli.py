@@ -10,15 +10,15 @@ from bdmc import MotorInfo, CMD
 from click import secho, echo, clear
 from mentabotix import MovingState, MovingTransition
 
-from . import __version__, __command__
-from .callbacks import (
+from kazu import __version__, __command__
+from kazu.callbacks import (
     export_default_app_config,
     export_default_run_config,
     disable_cam_callback,
     log_level_callback,
     team_color_callback,
 )
-from .compile import (
+from kazu.compile import (
     botix,
     make_edge_handler,
     make_reboot_handler,
@@ -30,10 +30,10 @@ from .compile import (
     make_fence_handler,
     make_stage_handler,
 )
-from .config import DEFAULT_APP_CONFIG_PATH, APPConfig, _InternalConfig, RunConfig
-from .constant import Env, RunMode
-from .logger import set_log_level
-from .visualize import print_colored_toml
+from kazu.config import DEFAULT_APP_CONFIG_PATH, APPConfig, _InternalConfig, RunConfig
+from kazu.constant import Env, RunMode
+from kazu.logger import set_log_level
+from kazu.visualize import print_colored_toml
 
 
 def _set_all_log_level(level: int | str):
@@ -182,7 +182,7 @@ def run(ctx: click.Context, run_config: Path | None, mode: str, **_):
 
     app_config = internal_config.app_config
 
-    from .hardwares import controller
+    from kazu.hardwares import controller
 
     controller.motor_infos = (
         MotorInfo(*app_config.motion.motor_fl),
@@ -195,8 +195,8 @@ def run(ctx: click.Context, run_config: Path | None, mode: str, **_):
     controller.start_msg_sending().send_cmd(CMD.RESET)
 
     if app_config.vision.use_camera:
-        from .hardwares import tag_detector
-        from .config import TagGroup
+        from kazu.hardwares import tag_detector
+        from kazu.config import TagGroup
 
         secho(f"Open Camera-{app_config.vision.camera_device_id}", fg="yellow", bold=True)
         tag_detector.open_camera(app_config.vision.camera_device_id)
@@ -209,7 +209,7 @@ def run(ctx: click.Context, run_config: Path | None, mode: str, **_):
             secho(f"Allay tag: {tag_group.allay_tag}", fg="green", bold=True)
             secho(f"Neutral tag: {tag_group.neutral_tag}", fg="cyan", bold=True)
         else:
-            from .config import TagGroup
+            from kazu.config import TagGroup
 
             # TODO remove this debug code
             tag_group = TagGroup(team_color=app_config.vision.team_color)
@@ -255,7 +255,7 @@ def test(ctx: click.Context, device: str):
     """
     app_config: APPConfig = ctx.obj.app_config
 
-    from .checkers import check_io, check_camera, check_adc, check_motor, check_power, check_mpu
+    from kazu.checkers import check_io, check_camera, check_adc, check_motor, check_power, check_mpu
     from terminaltables import SingleTable
     from colorama import Fore
 
@@ -268,9 +268,7 @@ def test(ctx: click.Context, device: str):
     table = [[f"{Fore.YELLOW}Device{Fore.RESET}", f"{Fore.GREEN}Success{Fore.RESET}"]]
     if "all" in device:
         from bdmc import CMD
-        from .hardwares import tag_detector
-        from .hardwares import controller
-        from .hardwares import sensors
+        from kazu.hardwares import tag_detector, controller, sensors
 
         sensors.adc_io_open().MPU6500_Open()
         controller.serial_client.port = app_config.motion.port
@@ -289,37 +287,37 @@ def test(ctx: click.Context, device: str):
         return
 
     if "adc" in device:
-        from .hardwares import sensors
+        from kazu.hardwares import sensors
 
         sensors.adc_io_open()
         table.append(shader("ADC", check_adc(sensors)))
         sensors.adc_io_close()
     if "io" in device:
-        from .hardwares import sensors
+        from kazu.hardwares import sensors
 
         sensors.adc_io_open()
         table.append(shader("IO", check_io(sensors)))
         sensors.adc_io_close()
     if "mpu" in device:
-        from .hardwares import sensors
+        from kazu.hardwares import sensors
 
         sensors.MPU6500_Open()
         table.append(shader("MPU", check_mpu(sensors)))
 
     if "pow" in device:
-        from .hardwares import sensors
+        from kazu.hardwares import sensors
 
         table.append(shader("POWER", check_power(sensors)))
 
     if "cam" in device:
-        from .hardwares import tag_detector
+        from kazu.hardwares import tag_detector
 
         tag_detector.open_camera(app_config.vision.camera_device_id)
         table.append(shader("CAMERA", check_camera(tag_detector)))
 
     if "mot" in device:
-        from .hardwares import controller
-        from .hardwares import sensors
+        from kazu.hardwares import controller
+        from kazu.hardwares import sensors
         from bdmc import CMD
 
         controller.serial_client.port = app_config.motion.port
@@ -349,7 +347,7 @@ def read_sensors(ctx: click.Context, interval: float, device: str):
         make_io_table,
         make_adc_table,
     )
-    from .hardwares import sensors
+    from kazu.hardwares import sensors
 
     app_config: APPConfig = ctx.obj.app_config
     device = set(device) or ("all",)
@@ -404,8 +402,8 @@ def control_motor(ctx: click.Context, duration: float, speeds: list[int]):
 
         DURATION: (float)
     """
-    from .compile import composer, botix
-    from .hardwares import controller
+    from kazu.compile import composer, botix
+    from kazu.hardwares import controller
     from colorama import Fore
 
     internal_conf: _InternalConfig = ctx.obj
@@ -453,7 +451,7 @@ def control_display(channel: Tuple[int, int, int]):
     """
     Control LED display.
     """
-    from .hardwares import screen, sensors
+    from kazu.hardwares import screen, sensors
     from pyuptech import Color
 
     sensors.adc_io_open()

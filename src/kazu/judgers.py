@@ -3,9 +3,9 @@ from typing import Callable, Tuple
 
 from mentabotix import SamplerUsage
 
-from .config import APPConfig, RunConfig, ContextVar
-from .constant import EdgeWeights, Attitude, ScanWeights, StageWeight
-from .hardwares import controller, menta, SamplerIndexes
+from kazu.config import APPConfig, RunConfig, ContextVar
+from kazu.constant import EdgeWeights, Attitude, ScanWeights, StageWeight
+from kazu.hardwares import controller, menta, SamplerIndexes
 
 
 class Breakers:
@@ -200,7 +200,7 @@ class Breakers:
     @staticmethod
     @lru_cache(maxsize=None)
     def make_std_on_stage_breaker(app_config: APPConfig, run_config: RunConfig):
-        from .constant import StageWeight
+        from kazu.constant import StageWeight
 
         return menta.construct_inlined_function(
             usages=[
@@ -227,7 +227,7 @@ class Breakers:
     @staticmethod
     @lru_cache(maxsize=None)
     def make_std_fence_breaker(app_config: APPConfig, run_config: RunConfig):
-        from .constant import FenceWeights
+        from kazu.constant import FenceWeights
 
         conf = run_config.fence
         return menta.construct_inlined_function(
@@ -263,7 +263,7 @@ class Breakers:
     @staticmethod
     @lru_cache(maxsize=None)
     def make_align_direction_breaker(app_config: APPConfig, run_config: RunConfig):
-        from .constant import Attitude
+        from kazu.constant import Attitude
 
         invalid_lower_bound, invalid_upper_bound = (
             run_config.fence.max_yaw_tolerance,

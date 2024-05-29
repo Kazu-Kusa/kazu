@@ -1,6 +1,6 @@
 from mentabotix import MovingState
 
-from .config import ContextVar
+from kazu.config import ContextVar
 
 continues_state = MovingState(
     speed_expressions=ContextVar.prev_salvo_speed.name,

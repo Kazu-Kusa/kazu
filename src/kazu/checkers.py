@@ -3,7 +3,7 @@ from cv2 import VideoCapture
 from pyuptech import OnBoardSensors
 from upic import TagDetector
 
-from .logger import _logger
+from kazu.logger import _logger
 
 
 def check_motor(controller: CloseLoopController) -> bool:
