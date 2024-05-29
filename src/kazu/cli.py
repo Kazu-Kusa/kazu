@@ -17,6 +17,8 @@ from kazu.callbacks import (
     disable_cam_callback,
     log_level_callback,
     team_color_callback,
+    bench_add_app,
+    bench_aps,
 )
 from kazu.compile import (
     botix,
@@ -464,3 +466,23 @@ def control_display(channel: Tuple[int, int, int]):
         .print(f"R:{channel[0]}\nG:{channel[1]}\nB:{channel[2]}")
         .refresh()
     )
+
+
+@main.command("bench")
+@click.help_option("-h", "--help")
+@click.pass_context
+@click.option(
+    "-a",
+    "--add-up-to",
+    type=click.IntRange(0, max_open=True),
+    callback=bench_add_app,
+    help="measure time cost adding up to N times",
+)
+@click.option(
+    "-p", "--add-up-per-second", is_flag=True, default=False, callback=bench_aps, help="measure add-ups per second"
+)
+def bench(ctx: click.Context, **_):
+    """
+    Benchmarks
+    """
+    echo("bench test done!")
