@@ -307,7 +307,7 @@ class MotionConfig(BaseModel):
     motor_fl: Tuple[int, int] = (1, 1)
     motor_rr: Tuple[int, int] = (1, 1)
     motor_rl: Tuple[int, int] = (1, 1)
-    port: str = "/dev/ttyACM0"
+    port: str = "/dev/ttyUSB0"
 
 
 class VisionConfig(BaseModel):
