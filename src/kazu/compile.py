@@ -1215,7 +1215,6 @@ def make_stage_handler(
     surr_pack = make_surrounding_handler(app_config, run_config, tag_group, start_state=edge_pack[1])
     search_pack = make_search_handler(app_config, run_config, start_state=surr_pack[1])
 
-    print(f"edge n end {edge_pack[1]}")
     case_reg = CaseRegistry(StageCodeSign)
     transition_pool = [*reboot_pack[-1], *edge_pack[-1], *fence_pack[-1], *surr_pack[-1], *search_pack[-1]]
 

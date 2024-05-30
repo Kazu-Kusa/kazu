@@ -2,6 +2,7 @@ from enum import Enum, auto
 from pathlib import Path
 from typing import Tuple, List, Self, Literal, TextIO, Optional, Any, Dict
 
+from click import secho
 from pydantic import BaseModel
 from toml import load, dump
 from upic import TagDetector
@@ -397,3 +398,50 @@ class _InternalConfig(BaseModel):
     app_config: APPConfig = APPConfig()
     app_config_file_path: Path = Path(DEFAULT_APP_CONFIG_PATH)
     run_config: Optional[RunConfig] = None
+
+
+def load_run_config(run_config_path: Path | None) -> RunConfig:
+    if run_config_path and (r_conf := Path(run_config_path)).exists():
+        secho(f'Loading run config from "{r_conf.absolute().as_posix()}"', fg="green", bold=True)
+        with open(r_conf) as fp:
+            run_config_path: RunConfig = RunConfig.read_config(fp)
+    else:
+        secho(f"Loading DEFAULT run config", fg="yellow", bold=True)
+        run_config_path = RunConfig()
+    return run_config_path
+
+
+def make_tag_group(app_config) -> TagGroup:
+    from kazu.hardwares import tag_detector
+
+    secho(f"Open Camera-{app_config.vision.camera_device_id}", fg="yellow", bold=True)
+    tag_detector.open_camera(app_config.vision.camera_device_id)
+    success, _ = tag_detector.camera_device.read()
+    if success:
+        secho("Camera opened successfully", fg="green", bold=True)
+        tag_group = TagGroup(team_color=app_config.vision.team_color)
+        secho(f"Team color: {tag_group.team_color}", fg=tag_group.team_color, bold=True)
+        secho(f"Enemy tag: {tag_group.enemy_tag}", fg="red", bold=True)
+        secho(f"Allay tag: {tag_group.allay_tag}", fg="green", bold=True)
+        secho(f"Neutral tag: {tag_group.neutral_tag}", fg="cyan", bold=True)
+    else:
+
+        # TODO remove this debug code
+        tag_group = TagGroup(team_color=app_config.vision.team_color)
+        secho(f"Failed to open Camera-{app_config.vision.camera_device_id}", fg="red", bold=True)
+        app_config.vision.use_camera = False
+    return tag_group
+
+
+def load_app_config(app_config_path) -> APPConfig:
+    if app_config_path.exists():
+        secho(f"Load app config from {app_config_path.absolute().as_posix()}", fg="yellow")
+        with open(app_config_path, encoding="utf-8") as fp:
+            app_config = APPConfig.read_config(fp)
+    else:
+        secho(f"Create and load default app config at {app_config_path.absolute().as_posix()}", fg="yellow")
+        app_config_path.parent.mkdir(parents=True, exist_ok=True)
+        app_config = APPConfig()
+        with open(app_config_path, "w", encoding="utf-8") as fp:
+            APPConfig.dump_config(fp, app_config)
+    return app_config

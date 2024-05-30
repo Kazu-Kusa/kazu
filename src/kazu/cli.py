@@ -32,7 +32,16 @@ from kazu.compile import (
     make_fence_handler,
     make_stage_handler,
 )
-from kazu.config import DEFAULT_APP_CONFIG_PATH, APPConfig, _InternalConfig, RunConfig, ContextVar
+from kazu.config import (
+    DEFAULT_APP_CONFIG_PATH,
+    APPConfig,
+    _InternalConfig,
+    ContextVar,
+    TagGroup,
+    load_run_config,
+    make_tag_group,
+    load_app_config,
+)
 from kazu.constant import Env, RunMode
 from kazu.logger import set_log_level
 from kazu.visualize import print_colored_toml
@@ -59,16 +68,9 @@ def _set_all_log_level(level: int | str):
     type=click.Path(dir_okay=False, writable=True, path_type=Path),
     help=f"config file path, also can receive env {Env.KAZU_APP_CONFIG_PATH}",
 )
-def main(ctx: click.Context, app_config_path):
+def main(ctx: click.Context, app_config_path: Path):
     """A Dedicated Robots Control System"""
-    if (config_path := Path(app_config_path)).exists():
-        with open(app_config_path, encoding="utf-8") as fp:
-            app_config = APPConfig.read_config(fp)
-    else:
-        config_path.parent.mkdir(parents=True, exist_ok=True)
-        app_config = APPConfig()
-        with open(app_config_path, "w", encoding="utf-8") as fp:
-            APPConfig.dump_config(fp, app_config)
+    app_config = load_app_config(app_config_path)
 
     ctx.obj = _InternalConfig(app_config=app_config, app_config_file_path=app_config_path)
     _set_all_log_level(ctx.obj.app_config.logger.log_level)
@@ -174,13 +176,7 @@ def run(ctx: click.Context, run_config: Path | None, mode: str, **_):
     """
 
     internal_config: _InternalConfig = ctx.obj
-    if run_config and (r_conf := Path(run_config)).exists():
-        secho(f'Loading run config from "{r_conf.absolute().as_posix()}"', fg="green", bold=True)
-        with open(r_conf) as fp:
-            run_config: RunConfig = RunConfig.read_config(fp)
-    else:
-        secho(f"Loading DEFAULT run config", fg="yellow", bold=True)
-        run_config = RunConfig()
+    run_config = load_run_config(run_config)
 
     app_config = internal_config.app_config
 
@@ -198,49 +194,11 @@ def run(ctx: click.Context, run_config: Path | None, mode: str, **_):
 
     controller.context.update(ContextVar.export_context())
     if app_config.vision.use_camera:
-        from kazu.hardwares import tag_detector
-        from kazu.config import TagGroup
-
-        secho(f"Open Camera-{app_config.vision.camera_device_id}", fg="yellow", bold=True)
-        tag_detector.open_camera(app_config.vision.camera_device_id)
-        success, _ = tag_detector.camera_device.read()
-        if success:
-            secho("Camera opened successfully", fg="green", bold=True)
-            tag_group = TagGroup(team_color=app_config.vision.team_color)
-            secho(f"Team color: {tag_group.team_color}", fg=tag_group.team_color, bold=True)
-            secho(f"Enemy tag: {tag_group.enemy_tag}", fg="red", bold=True)
-            secho(f"Allay tag: {tag_group.allay_tag}", fg="green", bold=True)
-            secho(f"Neutral tag: {tag_group.neutral_tag}", fg="cyan", bold=True)
-        else:
-            from kazu.config import TagGroup
-
-            # TODO remove this debug code
-            tag_group = TagGroup(team_color=app_config.vision.team_color)
-            secho(f"Failed to open Camera-{app_config.vision.camera_device_id}", fg="red", bold=True)
-            app_config.vision.use_camera = False
+        tag_group = make_tag_group(app_config)
     # TODO remove this debug code below
     app_config.vision.use_camera = True
 
-    edge_pack = make_edge_handler(app_config, run_config)
-
-    boot_pack = make_reboot_handler(app_config, run_config)
-
-    backstage_pack = make_back_to_stage_handler(run_config)
-    fence_pack = make_fence_handler(app_config, run_config)
-    rand_walk_pack = make_rand_walk_handler(run_config)
-    surr_pack = make_surrounding_handler(app_config, run_config, tag_group)
-    scan_pack = make_scan_handler(app_config, run_config)
-
-    search_pack = make_search_handler(app_config, run_config)
     stage_pack = make_stage_handler(app_config, run_config, tag_group=tag_group)
-    botix.export_structure("edge.puml", edge_pack[-1])
-    botix.export_structure("boot.puml", boot_pack[-1])
-    botix.export_structure("backstage.puml", backstage_pack[-1])
-    botix.export_structure("surr.puml", surr_pack[-1])
-    botix.export_structure("scan.puml", scan_pack[-1])
-    botix.export_structure("search.puml", search_pack[-1])
-    botix.export_structure("fence.puml", fence_pack[-1])
-    botix.export_structure("rand_walk.puml", rand_walk_pack[-1])
     botix.export_structure("stage.puml", stage_pack)
     botix.token_pool = stage_pack
     func = botix.compile()
@@ -390,6 +348,68 @@ def read_sensors(ctx: click.Context, interval: float, device: str):
         echo("Exit reading.")
 
     sensors.adc_io_close()
+
+
+@main.command("viz")
+@click.help_option("-h", "--help")
+@click.pass_context
+@click.argument(
+    "packname",
+    type=click.Choice(["all", "edge", "surr", "search", "fence", "boot", "scan", "stage", "bkstage", "rdwalk"]),
+    nargs=-1,
+    default="all",
+)
+@click.option(
+    "-d",
+    "--destination",
+    type=click.Path(file_okay=False, dir_okay=True, path_type=Path),
+    default="./visualize",
+    show_default=True,
+    help="Destination path of the generated files",
+)
+@click.option(
+    "-c",
+    "--run-config",
+    show_default=True,
+    default=None,
+    help=f"config file path, also can receive env {Env.KAZU_RUN_CONFIG_PATH}",
+    type=click.Path(dir_okay=False, readable=True, path_type=Path),
+    envvar=Env.KAZU_RUN_CONFIG_PATH,
+)
+def visualize(ctx: click.Context, packname: str, destination: Path, run_config: Optional[Path]):
+    """
+    Visualize State-Transition Diagram of KAZU with PlantUML
+
+    """
+    conf: _InternalConfig = ctx.obj
+    destination.mkdir(parents=True, exist_ok=True)
+
+    app_config = conf.app_config
+    run_config = load_run_config(run_config)
+
+    tag_group = TagGroup(team_color=app_config.vision.team_color)
+    edge_pack = make_edge_handler(app_config, run_config)
+
+    boot_pack = make_reboot_handler(app_config, run_config)
+
+    backstage_pack = make_back_to_stage_handler(run_config)
+    fence_pack = make_fence_handler(app_config, run_config)
+    rand_walk_pack = make_rand_walk_handler(run_config)
+    surr_pack = make_surrounding_handler(app_config, run_config, tag_group)
+    scan_pack = make_scan_handler(app_config, run_config)
+
+    search_pack = make_search_handler(app_config, run_config)
+    stage_pack = make_stage_handler(app_config, run_config, tag_group=tag_group)
+
+    botix.export_structure(destination / "edge.puml", edge_pack[-1])
+    botix.export_structure(destination / "boot.puml", boot_pack[-1])
+    botix.export_structure(destination / "bkstage.puml", backstage_pack[-1])
+    botix.export_structure(destination / "surr.puml", surr_pack[-1])
+    botix.export_structure(destination / "scan.puml", scan_pack[-1])
+    botix.export_structure(destination / "search.puml", search_pack[-1])
+    botix.export_structure(destination / "fence.puml", fence_pack[-1])
+    botix.export_structure(destination / "rdwalk.puml", rand_walk_pack[-1])
+    botix.export_structure(destination / "stage.puml", stage_pack)
 
 
 @main.command("cmd", context_settings={"ignore_unknown_options": True})
