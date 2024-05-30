@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import click
-from click import secho
+from click import secho, echo
 
 from kazu.config import APPConfig, RunConfig
 
@@ -67,3 +67,32 @@ def team_color_callback(ctx: click.Context, _, value: str):
 
         secho(f"Change team color to {value}", fg=value, bold=True)
         app_config.vision.team_color = value
+
+
+def bench_add_app(ctx: click.Context, _, add_up_to):
+    if add_up_to is not None:
+        import timeit
+
+        def count_up():
+            i = 0
+            while i < add_up_to:
+                i += 1
+
+        # 测量执行100万次自增操作的耗时，这里repeat=5表示重复执行5次取平均值，number=1表示每次执行1次计数到100万的操作
+        execution_time = timeit.timeit(count_up, number=1, globals=globals())
+        echo(f"Execution time of add up to {add_up_to}: {execution_time:.6f} s")
+
+
+def bench_aps(ctx: click.Context, _, add_up_per_second: bool):
+
+    if add_up_per_second:
+        import timeit
+        from time import perf_counter_ns
+
+        counter = 0
+
+        end_time = perf_counter_ns() + 1000_000_000
+        while perf_counter_ns() < end_time:  # 运行1秒
+            counter += 1
+
+        echo(f"Operations per second: {counter}\nAverage counts per ms: {counter / 1000}")

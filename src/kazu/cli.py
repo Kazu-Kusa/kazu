@@ -17,6 +17,8 @@ from kazu.callbacks import (
     disable_cam_callback,
     log_level_callback,
     team_color_callback,
+    bench_add_app,
+    bench_aps,
 )
 from kazu.compile import (
     botix,
@@ -30,7 +32,7 @@ from kazu.compile import (
     make_fence_handler,
     make_stage_handler,
 )
-from kazu.config import DEFAULT_APP_CONFIG_PATH, APPConfig, _InternalConfig, RunConfig
+from kazu.config import DEFAULT_APP_CONFIG_PATH, APPConfig, _InternalConfig, RunConfig, ContextVar
 from kazu.constant import Env, RunMode
 from kazu.logger import set_log_level
 from kazu.visualize import print_colored_toml
@@ -194,6 +196,7 @@ def run(ctx: click.Context, run_config: Path | None, mode: str, **_):
     controller.serial_client.open()
     controller.start_msg_sending().send_cmd(CMD.RESET)
 
+    controller.context.update(ContextVar.export_context())
     if app_config.vision.use_camera:
         from kazu.hardwares import tag_detector
         from kazu.config import TagGroup
@@ -239,6 +242,10 @@ def run(ctx: click.Context, run_config: Path | None, mode: str, **_):
     botix.export_structure("fence.puml", fence_pack[-1])
     botix.export_structure("rand_walk.puml", rand_walk_pack[-1])
     botix.export_structure("stage.puml", stage_pack)
+    botix.token_pool = stage_pack
+    func = botix.compile()
+    func()
+    echo("Done!")
 
 
 @main.command("check")
@@ -385,7 +392,7 @@ def read_sensors(ctx: click.Context, interval: float, device: str):
     sensors.adc_io_close()
 
 
-@main.command("cmd")
+@main.command("cmd", context_settings={"ignore_unknown_options": True})
 @click.help_option("-h", "--help")
 @click.pass_context
 @click.argument("duration", type=click.FLOAT, required=True)
@@ -406,8 +413,16 @@ def control_motor(ctx: click.Context, duration: float, speeds: list[int]):
     from kazu.hardwares import controller
     from colorama import Fore
 
+    app_config = ctx.obj.app_config
     internal_conf: _InternalConfig = ctx.obj
     controller.serial_client.port = internal_conf.app_config.motion.port
+    controller.motor_infos = (
+        MotorInfo(*app_config.motion.motor_fl),
+        MotorInfo(*app_config.motion.motor_rl),
+        MotorInfo(*app_config.motion.motor_rr),
+        MotorInfo(*app_config.motion.motor_fr),
+    )
+
     controller.serial_client.open()
     controller.start_msg_sending()
     try:
@@ -431,7 +446,13 @@ def control_motor(ctx: click.Context, duration: float, speeds: list[int]):
 
     def _bar():
         with click.progressbar(
-            range(int(duration / 0.1)), show_percent=True, show_eta=True, label="Moving", color=True
+            range(int(duration / 0.1) - 1),
+            show_percent=True,
+            show_eta=True,
+            label="Moving",
+            color=True,
+            fill_char=f"{Fore.GREEN}█{Fore.RESET}",
+            empty_char=f"{Fore.LIGHTWHITE_EX}█{Fore.RESET}",
         ) as bar:
             for _ in bar:
                 sleep(0.1)
@@ -464,3 +485,23 @@ def control_display(channel: Tuple[int, int, int]):
         .print(f"R:{channel[0]}\nG:{channel[1]}\nB:{channel[2]}")
         .refresh()
     )
+
+
+@main.command("bench")
+@click.help_option("-h", "--help")
+@click.pass_context
+@click.option(
+    "-a",
+    "--add-up-to",
+    type=click.IntRange(0, max_open=True),
+    callback=bench_add_app,
+    help="measure time cost adding up to N times",
+)
+@click.option(
+    "-p", "--add-up-per-second", is_flag=True, default=False, callback=bench_aps, help="measure add-ups per second"
+)
+def bench(ctx: click.Context, **_):
+    """
+    Benchmarks
+    """
+    echo("bench test done!")
