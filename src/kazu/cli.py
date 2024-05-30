@@ -1,3 +1,4 @@
+from functools import partial
 from pathlib import Path
 from time import sleep
 from typing import Callable, Optional, Tuple
@@ -6,7 +7,6 @@ import bdmc
 import click
 import mentabotix
 import pyuptech
-from bdmc import MotorInfo, CMD
 from click import secho, echo, clear
 from mentabotix import MovingState, MovingTransition
 
@@ -180,27 +180,17 @@ def run(ctx: click.Context, run_config: Path | None, mode: str, **_):
 
     app_config = internal_config.app_config
 
-    from kazu.hardwares import controller
+    from kazu.hardwares import inited_controller
 
-    controller.motor_infos = (
-        MotorInfo(*app_config.motion.motor_fl),
-        MotorInfo(*app_config.motion.motor_rl),
-        MotorInfo(*app_config.motion.motor_rr),
-        MotorInfo(*app_config.motion.motor_fr),
-    )
-    controller.serial_client.port = app_config.motion.port
-    controller.serial_client.open()
-    controller.start_msg_sending().send_cmd(CMD.RESET)
+    inited_controller(app_config).context.update(ContextVar.export_context())
 
-    controller.context.update(ContextVar.export_context())
     if app_config.vision.use_camera:
         tag_group = make_tag_group(app_config)
     # TODO remove this debug code below
     app_config.vision.use_camera = True
 
     stage_pack = make_stage_handler(app_config, run_config, tag_group=tag_group)
-    botix.export_structure("stage.puml", stage_pack)
-    botix.token_pool = stage_pack
+    botix.token_pool = stage_pack[-1]
     func = botix.compile()
     func()
     echo("Done!")
@@ -357,7 +347,6 @@ def read_sensors(ctx: click.Context, interval: float, device: str):
     "packname",
     type=click.Choice(["all", "edge", "surr", "search", "fence", "boot", "scan", "stage", "bkstage", "rdwalk"]),
     nargs=-1,
-    default="all",
 )
 @click.option(
     "-d",
@@ -376,7 +365,12 @@ def read_sensors(ctx: click.Context, interval: float, device: str):
     type=click.Path(dir_okay=False, readable=True, path_type=Path),
     envvar=Env.KAZU_RUN_CONFIG_PATH,
 )
-def visualize(ctx: click.Context, packname: str, destination: Path, run_config: Optional[Path]):
+def visualize(
+    ctx: click.Context,
+    destination: Path,
+    run_config: Optional[Path],
+    packname: str = ("all",),
+):
     """
     Visualize State-Transition Diagram of KAZU with PlantUML
 
@@ -388,28 +382,33 @@ def visualize(ctx: click.Context, packname: str, destination: Path, run_config: 
     run_config = load_run_config(run_config)
 
     tag_group = TagGroup(team_color=app_config.vision.team_color)
-    edge_pack = make_edge_handler(app_config, run_config)
+    handlers = {
+        "edge": make_edge_handler,
+        "boot": make_reboot_handler,
+        "bkstage": make_back_to_stage_handler,
+        "surr": partial(make_surrounding_handler, tag_group=tag_group),
+        "scan": make_scan_handler,
+        "search": make_search_handler,
+        "fence": make_fence_handler,
+        "rdwalk": make_rand_walk_handler,
+        "stage": partial(make_stage_handler, tag_group=tag_group),
+    }
 
-    boot_pack = make_reboot_handler(app_config, run_config)
+    # 如果packname是'all'，则导出所有；否则，仅导出指定的包
+    packs_to_export = list(handlers.keys()) if "all" in packname else packname
 
-    backstage_pack = make_back_to_stage_handler(run_config)
-    fence_pack = make_fence_handler(app_config, run_config)
-    rand_walk_pack = make_rand_walk_handler(run_config)
-    surr_pack = make_surrounding_handler(app_config, run_config, tag_group)
-    scan_pack = make_scan_handler(app_config, run_config)
+    destination.mkdir(parents=True, exist_ok=True)
 
-    search_pack = make_search_handler(app_config, run_config)
-    stage_pack = make_stage_handler(app_config, run_config, tag_group=tag_group)
+    for f_name in packs_to_export:
+        # 假设每个处理函数返回一个可以被导出的数据结构
+        # 这里简化处理，实际可能需要根据handler的不同调用不同的导出方法
+        handler_func: Callable = handlers.get(f_name)
 
-    botix.export_structure(destination / "edge.puml", edge_pack[-1])
-    botix.export_structure(destination / "boot.puml", boot_pack[-1])
-    botix.export_structure(destination / "bkstage.puml", backstage_pack[-1])
-    botix.export_structure(destination / "surr.puml", surr_pack[-1])
-    botix.export_structure(destination / "scan.puml", scan_pack[-1])
-    botix.export_structure(destination / "search.puml", search_pack[-1])
-    botix.export_structure(destination / "fence.puml", fence_pack[-1])
-    botix.export_structure(destination / "rdwalk.puml", rand_walk_pack[-1])
-    botix.export_structure(destination / "stage.puml", stage_pack)
+        (*_, handler_data) = handler_func(**{"app_config": app_config, "run_config": run_config})
+        filename = f_name + ".puml"
+        destination_filename = (destination / filename).as_posix()
+        secho(f"Exporting {filename}", fg="green", bold=True)
+        botix.export_structure(destination_filename, handler_data)
 
 
 @main.command("cmd", context_settings={"ignore_unknown_options": True})
@@ -430,21 +429,11 @@ def control_motor(ctx: click.Context, duration: float, speeds: list[int]):
         DURATION: (float)
     """
     from kazu.compile import composer, botix
-    from kazu.hardwares import controller
+    from kazu.hardwares import inited_controller
     from colorama import Fore
 
     app_config = ctx.obj.app_config
-    internal_conf: _InternalConfig = ctx.obj
-    controller.serial_client.port = internal_conf.app_config.motion.port
-    controller.motor_infos = (
-        MotorInfo(*app_config.motion.motor_fl),
-        MotorInfo(*app_config.motion.motor_rl),
-        MotorInfo(*app_config.motion.motor_rr),
-        MotorInfo(*app_config.motion.motor_fr),
-    )
-
-    controller.serial_client.open()
-    controller.start_msg_sending()
+    controller = inited_controller(app_config)
     try:
         states, transitions = (
             composer.init_container()
