@@ -1098,7 +1098,7 @@ def make_align_direction_handler(
 
 
 def make_back_to_stage_handler(
-    run_config: RunConfig, end_state: Optional[MovingState] = MovingState.halt()
+    run_config: RunConfig, end_state: Optional[MovingState] = MovingState.halt(), **_
 ) -> Tuple[List[MovingState], List[MovingTransition]]:
     small_advance = MovingState(run_config.backstage.small_advance_speed)
     small_advance_transition = MovingTransition(run_config.backstage.small_advance_duration)
@@ -1178,7 +1178,7 @@ def make_reboot_handler(
 
 
 def make_rand_walk_handler(
-    run_config: RunConfig, end_state: MovingState = MovingState.halt()
+    run_config: RunConfig, end_state: MovingState = MovingState.halt(), **_
 ) -> Tuple[List[MovingState], List[MovingTransition]]:
     conf = run_config.fence.rand_walk
 
@@ -1201,21 +1201,23 @@ def make_rand_walk_handler(
 def make_stage_handler(
     app_config: APPConfig,
     run_config: RunConfig,
+    start_state: Optional[MovingState] = None,
     end_state: MovingState = MovingState.halt(),
     tag_group: Optional[TagGroup] = None,
-) -> List[MovingTransition]:
+) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
 
-    start_state = continues_state.clone()
+    start_state = start_state or continues_state.clone()
 
     stage_breaker = Breakers.make_std_stage_breaker(app_config, run_config)
 
-    reboot_pack = make_reboot_handler(app_config, run_config)
-    fence_pack = make_fence_handler(app_config, run_config)
-    edge_pack = make_edge_handler(app_config, run_config)
-    surr_pack = make_surrounding_handler(app_config, run_config, tag_group, start_state=edge_pack[1])
+    reboot_pack = make_reboot_handler(app_config, run_config, end_state=end_state)
+    fence_pack = make_fence_handler(app_config, run_config, end_state=end_state)
+    edge_pack = make_edge_handler(app_config, run_config, abnormal_exit=end_state)
+    surr_pack = make_surrounding_handler(
+        app_config, run_config, tag_group, start_state=edge_pack[1], abnormal_exit=end_state
+    )
     search_pack = make_search_handler(app_config, run_config, start_state=surr_pack[1])
 
-    print(f"edge n end {edge_pack[1]}")
     case_reg = CaseRegistry(StageCodeSign)
     transition_pool = [*reboot_pack[-1], *edge_pack[-1], *fence_pack[-1], *surr_pack[-1], *search_pack[-1]]
 
@@ -1234,4 +1236,4 @@ def make_stage_handler(
 
     _, trans = composer.init_container().add(start_state).add(check_trans).export_structure()
     transition_pool.extend(trans)
-    return transition_pool
+    return start_state, end_state, transition_pool
