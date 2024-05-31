@@ -26,6 +26,10 @@ menta = Menta(
 
 @dataclass
 class SamplerIndexes:
+    """
+    Indexes of the samplers in the menta module.
+    """
+
     adc_all: int = 0
     io_all: int = 1
     io_level_idx: int = 2
@@ -40,7 +44,6 @@ def inited_controller(app_config) -> CloseLoopController:
     Initializes the controller with the given configuration.
 
     Args:
-        con (CloseLoopController): The controller object to be initialized.
         app_config (APPConfig): The application configuration containing the motor information and port.
 
     Returns:
