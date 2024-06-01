@@ -896,9 +896,7 @@ def make_rand_turn_handler(
     return states, transitions
 
 
-def make_gradient_move(
-    app_config: APPConfig, run_config: RunConfig, end_state: MovingState = MovingState.halt()
-) -> MovingState:
+def make_gradient_move(app_config: APPConfig, run_config: RunConfig, is_salvo_end: bool = True) -> MovingState:
     conf = run_config.search.gradient_move
 
     speed_range = conf.max_speed - conf.min_speed
@@ -914,11 +912,26 @@ def make_gradient_move(
         extra_context={"int": int},
         return_raw=False,
     )
-    speed_updater = controller.register_context_executor(speed_calc_func, [ContextVar.gradient_speed.name])
+    updaters = []
+    speed_updater = controller.register_context_executor(
+        speed_calc_func, [ContextVar.gradient_speed.name], function_name="_update_gradient_speed"
+    )
+    updaters.append(speed_updater)
+    if is_salvo_end:
+        getter: Callable[[], int] = controller.register_context_getter(ContextVar.gradient_speed.name)
+
+        def _update_salvo_end_speed() -> Tuple[int, int, int, int]:
+            speed = getter()
+            return speed, speed, speed, speed
+
+        salvo_end_speed_updater = controller.register_context_executor(
+            _update_salvo_end_speed, [ContextVar.prev_salvo_speed.name], function_name="_update_salvo_end_speed"
+        )
+        updaters.append(salvo_end_speed_updater)
     return MovingState(
         speed_expressions=ContextVar.gradient_speed.name,
         used_context_variables=[ContextVar.gradient_speed.name],
-        before_entering=[speed_updater],
+        before_entering=updaters,
     )
 
 
@@ -926,11 +939,12 @@ def make_search_handler(
     app_config: APPConfig,
     run_config: RunConfig,
     start_state: Optional[MovingState] = None,
+    stop_state: MovingState = MovingState.halt(),
 ) -> Tuple[List[MovingState], List[MovingTransition]]:
     start_state = start_state or continues_state.clone()
-    scan_states, scan_transitions = make_scan_handler(app_config, run_config)
-    rand_turn_states, rand_turn_transitions = make_rand_turn_handler(app_config, run_config)
-    grad_move_state = make_gradient_move(app_config, run_config)
+    scan_states, scan_transitions = make_scan_handler(app_config, run_config, end_state=stop_state)
+    rand_turn_states, rand_turn_transitions = make_rand_turn_handler(app_config, run_config, end_state=stop_state)
+    grad_move_state = make_gradient_move(app_config, run_config, is_salvo_end=True)
 
     pool = []
     w = []
@@ -963,16 +977,15 @@ def make_fence_handler(
     app_config: APPConfig,
     run_config: RunConfig,
     start_state: Optional[MovingState] = None,
-    normal_exit: Optional[MovingState] = MovingState.halt(),
-    abnormal_exit: MovingState = MovingState.halt(),
+    stop_state: MovingState = MovingState.halt(),
 ) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
 
     fence_breaker = Breakers.make_std_fence_breaker(app_config, run_config)
 
     align_stage_breaker = Breakers.make_stage_align_breaker_mpu(app_config, run_config)
 
-    back_stage_pack = make_back_to_stage_handler(run_config, normal_exit)
-    rand_move_pack = make_rand_walk_handler(run_config, abnormal_exit)
+    back_stage_pack = make_back_to_stage_handler(run_config, stop_state)
+    rand_move_pack = make_rand_walk_handler(run_config, stop_state)
 
     align_direction_pack = make_align_direction_handler(app_config, run_config, rand_move_pack[0][0])
 
@@ -1031,7 +1044,7 @@ def make_fence_handler(
         composer.init_container()
         .add(front_exit_corner_state.clone())
         .add(exit_duration.clone())
-        .add(abnormal_exit)
+        .add(stop_state)
         .export_structure()
     )
     transitions_pool.extend(transitions)
@@ -1041,14 +1054,14 @@ def make_fence_handler(
         composer.init_container()
         .add(rear_exit_corner_state.clone())
         .add(exit_duration.clone())
-        .add(abnormal_exit)
+        .add(stop_state)
         .export_structure()
     )
     transitions_pool.extend(transitions)
     case_reg.batch_register([FenceCodeSign.X_O_O_X, FenceCodeSign.X_O_X_O], head_state)
     # ---------------------------------------------------------------------
     [head_state, *_], transitions = (
-        composer.init_container().concat(*align_direction_pack).add(abnormal_exit, True).export_structure()
+        composer.init_container().concat(*align_direction_pack).add(stop_state, True).export_structure()
     )
     transitions_pool.extend(transitions)
     case_reg.batch_register(
@@ -1072,7 +1085,7 @@ def make_fence_handler(
     # <editor-fold desc="Make Return">
     transitions_pool.extend(head_trans)
 
-    return start_state, normal_exit, list(set(transitions_pool))
+    return start_state, stop_state, list(set(transitions_pool))
     # </editor-fold>
 
 
@@ -1208,22 +1221,25 @@ def make_rand_walk_handler(
 def make_stage_handler(
     app_config: APPConfig,
     run_config: RunConfig,
-    start_state: Optional[MovingState] = None,
-    end_state: MovingState = MovingState.halt(),
     tag_group: Optional[TagGroup] = None,
 ) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
+    end_state: MovingState = MovingState.halt()
 
-    start_state = start_state or continues_state.clone()
+    zero_salvo_speed_updater = controller.register_context_executor(
+        lambda: (0, 0, 0, 0), output_keys=[ContextVar.prev_salvo_speed.name], function_name="zero_salvo_speed_updater"
+    )
+    end_state.before_entering.append(zero_salvo_speed_updater)
+    start_state = continues_state.clone()
 
     stage_breaker = Breakers.make_std_stage_breaker(app_config, run_config)
 
     reboot_pack = make_reboot_handler(app_config, run_config, end_state=end_state)
-    fence_pack = make_fence_handler(app_config, run_config, normal_exit=end_state)
+    fence_pack = make_fence_handler(app_config, run_config, stop_state=end_state)
     edge_pack = make_edge_handler(app_config, run_config, abnormal_exit=end_state)
     surr_pack = make_surrounding_handler(
         app_config, run_config, tag_group, start_state=edge_pack[1], abnormal_exit=end_state
     )
-    search_pack = make_search_handler(app_config, run_config, start_state=surr_pack[1])
+    search_pack = make_search_handler(app_config, run_config, start_state=surr_pack[1], stop_state=end_state)
 
     case_reg = CaseRegistry(StageCodeSign)
     transition_pool = [*reboot_pack[-1], *edge_pack[-1], *fence_pack[-1], *surr_pack[-1], *search_pack[-1]]
