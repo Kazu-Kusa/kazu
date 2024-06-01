@@ -182,37 +182,44 @@ def run(conf: _InternalConfig, run_config: Path | None, mode: str, **_):
 
     con = inited_controller(app_config)
     con.context.update(ContextVar.export_context())
-
-    match mode:
-        case RunMode.FGS:
-            from kazu.assembly import assmbly_FGDL_schema
-
-            botix.token_pool = assmbly_FGDL_schema(app_config, run_config)
-        case RunMode.NGS:
-            from kazu.assembly import assmbly_NGS_schema
-
-            botix.token_pool = assmbly_NGS_schema(app_config, run_config)
-        case RunMode.AFG:
-            from kazu.assembly import assmbly_AFG_schema
-
-            botix.token_pool = assmbly_AFG_schema(app_config, run_config)
-        case RunMode.ANG:
-            from kazu.assembly import assmbly_ANG_schema
-
-            botix.token_pool = assmbly_ANG_schema(app_config, run_config)
-        case RunMode.FGDL:
-            from kazu.assembly import assmbly_FGDL_schema
-
-            botix.token_pool = assmbly_FGDL_schema(app_config, run_config)
-
-    func = botix.compile()
     try:
-        while 1:
-            func()
+        match mode:
+            case RunMode.FGS:
+                from kazu.assembly import assmbly_FGDL_schema
+
+                boot_pool, stage_pool = assmbly_FGDL_schema(app_config, run_config)
+                botix.token_pool = boot_pool
+                boot_func = botix.compile()
+                botix.token_pool = stage_pool
+                stage_func = botix.compile()
+                boot_func()
+                while 1:
+                    stage_func()
+            case RunMode.NGS:
+                from kazu.assembly import assmbly_NGS_schema
+
+                botix.token_pool = assmbly_NGS_schema(app_config, run_config)
+                stage_func = botix.compile()
+                while 1:
+                    stage_func()
+            case RunMode.AFG:
+                from kazu.assembly import assmbly_AFG_schema
+
+                botix.token_pool = assmbly_AFG_schema(app_config, run_config)
+            case RunMode.ANG:
+                from kazu.assembly import assmbly_ANG_schema
+
+                botix.token_pool = assmbly_ANG_schema(app_config, run_config)
+            case RunMode.FGDL:
+                from kazu.assembly import assmbly_FGDL_schema
+
+                botix.token_pool = assmbly_FGDL_schema(app_config, run_config)
+
     except KeyboardInterrupt:
         secho(f"Exited by user.", fg="red")
     finally:
         con.send_cmd(CMD.FULL_STOP).send_cmd(CMD.RESET).stop_msg_sending()
+        secho(f"KAZU stopped.", fg="green")
 
 
 @main.command("check")
