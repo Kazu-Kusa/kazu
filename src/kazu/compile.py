@@ -788,14 +788,22 @@ def make_scan_handler(
     case_reg.register(ScanCodesign.O_O_O_O, head_state)
     # ---------------------------------------------------------------------
     [head_state, *_], transitions = (
-        composer.init_container().add(fall_back_state).add(fall_back_transition).add(end_state).export_structure()
+        composer.init_container()
+        .add(fall_back_state.clone())
+        .add(fall_back_transition.clone())
+        .add(end_state)
+        .export_structure()
     )
 
     transitions_pool.extend(transitions)
-    case_reg.register(ScanCodesign.X_O_O_O, head_state)
+    case_reg.batch_register([ScanCodesign.X_O_O_O, ScanCodesign.X_O_X_X], head_state)
     # ---------------------------------------------------------------------
     [head_state, *_], transitions = (
-        composer.init_container().add(rand_turn_state).add(full_turn_transition).add(end_state).export_structure()
+        composer.init_container()
+        .add(rand_turn_state.clone())
+        .add(full_turn_transition.clone())
+        .add(end_state)
+        .export_structure()
     )
 
     transitions_pool.extend(transitions)
@@ -814,7 +822,11 @@ def make_scan_handler(
     )
     # ---------------------------------------------------------------------
     [head_state, *_], transitions = (
-        composer.init_container().add(turn_left_state).add(half_turn_transition).add(end_state).export_structure()
+        composer.init_container()
+        .add(turn_left_state.clone())
+        .add(half_turn_transition.clone())
+        .add(end_state)
+        .export_structure()
     )
 
     transitions_pool.extend(transitions)
@@ -828,7 +840,11 @@ def make_scan_handler(
 
     # ---------------------------------------------------------------------
     [head_state, *_], transitions = (
-        composer.init_container().add(turn_right_state).add(half_turn_transition).add(end_state).export_structure()
+        composer.init_container()
+        .add(turn_right_state.clone())
+        .add(half_turn_transition.clone())
+        .add(end_state)
+        .export_structure()
     )
 
     transitions_pool.extend(transitions)
@@ -842,18 +858,11 @@ def make_scan_handler(
 
     # ---------------------------------------------------------------------
     [head_state, *_], transitions = (
-        composer.init_container().add(fall_back_state).add(fall_back_transition).add(end_state).export_structure()
-    )
-
-    transitions_pool.extend(transitions)
-    case_reg.register(ScanCodesign.X_O_X_X, head_state)
-    # ---------------------------------------------------------------------
-    [head_state, *_], transitions = (
         composer.init_container()
-        .add(fall_back_state)
-        .add(fall_back_transition)
-        .add(rand_turn_state)
-        .add(half_turn_transition)
+        .add(fall_back_state.clone())
+        .add(fall_back_transition.clone())
+        .add(rand_turn_state.clone())
+        .add(half_turn_transition.clone())
         .add(end_state)
         .export_structure()
     )
@@ -869,7 +878,8 @@ def make_scan_handler(
         .export_structure()
     )
 
-    return states, transitions
+    transitions_pool.extend(transitions)
+    return states, transitions_pool
 
 
 def make_rand_turn_handler(

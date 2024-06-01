@@ -423,7 +423,7 @@ def visualize(
         # 这里简化处理，实际可能需要根据handler的不同调用不同的导出方法
         handler_func: Callable = handlers.get(f_name)
 
-        (*_, handler_data) = handler_func(**{"app_config": app_config, "run_config": run_config})
+        (*_, handler_data) = handler_func(app_config=app_config, run_config=run_config)
         filename = f_name + ".puml"
         destination_filename = (destination / filename).as_posix()
         secho(f"Exporting {filename}", fg="green", bold=True)
