@@ -77,7 +77,7 @@ def main(ctx: click.Context, app_config_path: Path):
 
 
 @main.command("config")
-@click.pass_context
+@click.pass_obj
 @click.help_option("-h", "--help")
 @click.option(
     "-r",
@@ -97,16 +97,15 @@ def main(ctx: click.Context, app_config_path: Path):
 )
 @click.argument("kv", type=(str, str), required=False, default=None)
 def configure(
-    context: click.Context,
+    config: _InternalConfig,
     kv: Optional[Tuple[str, str]],
     **_,
 ):
     """
     Configure KAZU
     """
-    config: _InternalConfig = context.obj
+
     app_config = config.app_config
-    print(f"kv: {kv}")
     if kv is None:
         from toml import dumps
 
@@ -117,14 +116,14 @@ def configure(
     try:
         exec(f"app_config.{key} = '{value}'")
     except Exception as e:
-        print(e)
+        secho(e, fg="red", bold=True)
     finally:
         with open(config.app_config_file_path, "w") as fp:
             APPConfig.dump_config(fp, app_config)
 
 
 @main.command("run")
-@click.pass_context
+@click.pass_obj
 @click.help_option("-h", "--help")
 @click.option(
     "-e",
@@ -170,15 +169,14 @@ def configure(
     help=f"run mode, also can receive env {Env.KAZU_RUN_MODE}",
     envvar=Env.KAZU_RUN_MODE,
 )
-def run(ctx: click.Context, run_config: Path | None, mode: str, **_):
+def run(conf: _InternalConfig, run_config: Path | None, mode: str, **_):
     """
     Run command for the main group.
     """
 
-    internal_config: _InternalConfig = ctx.obj
     run_config = load_run_config(run_config)
 
-    app_config = internal_config.app_config
+    app_config = conf.app_config
 
     from kazu.hardwares import inited_controller
 
@@ -219,17 +217,17 @@ def run(ctx: click.Context, run_config: Path | None, mode: str, **_):
 
 @main.command("check")
 @click.help_option("-h", "--help")
-@click.pass_context
+@click.pass_obj
 @click.argument(
     "device",
     type=click.Choice(["mot", "cam", "adc", "io", "mpu", "pow", "all"]),
     nargs=-1,
 )
-def test(ctx: click.Context, device: str):
+def test(conf: _InternalConfig, device: str):
     """
     Check devices' normal functions
     """
-    app_config: APPConfig = ctx.obj.app_config
+    app_config: APPConfig = conf.app_config
 
     from kazu.checkers import check_io, check_camera, check_adc, check_motor, check_power, check_mpu
     from terminaltables import SingleTable
@@ -307,14 +305,14 @@ def test(ctx: click.Context, device: str):
 
 @main.command("read")
 @click.help_option("-h", "--help")
-@click.pass_context
+@click.pass_obj
 @click.argument(
     "device",
     type=click.Choice(["adc", "io", "mpu", "all"]),
     nargs=-1,
 )
 @click.option("-i", "interval", type=click.FLOAT, default=0.1, show_default=True)
-def read_sensors(ctx: click.Context, interval: float, device: str):
+def read_sensors(conf: _InternalConfig, interval: float, device: str):
     """
     Read sensors data and print to terminal
     """
@@ -325,7 +323,7 @@ def read_sensors(ctx: click.Context, interval: float, device: str):
     )
     from kazu.hardwares import sensors
 
-    app_config: APPConfig = ctx.obj.app_config
+    app_config: APPConfig = conf.app_config
     device = set(device) or ("all",)
     (
         sensors.adc_io_open()
@@ -348,7 +346,8 @@ def read_sensors(ctx: click.Context, interval: float, device: str):
                 packs.append(lambda: make_io_table(sensors))
             case "mpu":
                 packs.append(lambda: make_mpu_table(sensors))
-
+            case _:
+                raise ValueError(f"Invalid device: {dev}")
     try:
         while 1:
             stdout: str = "\n".join(pack() for pack in packs)
@@ -363,7 +362,7 @@ def read_sensors(ctx: click.Context, interval: float, device: str):
 
 @main.command("viz")
 @click.help_option("-h", "--help")
-@click.pass_context
+@click.pass_obj
 @click.argument(
     "packname",
     type=click.Choice(["all", "edge", "surr", "search", "fence", "boot", "scan", "stage", "bkstage", "rdwalk"]),
@@ -387,7 +386,7 @@ def read_sensors(ctx: click.Context, interval: float, device: str):
     envvar=Env.KAZU_RUN_CONFIG_PATH,
 )
 def visualize(
-    ctx: click.Context,
+    conf: _InternalConfig,
     destination: Path,
     run_config: Optional[Path],
     packname: str = ("all",),
@@ -396,7 +395,6 @@ def visualize(
     Visualize State-Transition Diagram of KAZU with PlantUML
 
     """
-    conf: _InternalConfig = ctx.obj
     destination.mkdir(parents=True, exist_ok=True)
 
     app_config = conf.app_config
@@ -434,10 +432,10 @@ def visualize(
 
 @main.command("cmd", context_settings={"ignore_unknown_options": True})
 @click.help_option("-h", "--help")
-@click.pass_context
+@click.pass_obj
 @click.argument("duration", type=click.FLOAT, required=True)
 @click.argument("speeds", nargs=-1, type=click.INT, required=True)
-def control_motor(ctx: click.Context, duration: float, speeds: list[int]):
+def control_motor(conf: _InternalConfig, duration: float, speeds: list[int]):
     """
     Control motor by sending command.
 
@@ -453,7 +451,7 @@ def control_motor(ctx: click.Context, duration: float, speeds: list[int]):
     from kazu.hardwares import inited_controller
     from colorama import Fore
 
-    app_config = ctx.obj.app_config
+    app_config = conf.app_config
     controller = inited_controller(app_config)
     try:
         states, transitions = (
@@ -519,7 +517,6 @@ def control_display(channel: Tuple[int, int, int]):
 
 @main.command("bench")
 @click.help_option("-h", "--help")
-@click.pass_context
 @click.option(
     "-a",
     "--add-up-to",
@@ -530,7 +527,7 @@ def control_display(channel: Tuple[int, int, int]):
 @click.option(
     "-p", "--add-up-per-second", is_flag=True, default=False, callback=bench_aps, help="measure add-ups per second"
 )
-def bench(ctx: click.Context, **_):
+def bench(**_):
     """
     Benchmarks
     """

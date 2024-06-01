@@ -17,6 +17,12 @@ def assmbly_AFG_schema(app_config: APPConfig, run_config: RunConfig) -> List[Mov
 
 
 def assmbly_ANG_schema(app_config: APPConfig, run_config: RunConfig) -> List[MovingTransition]:
+    if app_config.vision.use_camera:
+        tag_group = make_tag_group(app_config)
+    else:
+        tag_group = None
+        app_config.vision.use_camera = False
+
     edge_pack = make_edge_handler(app_config, run_config)
 
     surr_pack = make_surrounding_handler(app_config, run_config, tag_group)
@@ -43,4 +49,3 @@ def assmbly_FGDL_schema(app_config: APPConfig, run_config: RunConfig) -> List[Mo
     reboot_pack = make_reboot_handler(app_config, run_config)
 
     return reboot_pack[-1]
-    # TODO add soft con
