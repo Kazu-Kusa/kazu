@@ -46,6 +46,9 @@ def export_default_run_config(ctx: click.Context, _, path: Path):
 
 
 def disable_cam_callback(ctx: click.Context, _, value: bool):
+    """
+    Disable the camera.
+    """
     if value:
         app_config: APPConfig = ctx.obj.app_config
 
@@ -54,6 +57,9 @@ def disable_cam_callback(ctx: click.Context, _, value: bool):
 
 
 def log_level_callback(ctx: click.Context, _, value: str):
+    """
+    Change the log level.
+    """
     if value:
         app_config: APPConfig = ctx.obj.app_config
 
@@ -62,6 +68,9 @@ def log_level_callback(ctx: click.Context, _, value: str):
 
 
 def team_color_callback(ctx: click.Context, _, value: str):
+    """
+    Change the team color.
+    """
     if value:
         app_config: APPConfig = ctx.obj.app_config
 
@@ -70,6 +79,9 @@ def team_color_callback(ctx: click.Context, _, value: str):
 
 
 def bench_add_app(ctx: click.Context, _, add_up_to):
+    """
+    Benchmark the execution time of adding up to a given number.
+    """
     if add_up_to is not None:
         import timeit
 
@@ -84,6 +96,9 @@ def bench_add_app(ctx: click.Context, _, add_up_to):
 
 
 def bench_aps(ctx: click.Context, _, add_up_per_second: bool):
+    """
+    Benchmark the execution time of adding up to a given number.
+    """
 
     if add_up_per_second:
         import timeit
