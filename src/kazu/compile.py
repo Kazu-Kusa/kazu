@@ -963,18 +963,15 @@ def make_fence_handler(
     app_config: APPConfig,
     run_config: RunConfig,
     start_state: Optional[MovingState] = None,
-    end_state: Optional[MovingState] = MovingState.halt(),
+    normal_exit: Optional[MovingState] = MovingState.halt(),
     abnormal_exit: MovingState = MovingState.halt(),
 ) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
-    is_align_setter_true = controller.register_context_executor(lambda: True, ContextVar.is_aligned.name)
-    is_align_setter_false = controller.register_context_executor(lambda: False, ContextVar.is_aligned.name)
-    is_align_getter = controller.register_context_getter(ContextVar.is_aligned.name)
 
     fence_breaker = Breakers.make_std_fence_breaker(app_config, run_config)
 
     align_stage_breaker = Breakers.make_stage_align_breaker_mpu(app_config, run_config)
 
-    back_stage_pack = make_back_to_stage_handler(run_config, end_state)
+    back_stage_pack = make_back_to_stage_handler(run_config, normal_exit)
     rand_move_pack = make_rand_walk_handler(run_config, abnormal_exit)
 
     align_direction_pack = make_align_direction_handler(app_config, run_config, rand_move_pack[0][0])
@@ -1034,7 +1031,7 @@ def make_fence_handler(
         composer.init_container()
         .add(front_exit_corner_state.clone())
         .add(exit_duration.clone())
-        .add(MovingState.halt())
+        .add(abnormal_exit)
         .export_structure()
     )
     transitions_pool.extend(transitions)
@@ -1044,14 +1041,14 @@ def make_fence_handler(
         composer.init_container()
         .add(rear_exit_corner_state.clone())
         .add(exit_duration.clone())
-        .add(MovingState.halt())
+        .add(abnormal_exit)
         .export_structure()
     )
     transitions_pool.extend(transitions)
     case_reg.batch_register([FenceCodeSign.X_O_O_X, FenceCodeSign.X_O_X_O], head_state)
     # ---------------------------------------------------------------------
     [head_state, *_], transitions = (
-        composer.init_container().concat(*align_direction_pack).add(MovingState.halt(), True).export_structure()
+        composer.init_container().concat(*align_direction_pack).add(abnormal_exit, True).export_structure()
     )
     transitions_pool.extend(transitions)
     case_reg.batch_register(
@@ -1075,7 +1072,7 @@ def make_fence_handler(
     # <editor-fold desc="Make Return">
     transitions_pool.extend(head_trans)
 
-    return start_state, end_state, list(set(transitions_pool))
+    return start_state, normal_exit, list(set(transitions_pool))
     # </editor-fold>
 
 
@@ -1221,7 +1218,7 @@ def make_stage_handler(
     stage_breaker = Breakers.make_std_stage_breaker(app_config, run_config)
 
     reboot_pack = make_reboot_handler(app_config, run_config, end_state=end_state)
-    fence_pack = make_fence_handler(app_config, run_config, end_state=end_state)
+    fence_pack = make_fence_handler(app_config, run_config, normal_exit=end_state)
     edge_pack = make_edge_handler(app_config, run_config, abnormal_exit=end_state)
     surr_pack = make_surrounding_handler(
         app_config, run_config, tag_group, start_state=edge_pack[1], abnormal_exit=end_state
