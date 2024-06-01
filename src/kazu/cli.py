@@ -7,6 +7,7 @@ import bdmc
 import click
 import mentabotix
 import pyuptech
+from bdmc import CMD
 from click import secho, echo, clear
 from mentabotix import MovingState, MovingTransition
 
@@ -39,7 +40,6 @@ from kazu.config import (
     ContextVar,
     TagGroup,
     load_run_config,
-    make_tag_group,
     load_app_config,
 )
 from kazu.constant import Env, RunMode
@@ -182,18 +182,39 @@ def run(ctx: click.Context, run_config: Path | None, mode: str, **_):
 
     from kazu.hardwares import inited_controller
 
-    inited_controller(app_config).context.update(ContextVar.export_context())
+    con = inited_controller(app_config)
+    con.context.update(ContextVar.export_context())
 
-    if app_config.vision.use_camera:
-        tag_group = make_tag_group(app_config)
-    # TODO remove this debug code below
-    app_config.vision.use_camera = True
+    match mode:
+        case RunMode.FGS:
+            from kazu.assembly import assmbly_FGDL_schema
 
-    stage_pack = make_stage_handler(app_config, run_config, tag_group=tag_group)
-    botix.token_pool = stage_pack[-1]
+            botix.token_pool = assmbly_FGDL_schema(app_config, run_config)
+        case RunMode.NGS:
+            from kazu.assembly import assmbly_NGS_schema
+
+            botix.token_pool = assmbly_NGS_schema(app_config, run_config)
+        case RunMode.AFG:
+            from kazu.assembly import assmbly_AFG_schema
+
+            botix.token_pool = assmbly_AFG_schema(app_config, run_config)
+        case RunMode.ANG:
+            from kazu.assembly import assmbly_ANG_schema
+
+            botix.token_pool = assmbly_ANG_schema(app_config, run_config)
+        case RunMode.FGDL:
+            from kazu.assembly import assmbly_FGDL_schema
+
+            botix.token_pool = assmbly_FGDL_schema(app_config, run_config)
+
     func = botix.compile()
-    func()
-    echo("Done!")
+    try:
+        while 1:
+            func()
+    except KeyboardInterrupt:
+        secho(f"Exited by user.", fg="red")
+    finally:
+        con.send_cmd(CMD.FULL_STOP).send_cmd(CMD.RESET).stop_msg_sending()
 
 
 @main.command("check")
