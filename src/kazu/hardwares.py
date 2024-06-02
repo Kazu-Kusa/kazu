@@ -7,6 +7,8 @@ from pyuptech.modules.screen import Screen
 from pyuptech.modules.sensors import OnBoardSensors
 from upic.vision.tagdetector import TagDetector
 
+from kazu.logger import _logger
+
 controller = CloseLoopController()
 screen = Screen()
 tag_detector = TagDetector()
@@ -65,3 +67,31 @@ def inited_controller(app_config) -> CloseLoopController:
     controller.serial_client.port = app_config.motion.port
     controller.serial_client.open()
     return controller.start_msg_sending().send_cmd(CMD.RESET)
+
+
+def inited_tag_detector(app_config) -> TagDetector:
+    """
+    Initializes the tag detector with the given configuration.
+
+    Args:
+        app_config (APPConfig): The application configuration containing the tag information and port.
+
+    Returns:
+        None
+
+    Description:
+        This function initializes the tag detector with the given configuration. It sets the tag information
+        of the tag detector object using the tag information provided in the application configuration. It also
+        sets the port of the serial client of the tag detector object to the port specified in the application
+        configuration. Finally, it opens the serial client, and starts the message sending process.
+    """
+    _logger.info(f"Open Camera-{app_config.vision.camera_device_id}")
+    tag_detector.open_camera(app_config.vision.camera_device_id)
+    success, _ = tag_detector.camera_device.read()
+    if success:
+        _logger.info("Camera is successfully opened !")
+    else:
+        _logger.critical(f"Failed to open Camera-{app_config.vision.camera_device_id}")
+        _logger.warning("Camera will not be used.")
+        app_config.vision.use_camera = False
+    return tag_detector

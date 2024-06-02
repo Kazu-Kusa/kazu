@@ -1,21 +1,21 @@
 [project]
 name = "kazu"
-version = "0.1.2"
+version = "0.1.3"
 description = "Default template for PDM package"
 authors = [
     { name = "Whth", email = "88489697+Whth@users.noreply.github.com" },
 ]
 dependencies = [
-    "mentabotix>=0.1.5.12",
+    "mentabotix>=0.1.5.15",
     "pyuptech>=0.1.6.3",
-    "bdmc>=0.1.5.11",
+    "bdmc>=0.1.5.14",
     "coloredlogs>=15.0.1",
     "pydantic>=2.7.1",
     "click>=8.1.7",
     "toml>=0.10.2",
     "terminaltables>=3.1.10",
     "colorama>=0.4.6",
-    "upicvision>=0.1.0.2",
+    "upicvision>=0.1.0.3",
 ]
 requires-python = "==3.11.*"
 readme = "README.md"

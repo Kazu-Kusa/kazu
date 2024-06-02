@@ -167,8 +167,11 @@ def run(conf: _InternalConfig, run_config: Path | None, mode: str, **_):
 
     app_config = conf.app_config
 
-    from kazu.hardwares import inited_controller
+    from kazu.hardwares import inited_controller, sensors, inited_tag_detector
+    from kazu.signal_light import set_all_black
 
+    sensors.adc_io_open().MPU6500_Open()
+    tag_detector = inited_tag_detector(app_config)
     con = inited_controller(app_config)
     con.context.update(ContextVar.export_context())
     try:
@@ -195,16 +198,16 @@ def run(conf: _InternalConfig, run_config: Path | None, mode: str, **_):
                 from kazu.assembly import assmbly_AFG_schema
 
                 botix.token_pool = assmbly_AFG_schema(app_config, run_config)
-                afg_func = botix.compile()
+                off_stage_func = botix.compile()
                 while 1:
-                    afg_func()
+                    off_stage_func()
             case RunMode.ANG:
                 from kazu.assembly import assmbly_ANG_schema
 
                 botix.token_pool = assmbly_ANG_schema(app_config, run_config)
-                ang_func = botix.compile()
+                on_stage_func = botix.compile()
                 while 1:
-                    ang_func()
+                    on_stage_func()
             case RunMode.FGDL:
                 from kazu.assembly import assmbly_FGDL_schema
 
@@ -215,6 +218,9 @@ def run(conf: _InternalConfig, run_config: Path | None, mode: str, **_):
     except KeyboardInterrupt:
         secho(f"Exited by user.", fg="red")
     finally:
+        set_all_black()
+        sensors.adc_io_close()
+        tag_detector.release_camera()
         con.send_cmd(CMD.FULL_STOP).send_cmd(CMD.RESET).stop_msg_sending()
         secho(f"KAZU stopped.", fg="green")
 
@@ -246,13 +252,11 @@ def test(conf: _InternalConfig, device: str):
     table = [[f"{Fore.YELLOW}Device{Fore.RESET}", f"{Fore.GREEN}Success{Fore.RESET}"]]
     if "all" in device:
         from bdmc import CMD
-        from kazu.hardwares import tag_detector, controller, sensors
+        from kazu.hardwares import inited_tag_detector, inited_controller, sensors
 
         sensors.adc_io_open().MPU6500_Open()
-        controller.serial_client.port = app_config.motion.port
-        tag_detector.open_camera(app_config.vision.camera_device_id)
-        controller.serial_client.open()
-        controller.start_msg_sending().send_cmd(CMD.RESET)
+        controller = inited_controller(app_config)
+        tag_detector = inited_tag_detector(app_config)
         table.append(shader("IO", check_io(sensors)))
         table.append(shader("ADC", check_adc(sensors)))
         table.append(shader("MPU", check_mpu(sensors)))
@@ -262,6 +266,7 @@ def test(conf: _InternalConfig, device: str):
         secho(SingleTable(table).table)
         controller.stop_msg_sending()
         sensors.adc_io_close()
+        tag_detector.release_camera()
         return
 
     if "adc" in device:
@@ -288,22 +293,19 @@ def test(conf: _InternalConfig, device: str):
         table.append(shader("POWER", check_power(sensors)))
 
     if "cam" in device:
-        from kazu.hardwares import tag_detector
+        from kazu.hardwares import inited_tag_detector
 
-        tag_detector.open_camera(app_config.vision.camera_device_id)
+        tag_detector = inited_tag_detector(app_config)
         table.append(shader("CAMERA", check_camera(tag_detector)))
-
+        tag_detector.release_camera()
     if "mot" in device:
-        from kazu.hardwares import controller
+        from kazu.hardwares import inited_controller
         from kazu.hardwares import sensors
         from bdmc import CMD
 
-        controller.serial_client.port = app_config.motion.port
-
-        controller.serial_client.open()
-        controller.start_msg_sending().send_cmd(CMD.RESET)
+        controller = inited_controller(app_config)
         table.append(shader("MOTOR", check_motor(controller)))
-
+        controller.stop_msg_sending()
     secho(SingleTable(table).table)
 
 

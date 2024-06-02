@@ -26,9 +26,9 @@ class Breakers:
                 )
             ],
             judging_source=f"ret= ({lt_seq[1]}>s0 or s0<{ut_seq[1]}) or ({lt_seq[2]}>s1 or s1<{ut_seq[2]})",
-            extra_context={"bool": bool},
-            return_type_varname="bool",
+            return_type=bool,
             return_raw=False,
+            function_name="std_edge_rear_breaker",
         )
 
     @staticmethod
@@ -54,9 +54,9 @@ class Breakers:
             f"or s1=={app_config.sensor.io_activating_value} "
             f"or ({lt_seq[0]}>s2 or s2<{ut_seq[0]}) "
             f"or ({lt_seq[-1]}>s3 or s3<{ut_seq[-1]})",
-            extra_context={"bool": bool},
-            return_type_varname="bool",
+            return_type=bool,
             return_raw=False,
+            function_name="std_edge_front_breaker",
         )
 
     @staticmethod
@@ -77,16 +77,16 @@ class Breakers:
                 )
             ],
             judging_source=(
-                "ret=sum("
+                "ret=sum(["
                 + ",".join(
                     f"({lt}>s{s_id} or {s_id}<{ut})*{wt}"
                     for s_id, lt, ut, wt in zip(range(4), lt_seq, ut_seq, EdgeWeights.export_std_weight_seq())
                 )
-                + ")"
+                + "])"
             ),
-            extra_context={"int": int},
-            return_type_varname="int",
+            return_type=int,
             return_raw=False,
+            function_name="std_edge_full_breaker",
         )
 
     @staticmethod
@@ -109,16 +109,10 @@ class Breakers:
                 ),
             ],
             judging_source=f"ret=bool(s0 or s1 or s2>{run_config.surrounding.front_adc_lower_threshold})",
-            extra_context={"bool": bool},
-            return_type_varname="bool",
+            return_type=bool,
             return_raw=False,
+            function_name="std_turn_to_front_breaker",
         )
-
-    @staticmethod
-    @lru_cache(maxsize=None)
-    def make_std_scanning_breaker(app_config: APPConfig, run_config: RunConfig):
-        # TODO impl
-        raise NotImplementedError
 
     @staticmethod
     @lru_cache(maxsize=None)
@@ -142,9 +136,9 @@ class Breakers:
             judging_source=f"ret=not s0 or not s1  "  # use gray scaler, indicating the edge is encountered
             f"or not any( (s2 , s3 , s4>{run_config.surrounding.atk_break_front_lower_threshold}))",
             # indicating front is empty
-            return_type_varname="bool",
-            extra_context={"bool": bool},
+            return_type=bool,
             return_raw=False,
+            function_name="atk_breaker",
         )
 
     @staticmethod
@@ -163,9 +157,9 @@ class Breakers:
                 ),
             ],
             judging_source=f"ret=bool(s0 or s1 and not s2 and not s3)",
-            return_type_varname="bool",
-            extra_context={"bool": bool},
+            return_type=bool,
             return_raw=False,
+            function_name="stage_align_breaker",
         )
 
     @staticmethod
@@ -192,9 +186,9 @@ class Breakers:
                 ),
             ],
             judging_source=f"ret=bool(not ({invalid_lower_bound}<abs(s0)//90<{invalid_upper_bound}) and (s1 or s2))",
-            return_type_varname="bool",
-            extra_context={"bool": bool},
+            return_type=bool,
             return_raw=False,
+            function_name="stage_align_breaker_mpu",
         )
 
     @staticmethod
@@ -218,10 +212,10 @@ class Breakers:
                 ),
             ],
             judging_source=f"ret={StageWeight.REBOOT}*(s0=={app_config.sensor.io_activating_value})"
-            f"+{StageWeight.OFF}*(s1<{run_config.perf.gray_adc_lower_threshold})",
-            return_type_varname="int",
-            extra_context={"int": int},
+            f"+{StageWeight.STAGE}*(s1<{run_config.perf.gray_adc_lower_threshold})",
+            return_type=int,
             return_raw=False,
+            function_name="std_on_stage_breaker",
         )
 
     @staticmethod
@@ -255,9 +249,9 @@ class Breakers:
             f"+{FenceWeights.Rear}*(s1>{conf.rear_adc_lower_threshold} or s6 == {conf.io_activated_value} or s7 == {conf.io_activated_value})"
             f"+{FenceWeights.Left}*(s2>{conf.left_adc_lower_threshold})"
             f"+{FenceWeights.Rear}*(s3>{conf.right_adc_lower_threshold})",
-            return_type_varname="int",
-            extra_context={"int": int},
+            return_type=int,
             return_raw=False,
+            function_name="std_fence_breaker",
         )
 
     @staticmethod
@@ -272,9 +266,9 @@ class Breakers:
         return menta.construct_inlined_function(
             usages=[SamplerUsage(used_sampler_index=SamplerIndexes.atti_all, required_data_indexes=[Attitude.yaw])],
             judging_source=["diff=abs(s0)//90", f"ret={invalid_lower_bound}>diff or diff>{invalid_upper_bound}"],
-            return_type_varname="bool",
-            extra_context={"bool": bool},
+            return_type=bool,
             return_raw=False,
+            function_name="align_direction_breaker",
         )
 
     @staticmethod
@@ -315,9 +309,10 @@ class Breakers:
                 f"+{ScanWeights.Left}*(s2-left>{conf.left_max_tolerance})"
                 f"+{ScanWeights.Rear}*(s3-right>{conf.right_max_tolerance})",
             ],
-            return_type_varname="int",
-            extra_context={"int": int, "adc_pack_getter": adc_pack_getter},
+            return_type=int,
+            extra_context={"adc_pack_getter": adc_pack_getter},
             return_raw=False,
+            function_name="std_scan_breaker",
         )
 
     @staticmethod
@@ -341,8 +336,7 @@ class Breakers:
             ],
             judging_source=f"ret={StageWeight.STAGE}*(s0<{conf.gray_adc_upper_threshold})"
             f"+{StageWeight.REBOOT}*(s1=={app_config.sensor.io_activating_value})",
-            return_type_varname="int",
-            extra_context={"int": int},
+            return_type=int,
             return_raw=False,
             function_name="std_stage_breaker",
         )
@@ -371,8 +365,7 @@ class Breakers:
                 f"+{StageWeight.REBOOT}*(s1=={app_config.sensor.io_activating_value})",
                 "ret=0",
             ],
-            return_type_varname="int",
-            extra_context={"int": int},
+            return_type=int,
             return_raw=False,
             function_name="always_on_stage_breaker",
         )
@@ -396,10 +389,12 @@ class Breakers:
                     ],
                 ),
             ],
-            judging_source=f"ret={StageWeight.STAGE}*(True)"
-            f"+{StageWeight.REBOOT}*(s1=={app_config.sensor.io_activating_value})",
-            return_type_varname="int",
-            extra_context={"int": int},
+            judging_source=[
+                "temp_data=s0",
+                f"ret={StageWeight.STAGE}*(True)"
+                f"+{StageWeight.REBOOT}*(s1=={app_config.sensor.io_activating_value})",
+            ],
+            return_type=int,
             return_raw=False,
             function_name="always_off_stage_breaker",
         )
