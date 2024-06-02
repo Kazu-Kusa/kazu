@@ -413,18 +413,17 @@ def make_surrounding_handler(
     """
 
     # <editor-fold desc="Breakers">
+    query_table: Dict[Tuple[int, bool], int] = {
+        (tag_group.default_tag, True): SurroundingWeights.FRONT_ENEMY_CAR,
+        (tag_group.default_tag, False): SurroundingWeights.NOTHING,
+        (tag_group.allay_tag, True): SurroundingWeights.FRONT_ALLY_BOX,
+        (tag_group.allay_tag, False): SurroundingWeights.FRONT_ALLY_BOX,
+        (tag_group.neutral_tag, True): SurroundingWeights.FRONT_NEUTRAL_BOX,
+        (tag_group.neutral_tag, False): SurroundingWeights.NOTHING,
+        (tag_group.enemy_tag, True): SurroundingWeights.FRONT_ENEMY_BOX,
+        (tag_group.enemy_tag, False): SurroundingWeights.FRONT_ENEMY_BOX,
+    }
     if app_config.vision.use_camera:
-
-        query_table: Dict[Tuple[int, bool], int] = {
-            (tag_group.default_tag, True): SurroundingWeights.FRONT_ENEMY_CAR,
-            (tag_group.default_tag, False): SurroundingWeights.NOTHING,
-            (tag_group.allay_tag, True): SurroundingWeights.FRONT_ALLY_BOX,
-            (tag_group.allay_tag, False): SurroundingWeights.FRONT_ALLY_BOX,
-            (tag_group.neutral_tag, True): SurroundingWeights.FRONT_NEUTRAL_BOX,
-            (tag_group.neutral_tag, False): SurroundingWeights.NOTHING,
-            (tag_group.enemy_tag, True): SurroundingWeights.FRONT_ENEMY_BOX,
-            (tag_group.enemy_tag, False): SurroundingWeights.FRONT_ENEMY_BOX,
-        }
 
         surr_full_breaker = menta.construct_inlined_function(
             usages=[
@@ -460,8 +459,38 @@ def make_surrounding_handler(
         )
 
     else:
-        # TODO: implement this no cam case
-        raise NotImplementedError
+        surr_full_breaker = menta.construct_inlined_function(
+            usages=[
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.io_all,
+                    required_data_indexes=[
+                        app_config.sensor.fl_io_index,  # s0
+                        app_config.sensor.fr_io_index,  # s1
+                        app_config.sensor.rl_io_index,  # s2
+                        app_config.sensor.rr_io_index,  # s3
+                    ],
+                ),
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.adc_all,
+                    required_data_indexes=[
+                        app_config.sensor.front_adc_index,  # s4
+                        app_config.sensor.left_adc_index,  # s5
+                        app_config.sensor.right_adc_index,  # s6
+                        app_config.sensor.rb_adc_index,  # s7
+                    ],
+                ),
+            ],
+            judging_source=(
+                f"ret=q_tb.get(({tag_group.default_tag}, bool(s0 or s1 or s4>{run_config.surrounding.front_adc_lower_threshold})))"
+                f"+(s5>{run_config.surrounding.left_adc_lower_threshold})*{SurroundingWeights.LEFT_OBJECT}"
+                f"+(s6>{run_config.surrounding.right_adc_lower_threshold})*{SurroundingWeights.RIGHT_OBJECT}"
+                f"+s2 or s3 or s7>{run_config.surrounding.right_adc_lower_threshold}*{SurroundingWeights.BEHIND_OBJECT}"
+            ),
+            return_type_varname="int",
+            extra_context={"int": int, "q_tb": query_table},
+            return_raw=False,
+            function_name="surrounding_breaker_without_cam",
+        )
 
     atk_breaker = Breakers.make_std_atk_breaker(app_config, run_config)
 
