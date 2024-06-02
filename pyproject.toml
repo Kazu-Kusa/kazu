@@ -6,9 +6,9 @@ authors = [
     { name = "Whth", email = "88489697+Whth@users.noreply.github.com" },
 ]
 dependencies = [
-    "mentabotix>=0.1.5.12",
+    "mentabotix>=0.1.5.13",
     "pyuptech>=0.1.6.3",
-    "bdmc>=0.1.5.11",
+    "bdmc>=0.1.5.14",
     "coloredlogs>=15.0.1",
     "pydantic>=2.7.1",
     "click>=8.1.7",

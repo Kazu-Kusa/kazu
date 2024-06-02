@@ -5,7 +5,7 @@
 groups = ["default"]
 strategy = ["cross_platform", "inherit_metadata"]
 lock_version = "4.4.1"
-content_hash = "sha256:792614e07998b4b725d18b828a369fb13dfe424959bdee4cc630f6ca7eec4394"
+content_hash = "sha256:70ef1f5866f7291b99a987a68667b0c384a280604e11d517a80098ed936fda36"
 
 [[package]]
 name = "annotated-types"
@@ -20,7 +20,7 @@ files = [
 
 [[package]]
 name = "bdmc"
-version = "0.1.5.12"
+version = "0.1.5.14"
 requires_python = ">=3.11"
 summary = "An api wrapper lib designed for the uptech BDMC divers"
 groups = ["default"]
@@ -29,8 +29,8 @@ dependencies = [
     "pyserial>=3.5",
 ]
 files = [
-    {file = "bdmc-0.1.5.12-py3-none-any.whl", hash = "sha256:00b0b2774dd606fa207dd8d2ee2e0510c0375c7372176201db1efd19183e4f6c"},
-    {file = "bdmc-0.1.5.12.tar.gz", hash = "sha256:8faa80bccb93527be64b8ac7037dc6237de73d372d6632394e7813e7b0e75601"},
+    {file = "bdmc-0.1.5.14-py3-none-any.whl", hash = "sha256:a36f8382ff8bee287051ef0c6864a09f4480286a57bd5c604e06b3e4ad6195c4"},
+    {file = "bdmc-0.1.5.14.tar.gz", hash = "sha256:d83df6e5b9e3492f8ea6a646d3db86a194189f3c3d980471f0959fe4557039b7"},
 ]
 
 [[package]]
@@ -88,7 +88,7 @@ files = [
 
 [[package]]
 name = "mentabotix"
-version = "0.1.5.12"
+version = "0.1.5.13"
 requires_python = ">=3.11"
 summary = "A Bot control lib"
 groups = ["default"]
@@ -100,8 +100,8 @@ dependencies = [
     "terminaltables>=3.1.10",
 ]
 files = [
-    {file = "mentabotix-0.1.5.12-py3-none-any.whl", hash = "sha256:44e6080b6a1a2ec12e6c57799853c3602c8ad76b8031101d6ee38fdc5417a7c8"},
-    {file = "mentabotix-0.1.5.12.tar.gz", hash = "sha256:3009b2d94242db8dcf3dc02d4eabfe74f4616d6f77f50e7b53e63ddd8ade8942"},
+    {file = "mentabotix-0.1.5.13-py3-none-any.whl", hash = "sha256:7cf9a857d42ab37f6c49d8641f9da3e28d8eba25d0c7b66ffc3d189095869446"},
+    {file = "mentabotix-0.1.5.13.tar.gz", hash = "sha256:3c81a9a56601f72334a84dc24ad3ba80d6f8ace6299ec6757e2a53f8f4e9ccc1"},
 ]
 
 [[package]]
