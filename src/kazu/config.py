@@ -412,24 +412,12 @@ def load_run_config(run_config_path: Path | None) -> RunConfig:
 
 
 def make_tag_group(app_config) -> TagGroup:
-    from kazu.hardwares import tag_detector
+    tag_group = TagGroup(team_color=app_config.vision.team_color)
+    secho(f"Team color: {tag_group.team_color}", fg=tag_group.team_color, bold=True)
+    secho(f"Enemy tag: {tag_group.enemy_tag}", fg="red", bold=True)
+    secho(f"Allay tag: {tag_group.allay_tag}", fg="green", bold=True)
+    secho(f"Neutral tag: {tag_group.neutral_tag}", fg="cyan", bold=True)
 
-    secho(f"Open Camera-{app_config.vision.camera_device_id}", fg="yellow", bold=True)
-    tag_detector.open_camera(app_config.vision.camera_device_id)
-    success, _ = tag_detector.camera_device.read()
-    if success:
-        secho("Camera opened successfully", fg="green", bold=True)
-        tag_group = TagGroup(team_color=app_config.vision.team_color)
-        secho(f"Team color: {tag_group.team_color}", fg=tag_group.team_color, bold=True)
-        secho(f"Enemy tag: {tag_group.enemy_tag}", fg="red", bold=True)
-        secho(f"Allay tag: {tag_group.allay_tag}", fg="green", bold=True)
-        secho(f"Neutral tag: {tag_group.neutral_tag}", fg="cyan", bold=True)
-    else:
-
-        # TODO remove this debug code
-        tag_group = TagGroup(team_color=app_config.vision.team_color)
-        secho(f"Failed to open Camera-{app_config.vision.camera_device_id}", fg="red", bold=True)
-        app_config.vision.use_camera = False
     return tag_group
 
 

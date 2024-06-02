@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 from bdmc.modules.cmd import CMD
 from bdmc.modules.controller import CloseLoopController, MotorInfo
+from click import secho
 from mentabotix.modules.menta import Menta
 from pyuptech.modules.screen import Screen
 from pyuptech.modules.sensors import OnBoardSensors
@@ -65,3 +66,32 @@ def inited_controller(app_config) -> CloseLoopController:
     controller.serial_client.port = app_config.motion.port
     controller.serial_client.open()
     return controller.start_msg_sending().send_cmd(CMD.RESET)
+
+
+def init_ted_tag_detector(app_config) -> TagDetector:
+    """
+    Initializes the tag detector with the given configuration.
+
+    Args:
+        app_config (APPConfig): The application configuration containing the tag information and port.
+
+    Returns:
+        None
+
+    Description:
+        This function initializes the tag detector with the given configuration. It sets the tag information
+        of the tag detector object using the tag information provided in the application configuration. It also
+        sets the port of the serial client of the tag detector object to the port specified in the application
+        configuration. Finally, it opens the serial client, and starts the message sending process.
+    """
+    secho(f"Open Camera-{app_config.vision.camera_device_id}", fg="yellow", bold=True)
+    tag_detector.open_camera(app_config.vision.camera_device_id)
+    success, _ = tag_detector.camera_device.read()
+    if success:
+        secho("Camera is successfully opened !", fg="green", bold=True)
+    else:
+
+        secho(f"Failed to open Camera-{app_config.vision.camera_device_id}", fg="red", bold=True)
+        secho("Camera will not be used.", fg="red", bold=True)
+        app_config.vision.use_camera = False
+    return tag_detector
