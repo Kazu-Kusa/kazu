@@ -206,8 +206,8 @@ class BootConfig(BaseModel):
 
     max_holding_duration: float = 180
 
-    left_threshold: int = 1500
-    right_threshold: int = 1500
+    left_threshold: int = 1100
+    right_threshold: int = 1100
 
     dash_speed: int = 8000
     dash_duration: float = 0.7
