@@ -185,9 +185,9 @@ def run(conf: _InternalConfig, run_config: Path | None, mode: str, **_):
     try:
         match mode:
             case RunMode.FGS:
-                from kazu.assembly import assmbly_FGDL_schema
+                from kazu.assembly import assmbly_FGS_schema
 
-                boot_pool, stage_pool = assmbly_FGDL_schema(app_config, run_config)
+                boot_pool, stage_pool = assmbly_FGS_schema(app_config, run_config)
                 botix.token_pool = boot_pool
                 boot_func = botix.compile()
                 botix.token_pool = stage_pool
