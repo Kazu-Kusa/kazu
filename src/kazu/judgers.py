@@ -29,6 +29,7 @@ class Breakers:
             extra_context={"bool": bool},
             return_type_varname="bool",
             return_raw=False,
+            function_name="std_edge_rear_breaker",
         )
 
     @staticmethod
@@ -57,6 +58,7 @@ class Breakers:
             extra_context={"bool": bool},
             return_type_varname="bool",
             return_raw=False,
+            function_name="std_edge_front_breaker",
         )
 
     @staticmethod
@@ -87,6 +89,7 @@ class Breakers:
             extra_context={"int": int},
             return_type_varname="int",
             return_raw=False,
+            function_name="std_edge_full_breaker",
         )
 
     @staticmethod
@@ -112,13 +115,8 @@ class Breakers:
             extra_context={"bool": bool},
             return_type_varname="bool",
             return_raw=False,
+            function_name="std_turn_to_front_breaker",
         )
-
-    @staticmethod
-    @lru_cache(maxsize=None)
-    def make_std_scanning_breaker(app_config: APPConfig, run_config: RunConfig):
-        # TODO impl
-        raise NotImplementedError
 
     @staticmethod
     @lru_cache(maxsize=None)
@@ -145,6 +143,7 @@ class Breakers:
             return_type_varname="bool",
             extra_context={"bool": bool},
             return_raw=False,
+            function_name="atk_breaker",
         )
 
     @staticmethod
@@ -166,6 +165,7 @@ class Breakers:
             return_type_varname="bool",
             extra_context={"bool": bool},
             return_raw=False,
+            function_name="stage_align_breaker",
         )
 
     @staticmethod
@@ -195,6 +195,7 @@ class Breakers:
             return_type_varname="bool",
             extra_context={"bool": bool},
             return_raw=False,
+            function_name="stage_align_breaker_mpu",
         )
 
     @staticmethod
@@ -218,10 +219,11 @@ class Breakers:
                 ),
             ],
             judging_source=f"ret={StageWeight.REBOOT}*(s0=={app_config.sensor.io_activating_value})"
-            f"+{StageWeight.OFF}*(s1<{run_config.perf.gray_adc_lower_threshold})",
+            f"+{StageWeight.STAGE}*(s1<{run_config.perf.gray_adc_lower_threshold})",
             return_type_varname="int",
             extra_context={"int": int},
             return_raw=False,
+            function_name="std_on_stage_breaker",
         )
 
     @staticmethod
@@ -258,6 +260,7 @@ class Breakers:
             return_type_varname="int",
             extra_context={"int": int},
             return_raw=False,
+            function_name="std_fence_breaker",
         )
 
     @staticmethod
@@ -275,6 +278,7 @@ class Breakers:
             return_type_varname="bool",
             extra_context={"bool": bool},
             return_raw=False,
+            function_name="align_direction_breaker",
         )
 
     @staticmethod
@@ -318,6 +322,7 @@ class Breakers:
             return_type_varname="int",
             extra_context={"int": int, "adc_pack_getter": adc_pack_getter},
             return_raw=False,
+            function_name="std_scan_breaker",
         )
 
     @staticmethod
@@ -396,8 +401,11 @@ class Breakers:
                     ],
                 ),
             ],
-            judging_source=f"ret={StageWeight.STAGE}*(True)"
-            f"+{StageWeight.REBOOT}*(s1=={app_config.sensor.io_activating_value})",
+            judging_source=[
+                "temp_data=s0",
+                f"ret={StageWeight.STAGE}*(True)"
+                f"+{StageWeight.REBOOT}*(s1=={app_config.sensor.io_activating_value})",
+            ],
             return_type_varname="int",
             extra_context={"int": int},
             return_raw=False,

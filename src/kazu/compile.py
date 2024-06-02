@@ -456,6 +456,7 @@ def make_surrounding_handler(
             return_type_varname="int",
             extra_context={"int": int, "tag_d": tag_detector, "q_tb": query_table},
             return_raw=False,
+            function_name="surrounding_breaker_with_cam",
         )
 
     else:
@@ -931,6 +932,7 @@ def make_gradient_move(app_config: APPConfig, run_config: RunConfig, is_salvo_en
         return_type_varname="int",
         extra_context={"int": int},
         return_raw=False,
+        function_name="calc_gradient_speed",
     )
     updaters = []
     speed_updater = controller.register_context_executor(
@@ -1239,6 +1241,7 @@ def make_reboot_handler(
         return_type_varname="bool",
         extra_context={"bool": bool},
         return_raw=False,
+        function_name="reboot_breaker",
     )
 
     holding_transition = MovingTransition(run_config.boot.max_holding_duration, breaker=activation_breaker)
