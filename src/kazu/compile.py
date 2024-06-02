@@ -57,9 +57,9 @@ def check_all_case_defined(branch_dict: Dict[T, MovingState], case_list: Iterabl
 def make_edge_handler(
     app_config: APPConfig,
     run_config: RunConfig,
-    start_state: Optional[MovingState] = None,
-    normal_exit: Optional[MovingState] = None,
-    abnormal_exit: Optional[MovingState] = MovingState.halt(),
+    start_state: MovingState = continues_state.clone(),
+    normal_exit: MovingState = continues_state.clone(),
+    abnormal_exit: MovingState = MovingState.halt(),
 ) -> Tuple[MovingState, MovingState, MovingState, List[MovingTransition]]:
     """
     根据应用和运行配置创建边缘处理函数。
@@ -95,8 +95,6 @@ def make_edge_handler(
     # <editor-fold desc="Templates">
 
     # 定义不同移动状态，如停止、继续、后退等
-    start_state = start_state or continues_state.clone()
-    normal_exit = normal_exit or continues_state.clone()
 
     fallback_state = MovingState.straight(-run_config.edge.fallback_speed)
 
@@ -393,9 +391,9 @@ def make_surrounding_handler(
     app_config: APPConfig,
     run_config: RunConfig,
     tag_group: Optional[TagGroup] = None,
-    start_state: Optional[MovingState] = None,
-    normal_exit: Optional[MovingState] = None,
-    abnormal_exit: Optional[MovingState] = MovingState.halt(),
+    start_state: MovingState = continues_state.clone(),
+    normal_exit: MovingState = continues_state.clone(),
+    abnormal_exit: MovingState = MovingState.halt(),
 ) -> Tuple[MovingState, MovingState, MovingState, List[MovingTransition]]:
     """
     构造一个处理周围环境信息的策略处理器。
@@ -460,6 +458,7 @@ def make_surrounding_handler(
         )
 
     else:
+        # TODO: implement this no cam case
         raise NotImplementedError
 
     atk_breaker = Breakers.make_std_atk_breaker(app_config, run_config)
@@ -470,8 +469,6 @@ def make_surrounding_handler(
     # </editor-fold>
 
     # <editor-fold desc="Templates">
-    start_state = start_state or continues_state.clone()
-    normal_exit = normal_exit or continues_state.clone()
 
     atk_enemy_car_state = MovingState.straight(run_config.surrounding.atk_speed_enemy_car)
     atk_enemy_box_state = MovingState.straight(run_config.surrounding.atk_speed_enemy_box)
@@ -788,14 +785,22 @@ def make_scan_handler(
     case_reg.register(ScanCodesign.O_O_O_O, head_state)
     # ---------------------------------------------------------------------
     [head_state, *_], transitions = (
-        composer.init_container().add(fall_back_state).add(fall_back_transition).add(end_state).export_structure()
+        composer.init_container()
+        .add(fall_back_state.clone())
+        .add(fall_back_transition.clone())
+        .add(end_state)
+        .export_structure()
     )
 
     transitions_pool.extend(transitions)
-    case_reg.register(ScanCodesign.X_O_O_O, head_state)
+    case_reg.batch_register([ScanCodesign.X_O_O_O, ScanCodesign.X_O_X_X], head_state)
     # ---------------------------------------------------------------------
     [head_state, *_], transitions = (
-        composer.init_container().add(rand_turn_state).add(full_turn_transition).add(end_state).export_structure()
+        composer.init_container()
+        .add(rand_turn_state.clone())
+        .add(full_turn_transition.clone())
+        .add(end_state)
+        .export_structure()
     )
 
     transitions_pool.extend(transitions)
@@ -814,7 +819,11 @@ def make_scan_handler(
     )
     # ---------------------------------------------------------------------
     [head_state, *_], transitions = (
-        composer.init_container().add(turn_left_state).add(half_turn_transition).add(end_state).export_structure()
+        composer.init_container()
+        .add(turn_left_state.clone())
+        .add(half_turn_transition.clone())
+        .add(end_state)
+        .export_structure()
     )
 
     transitions_pool.extend(transitions)
@@ -828,7 +837,11 @@ def make_scan_handler(
 
     # ---------------------------------------------------------------------
     [head_state, *_], transitions = (
-        composer.init_container().add(turn_right_state).add(half_turn_transition).add(end_state).export_structure()
+        composer.init_container()
+        .add(turn_right_state.clone())
+        .add(half_turn_transition.clone())
+        .add(end_state)
+        .export_structure()
     )
 
     transitions_pool.extend(transitions)
@@ -842,18 +855,11 @@ def make_scan_handler(
 
     # ---------------------------------------------------------------------
     [head_state, *_], transitions = (
-        composer.init_container().add(fall_back_state).add(fall_back_transition).add(end_state).export_structure()
-    )
-
-    transitions_pool.extend(transitions)
-    case_reg.register(ScanCodesign.X_O_X_X, head_state)
-    # ---------------------------------------------------------------------
-    [head_state, *_], transitions = (
         composer.init_container()
-        .add(fall_back_state)
-        .add(fall_back_transition)
-        .add(rand_turn_state)
-        .add(half_turn_transition)
+        .add(fall_back_state.clone())
+        .add(fall_back_transition.clone())
+        .add(rand_turn_state.clone())
+        .add(half_turn_transition.clone())
         .add(end_state)
         .export_structure()
     )
@@ -869,13 +875,24 @@ def make_scan_handler(
         .export_structure()
     )
 
-    return states, transitions
+    transitions_pool.extend(transitions)
+    return states, transitions_pool
 
 
 def make_rand_turn_handler(
     app_config: APPConfig, run_config: RunConfig, end_state: MovingState = MovingState.halt()
 ) -> Tuple[List[MovingState], List[MovingTransition]]:
+    """
+    Generates a handler for a random turn action.
 
+    Args:
+        app_config (APPConfig): The application configuration.
+        run_config (RunConfig): The run configuration.
+        end_state (MovingState, optional): The state to transition to after the random turn. Defaults to MovingState.halt().
+
+    Returns:
+        Tuple[List[MovingState], List[MovingTransition]]: A tuple containing the list of states and the list of transitions.
+    """
     conf = run_config.search.rand_turn
 
     rand_lr_turn_state = MovingState.rand_dir_turn(controller, conf.turn_speed, turn_left_prob=conf.turn_left_prob)
@@ -886,9 +903,19 @@ def make_rand_turn_handler(
     return states, transitions
 
 
-def make_gradient_move(
-    app_config: APPConfig, run_config: RunConfig, end_state: MovingState = MovingState.halt()
-) -> MovingState:
+def make_gradient_move(app_config: APPConfig, run_config: RunConfig, is_salvo_end: bool = True) -> MovingState:
+    """
+    Generates a MovingState object for a gradient move in a search algorithm.
+
+    Args:
+        app_config (APPConfig): The application configuration.
+        run_config (RunConfig): The run configuration.
+        is_salvo_end (bool, optional): Indicates if this is the last gradient move in a salvo. Defaults to True.
+
+    Returns:
+        MovingState: The MovingState object representing the gradient move.
+
+    """
     conf = run_config.search.gradient_move
 
     speed_range = conf.max_speed - conf.min_speed
@@ -904,11 +931,26 @@ def make_gradient_move(
         extra_context={"int": int},
         return_raw=False,
     )
-    speed_updater = controller.register_context_executor(speed_calc_func, [ContextVar.gradient_speed.name])
+    updaters = []
+    speed_updater = controller.register_context_executor(
+        speed_calc_func, [ContextVar.gradient_speed.name], function_name="_update_gradient_speed"
+    )
+    updaters.append(speed_updater)
+    if is_salvo_end:
+        getter: Callable[[], int] = controller.register_context_getter(ContextVar.gradient_speed.name)
+
+        def _update_salvo_end_speed() -> Tuple[int, int, int, int]:
+            speed = getter()
+            return speed, speed, speed, speed
+
+        salvo_end_speed_updater = controller.register_context_executor(
+            _update_salvo_end_speed, [ContextVar.prev_salvo_speed.name], function_name="_update_salvo_end_speed"
+        )
+        updaters.append(salvo_end_speed_updater)
     return MovingState(
         speed_expressions=ContextVar.gradient_speed.name,
         used_context_variables=[ContextVar.gradient_speed.name],
-        before_entering=[speed_updater],
+        before_entering=updaters,
     )
 
 
@@ -916,11 +958,24 @@ def make_search_handler(
     app_config: APPConfig,
     run_config: RunConfig,
     start_state: Optional[MovingState] = None,
+    stop_state: MovingState = MovingState.halt(),
 ) -> Tuple[List[MovingState], List[MovingTransition]]:
+    """
+    Generates a search handler for the given application configuration, run configuration, and optional start and stop states.
+
+    Args:
+        app_config (APPConfig): The application configuration.
+        run_config (RunConfig): The run configuration.
+        start_state (Optional[MovingState], optional): The optional start state. Defaults to None.
+        stop_state (MovingState, optional): The stop state. Defaults to MovingState.halt().
+
+    Returns:
+        Tuple[List[MovingState], List[MovingTransition]]: A tuple containing the list of states and the list of transitions.
+    """
     start_state = start_state or continues_state.clone()
-    scan_states, scan_transitions = make_scan_handler(app_config, run_config)
-    rand_turn_states, rand_turn_transitions = make_rand_turn_handler(app_config, run_config)
-    grad_move_state = make_gradient_move(app_config, run_config)
+    scan_states, scan_transitions = make_scan_handler(app_config, run_config, end_state=stop_state)
+    rand_turn_states, rand_turn_transitions = make_rand_turn_handler(app_config, run_config, end_state=stop_state)
+    grad_move_state = make_gradient_move(app_config, run_config, is_salvo_end=True)
 
     pool = []
     w = []
@@ -953,19 +1008,26 @@ def make_fence_handler(
     app_config: APPConfig,
     run_config: RunConfig,
     start_state: Optional[MovingState] = None,
-    end_state: Optional[MovingState] = MovingState.halt(),
-    abnormal_exit: MovingState = MovingState.halt(),
+    stop_state: MovingState = MovingState.halt(),
 ) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
-    is_align_setter_true = controller.register_context_executor(lambda: True, ContextVar.is_aligned.name)
-    is_align_setter_false = controller.register_context_executor(lambda: False, ContextVar.is_aligned.name)
-    is_align_getter = controller.register_context_getter(ContextVar.is_aligned.name)
+    """
+    Generates a fence handler for a given app configuration, run configuration, and optional start state.
 
+    Args:
+        app_config (APPConfig): The app configuration.
+        run_config (RunConfig): The run configuration.
+        start_state (Optional[MovingState], optional): The optional start state. Defaults to None.
+        stop_state (MovingState, optional): The stop state. Defaults to MovingState.halt().
+
+    Returns:
+        Tuple[MovingState, MovingState, List[MovingTransition]]: A tuple containing the start state, stop state, and list of transitions.
+    """
     fence_breaker = Breakers.make_std_fence_breaker(app_config, run_config)
 
     align_stage_breaker = Breakers.make_stage_align_breaker_mpu(app_config, run_config)
 
-    back_stage_pack = make_back_to_stage_handler(run_config, end_state)
-    rand_move_pack = make_rand_walk_handler(run_config, abnormal_exit)
+    back_stage_pack = make_back_to_stage_handler(run_config, stop_state)
+    rand_move_pack = make_rand_walk_handler(run_config, stop_state)
 
     align_direction_pack = make_align_direction_handler(app_config, run_config, rand_move_pack[0][0])
 
@@ -1024,7 +1086,7 @@ def make_fence_handler(
         composer.init_container()
         .add(front_exit_corner_state.clone())
         .add(exit_duration.clone())
-        .add(MovingState.halt())
+        .add(stop_state)
         .export_structure()
     )
     transitions_pool.extend(transitions)
@@ -1034,14 +1096,14 @@ def make_fence_handler(
         composer.init_container()
         .add(rear_exit_corner_state.clone())
         .add(exit_duration.clone())
-        .add(MovingState.halt())
+        .add(stop_state)
         .export_structure()
     )
     transitions_pool.extend(transitions)
     case_reg.batch_register([FenceCodeSign.X_O_O_X, FenceCodeSign.X_O_X_O], head_state)
     # ---------------------------------------------------------------------
     [head_state, *_], transitions = (
-        composer.init_container().concat(*align_direction_pack).add(MovingState.halt(), True).export_structure()
+        composer.init_container().concat(*align_direction_pack).add(stop_state, True).export_structure()
     )
     transitions_pool.extend(transitions)
     case_reg.batch_register(
@@ -1065,17 +1127,31 @@ def make_fence_handler(
     # <editor-fold desc="Make Return">
     transitions_pool.extend(head_trans)
 
-    return start_state, end_state, list(set(transitions_pool))
+    return start_state, stop_state, list(set(transitions_pool))
     # </editor-fold>
 
 
 def make_align_direction_handler(
     app_config: APPConfig,
     run_config: RunConfig,
-    not_aligned_state: Optional[MovingState] = MovingState.halt(),
+    not_aligned_state: MovingState = MovingState.halt(),
     aligned_state: Optional[MovingState] = None,
 ) -> Tuple[List[MovingState], List[MovingTransition]]:
-    # TODO impl
+    """
+    Constructs a state machine handler for aligning the direction.
+
+    Parameters:
+        app_config (APPConfig): The configuration object for the application.
+        run_config (RunConfig): The runtime configuration object.
+        not_aligned_state (MovingState): The state to transition to when not aligned. Defaults to MovingState.halt().
+        aligned_state (Optional[MovingState], optional): The state to transition to when aligned. Defaults to None.
+
+    Returns:
+        Tuple[List[MovingState], List[MovingTransition]]: A tuple containing the list of states and transitions.
+
+    Raises:
+        ValueError: If the align direction is invalid.
+    """
     conf = run_config.fence
 
     match conf.direction_align_direction:
@@ -1100,6 +1176,16 @@ def make_align_direction_handler(
 def make_back_to_stage_handler(
     run_config: RunConfig, end_state: Optional[MovingState] = MovingState.halt(), **_
 ) -> Tuple[List[MovingState], List[MovingTransition]]:
+    """
+    Creates a state machine handler for moving back to the stage.
+
+    Args:
+        run_config (RunConfig): Runtime configuration object with parameters for movement actions.
+        end_state (Optional[MovingState], optional): The final state of the state machine. Defaults to MovingState.halt().
+
+    Returns:
+        Tuple[List[MovingState], List[MovingTransition]]: A tuple containing lists of states and transitions.
+    """
     small_advance = MovingState(run_config.backstage.small_advance_speed)
     small_advance_transition = MovingTransition(run_config.backstage.small_advance_duration)
     stab_trans = MovingTransition(run_config.backstage.time_to_stabilize)
@@ -1180,6 +1266,28 @@ def make_reboot_handler(
 def make_rand_walk_handler(
     run_config: RunConfig, end_state: MovingState = MovingState.halt(), **_
 ) -> Tuple[List[MovingState], List[MovingTransition]]:
+    """
+    Generates a random walk handler for the given run configuration and end state.
+
+    Args:
+        run_config (RunConfig): The run configuration containing the fence settings.
+        end_state (MovingState, optional): The end state to transition to after the random walk. Defaults to MovingState.halt().
+        **_: Additional keyword arguments.
+
+    Returns:
+        Tuple[List[MovingState], List[MovingTransition]]: A tuple containing the list of states and the list of transitions.
+
+    Raises:
+        None
+
+    Description:
+        This function generates a random walk handler based on the given run configuration. It creates a list of moves
+        and their corresponding weights based on the fence settings in the run configuration. The moves can be either turns
+        or straight lines. The function then creates a random move state using the moves and weights, and a move transition
+        with the specified walk duration. Finally, it returns a tuple containing the random move state, move transition,
+        and the specified end state.
+
+    """
     conf = run_config.fence.rand_walk
 
     moves_seq = []
@@ -1198,35 +1306,45 @@ def make_rand_walk_handler(
     return composer.init_container().add(rand_move_state).add(move_transition).add(end_state).export_structure()
 
 
-def make_stage_handler(
+def make_std_battle_handler(
     app_config: APPConfig,
     run_config: RunConfig,
-    start_state: Optional[MovingState] = None,
-    end_state: MovingState = MovingState.halt(),
     tag_group: Optional[TagGroup] = None,
 ) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
+    """
+    Generates a standard battle handler for a given app configuration, run configuration, and optional tag group.
 
-    start_state = start_state or continues_state.clone()
+    Args:
+        app_config (APPConfig): The application configuration.
+        run_config (RunConfig): The run configuration.
+        tag_group (Optional[TagGroup], optional): The tag group. Defaults to None.
+
+    Returns:
+        Tuple[MovingState, MovingState, List[MovingTransition]]: A tuple containing the start state, end state, and transition pool.
+            - start_state (MovingState): The starting state of the battle handler.
+            - end_state (MovingState): The end state of the battle handler.
+            - transition_pool (List[MovingTransition]): The list of transition objects for the battle handler.
+    """
+    end_state: MovingState = make_salvo_end_state()
+    start_state = continues_state.clone()
 
     stage_breaker = Breakers.make_std_stage_breaker(app_config, run_config)
 
     reboot_pack = make_reboot_handler(app_config, run_config, end_state=end_state)
-    fence_pack = make_fence_handler(app_config, run_config, end_state=end_state)
-    edge_pack = make_edge_handler(app_config, run_config, abnormal_exit=end_state)
-    surr_pack = make_surrounding_handler(
-        app_config, run_config, tag_group, start_state=edge_pack[1], abnormal_exit=end_state
+    fence_pack = make_fence_handler(app_config, run_config, stop_state=end_state)
+    on_stage_start_state, _, stage_pack = make_on_stage_handler(
+        app_config, run_config, abnormal_exit=end_state, tag_group=tag_group
     )
-    search_pack = make_search_handler(app_config, run_config, start_state=surr_pack[1])
 
     case_reg = CaseRegistry(StageCodeSign)
-    transition_pool = [*reboot_pack[-1], *edge_pack[-1], *fence_pack[-1], *surr_pack[-1], *search_pack[-1]]
+    transition_pool = [*reboot_pack[-1], *fence_pack[-1], *stage_pack]
 
     (
         case_reg.batch_register(
             [StageCodeSign.ON_STAGE_REBOOT, StageCodeSign.OFF_STAGE_REBOOT],
             reboot_pack[0][0],
         )
-        .register(StageCodeSign.ON_STAGE, edge_pack[0])
+        .register(StageCodeSign.ON_STAGE, on_stage_start_state)
         .register(StageCodeSign.OFF_STAGE, fence_pack[0])
     )
 
@@ -1237,3 +1355,124 @@ def make_stage_handler(
     _, trans = composer.init_container().add(start_state).add(check_trans).export_structure()
     transition_pool.extend(trans)
     return start_state, end_state, transition_pool
+
+
+def make_on_stage_handler(
+    app_config: APPConfig,
+    run_config: RunConfig,
+    start_state: MovingState = continues_state.clone(),
+    abnormal_exit: MovingState = MovingState.halt(),
+    tag_group: Optional[TagGroup] = None,
+) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
+    """
+    创建一个舞台处理程序，用于管理机器人的移动状态和过渡。
+
+    Parameters:
+        app_config: 应用配置对象，包含通用的应用配置信息。
+        run_config: 运行配置对象，包含与运行时相关的配置信息。
+        start_state: 移动状态的初始状态，默认为继续状态的克隆。
+        abnormal_exit: 移动状态的异常退出状态，默认为停止状态。
+        tag_group: 标签组对象，用于指定特定的标签，可选。
+
+    Returns:
+        边缘处理状态；
+        异常退出状态；
+        包含所有边缘、环绕和搜索处理状态转换的列表。
+    """
+    edge_pack = make_edge_handler(app_config, run_config, start_state=start_state, abnormal_exit=abnormal_exit)
+    surr_pack = make_surrounding_handler(
+        app_config, run_config, tag_group, start_state=edge_pack[1], abnormal_exit=abnormal_exit
+    )
+    search_pack = make_search_handler(app_config, run_config, start_state=surr_pack[1], stop_state=abnormal_exit)
+    return edge_pack[0], abnormal_exit, [*edge_pack[-1], *surr_pack[-1], *search_pack[-1]]
+
+
+def make_always_on_stage_battle_handler(
+    app_config: APPConfig,
+    run_config: RunConfig,
+    tag_group: Optional[TagGroup] = None,
+) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
+    """
+    Generates a handler for an always-on stage battle.
+
+    Args:
+        app_config (APPConfig): The application configuration.
+        run_config (RunConfig): The run configuration.
+        tag_group (Optional[TagGroup], optional): The tag group. Defaults to None.
+
+    Returns:
+        Tuple[MovingState, MovingState, List[MovingTransition]]: A tuple containing the start state, end state, and transition pool.
+    """
+    end_state: MovingState = make_salvo_end_state()
+    start_state = continues_state.clone()
+
+    stage_breaker = Breakers.make_always_on_stage_breaker(app_config, run_config)
+
+    on_stage_start_state, _, stage_pack = make_on_stage_handler(
+        app_config, run_config, abnormal_exit=end_state, tag_group=tag_group
+    )
+
+    transition_pool = stage_pack
+
+    check_trans = MovingTransition(
+        run_config.perf.min_sync_interval, breaker=stage_breaker, to_states=on_stage_start_state
+    )
+
+    _, trans = composer.init_container().add(start_state).add(check_trans).export_structure()
+    transition_pool.extend(trans)
+    return start_state, end_state, transition_pool
+
+
+def make_always_off_stage_battle_handler(
+    app_config: APPConfig,
+    run_config: RunConfig,
+) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
+    """
+    Generates a battle handler for when the stage is always off.
+
+    Args:
+        app_config (APPConfig): The application configuration.
+        run_config (RunConfig): The run configuration.
+
+    Returns:
+        start_state (MovingState): The starting state of the battle handler.
+        end_state (MovingState): The end state of the battle handler.
+        transition_pool (List[MovingTransition]): The list of transition objects for the battle handler.
+
+    """
+    end_state = make_salvo_end_state()
+    start_state = continues_state.clone()
+
+    stage_breaker = Breakers.make_std_stage_breaker(app_config, run_config)
+
+    reboot_pack = make_reboot_handler(app_config, run_config, end_state=end_state)
+    fence_pack = make_fence_handler(app_config, run_config, stop_state=end_state)
+
+    transition_pool = [*reboot_pack[-1], *fence_pack[-1]]
+
+    check_trans = MovingTransition(
+        run_config.perf.min_sync_interval,
+        breaker=stage_breaker,
+        to_states={StageCodeSign.OFF_STAGE: fence_pack[0], StageCodeSign.OFF_STAGE_REBOOT: reboot_pack[0][0]},
+    )
+
+    _, trans = composer.init_container().add(start_state).add(check_trans).export_structure()
+    transition_pool.extend(trans)
+    return start_state, end_state, transition_pool
+
+
+def make_salvo_end_state() -> MovingState:
+    """
+    创建并返回一个表示循环轮结束状态的移动状态。
+
+    这个状态在进入时会将之前的循环轮速度重置为零，以准备下一次循环轮。
+
+    返回:
+        MovingState: 一个配置了速度重置执行器的移动状态，用于循环轮结束时的状态转换。
+    """
+    end_state: MovingState = MovingState.halt()
+    zero_salvo_speed_updater = controller.register_context_executor(
+        lambda: (0, 0, 0, 0), output_keys=[ContextVar.prev_salvo_speed.name], function_name="zero_salvo_speed_updater"
+    )
+    end_state.before_entering.append(zero_salvo_speed_updater)
+    return end_state

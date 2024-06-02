@@ -21,18 +21,6 @@ from kazu.callbacks import (
     bench_add_app,
     bench_aps,
 )
-from kazu.compile import (
-    botix,
-    make_edge_handler,
-    make_reboot_handler,
-    make_back_to_stage_handler,
-    make_surrounding_handler,
-    make_scan_handler,
-    make_search_handler,
-    make_rand_walk_handler,
-    make_fence_handler,
-    make_stage_handler,
-)
 from kazu.config import (
     DEFAULT_APP_CONFIG_PATH,
     APPConfig,
@@ -173,6 +161,7 @@ def run(conf: _InternalConfig, run_config: Path | None, mode: str, **_):
     """
     Run command for the main group.
     """
+    from kazu.compile import botix
 
     run_config = load_run_config(run_config)
 
@@ -182,37 +171,52 @@ def run(conf: _InternalConfig, run_config: Path | None, mode: str, **_):
 
     con = inited_controller(app_config)
     con.context.update(ContextVar.export_context())
-
-    match mode:
-        case RunMode.FGS:
-            from kazu.assembly import assmbly_FGDL_schema
-
-            botix.token_pool = assmbly_FGDL_schema(app_config, run_config)
-        case RunMode.NGS:
-            from kazu.assembly import assmbly_NGS_schema
-
-            botix.token_pool = assmbly_NGS_schema(app_config, run_config)
-        case RunMode.AFG:
-            from kazu.assembly import assmbly_AFG_schema
-
-            botix.token_pool = assmbly_AFG_schema(app_config, run_config)
-        case RunMode.ANG:
-            from kazu.assembly import assmbly_ANG_schema
-
-            botix.token_pool = assmbly_ANG_schema(app_config, run_config)
-        case RunMode.FGDL:
-            from kazu.assembly import assmbly_FGDL_schema
-
-            botix.token_pool = assmbly_FGDL_schema(app_config, run_config)
-
-    func = botix.compile()
     try:
-        while 1:
-            func()
+        match mode:
+            case RunMode.FGS:
+                from kazu.assembly import assmbly_FGS_schema
+
+                boot_pool, stage_pool = assmbly_FGS_schema(app_config, run_config)
+                botix.token_pool = boot_pool
+                boot_func = botix.compile()
+                botix.token_pool = stage_pool
+                stage_func = botix.compile()
+                boot_func()
+                while 1:
+                    stage_func()
+            case RunMode.NGS:
+                from kazu.assembly import assmbly_NGS_schema
+
+                botix.token_pool = assmbly_NGS_schema(app_config, run_config)
+                stage_func = botix.compile()
+                while 1:
+                    stage_func()
+            case RunMode.AFG:
+                from kazu.assembly import assmbly_AFG_schema
+
+                botix.token_pool = assmbly_AFG_schema(app_config, run_config)
+                afg_func = botix.compile()
+                while 1:
+                    afg_func()
+            case RunMode.ANG:
+                from kazu.assembly import assmbly_ANG_schema
+
+                botix.token_pool = assmbly_ANG_schema(app_config, run_config)
+                ang_func = botix.compile()
+                while 1:
+                    ang_func()
+            case RunMode.FGDL:
+                from kazu.assembly import assmbly_FGDL_schema
+
+                botix.token_pool = assmbly_FGDL_schema(app_config, run_config)
+                boot_func = botix.compile()
+                while 1:
+                    boot_func()
     except KeyboardInterrupt:
         secho(f"Exited by user.", fg="red")
     finally:
         con.send_cmd(CMD.FULL_STOP).send_cmd(CMD.RESET).stop_msg_sending()
+        secho(f"KAZU stopped.", fg="green")
 
 
 @main.command("check")
@@ -365,7 +369,23 @@ def read_sensors(conf: _InternalConfig, interval: float, device: str):
 @click.pass_obj
 @click.argument(
     "packname",
-    type=click.Choice(["all", "edge", "surr", "search", "fence", "boot", "scan", "stage", "bkstage", "rdwalk"]),
+    type=click.Choice(
+        [
+            "all",
+            "edge",
+            "surr",
+            "search",
+            "fence",
+            "boot",
+            "scan",
+            "stdbat",
+            "bkstage",
+            "rdwalk",
+            "onstage",
+            "angbat",
+            "afgbat",
+        ]
+    ),
     nargs=-1,
 )
 @click.option(
@@ -395,6 +415,21 @@ def visualize(
     Visualize State-Transition Diagram of KAZU with PlantUML
 
     """
+    from kazu.compile import (
+        botix,
+        make_edge_handler,
+        make_reboot_handler,
+        make_back_to_stage_handler,
+        make_surrounding_handler,
+        make_scan_handler,
+        make_search_handler,
+        make_rand_walk_handler,
+        make_fence_handler,
+        make_std_battle_handler,
+        make_always_on_stage_battle_handler,
+        make_always_off_stage_battle_handler,
+    )
+
     destination.mkdir(parents=True, exist_ok=True)
 
     app_config = conf.app_config
@@ -410,7 +445,10 @@ def visualize(
         "search": make_search_handler,
         "fence": make_fence_handler,
         "rdwalk": make_rand_walk_handler,
-        "stage": partial(make_stage_handler, tag_group=tag_group),
+        "stdbat": partial(make_std_battle_handler, tag_group=tag_group),
+        "onstage": partial(make_always_on_stage_battle_handler, tag_group=tag_group),
+        "angbat": partial(make_always_on_stage_battle_handler, tag_group=tag_group),
+        "afgbat": make_always_off_stage_battle_handler,
     }
 
     # 如果packname是'all'，则导出所有；否则，仅导出指定的包
@@ -423,7 +461,7 @@ def visualize(
         # 这里简化处理，实际可能需要根据handler的不同调用不同的导出方法
         handler_func: Callable = handlers.get(f_name)
 
-        (*_, handler_data) = handler_func(**{"app_config": app_config, "run_config": run_config})
+        (*_, handler_data) = handler_func(app_config=app_config, run_config=run_config)
         filename = f_name + ".puml"
         destination_filename = (destination / filename).as_posix()
         secho(f"Exporting {filename}", fg="green", bold=True)
