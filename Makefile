@@ -6,18 +6,17 @@ DIST_DIR = dist
 SPEC_FILE = $(APP_NAME).spec
 
 # 编译规则
-all: $(DIST_DIR)/$(APP_NAME)
+all: build
 
-$(DIST_DIR)/$(APP_NAME): $(SOURCE)
+build:
 	@echo "Start building $(APP_NAME)..."
 	pyinstaller --name=$(APP_NAME) \
 	              --onefile \
-	              --noconsole \
 	              --distpath=$(DIST_DIR) \
 	              --collect-binaries pyapriltags \
 	              --collect-binaries pyuptech \
 	              --collect-binaries opencv-python-headless \
-	              $(if $(ICON),--icon=$(ICON)) \
+	              --icon=$(ICON) \
 	              $(SOURCE)
 	@echo "$(APP_NAME) was successfully built! See $(DIST_DIR)/$(APP_NAME)"
 
@@ -29,4 +28,4 @@ clean:
 rebuild: clean all
 	@echo "$(APP_NAME) was successfully rebuilt!"
 
-.PHONY: clean rebuild
+.PHONY: clean rebuild build
