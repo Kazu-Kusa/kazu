@@ -214,7 +214,9 @@ def run(conf: _InternalConfig, run_config: Path | None, mode: str, **_):
                 from kazu.assembly import assmbly_FGDL_schema
 
                 botix.token_pool = assmbly_FGDL_schema(app_config, run_config)
-
+                boot_func = botix.compile()
+                while 1:
+                    boot_func()
     except KeyboardInterrupt:
         secho(f"Exited by user.", fg="red")
     finally:
