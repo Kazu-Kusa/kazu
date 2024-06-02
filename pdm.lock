@@ -5,7 +5,7 @@
 groups = ["default"]
 strategy = ["cross_platform", "inherit_metadata"]
 lock_version = "4.4.1"
-content_hash = "sha256:5002bf8145a541828460af7b9b6a29f1bb515a0b365aef689df5f886221dbe22"
+content_hash = "sha256:fe402903d94ff49c347e13fa4c8ab0ff36710c0a12b1932b0b5729ada9322d60"
 
 [[package]]
 name = "annotated-types"
@@ -296,7 +296,7 @@ files = [
 
 [[package]]
 name = "upicvision"
-version = "0.1.0.2"
+version = "0.1.0.3"
 requires_python = ">=3.11"
 summary = "pi vision lib"
 groups = ["default"]
@@ -307,6 +307,6 @@ dependencies = [
     "pyapriltags>=3.3.0.3",
 ]
 files = [
-    {file = "upicvision-0.1.0.2-py3-none-any.whl", hash = "sha256:239fbc8218386380823d47a45b48e4b5e2e192c7705933d3298bf8612ae6ac44"},
-    {file = "upicvision-0.1.0.2.tar.gz", hash = "sha256:a53e0198600d56a62954243f4b9c932338ddf5c9583d1b13bae922445606467c"},
+    {file = "upicvision-0.1.0.3-py3-none-any.whl", hash = "sha256:f177f15ce1f4e6657ed44a43d881fd1be76a7c76707d9d841b53a690270b234c"},
+    {file = "upicvision-0.1.0.3.tar.gz", hash = "sha256:4a7bed013f082ed601c4f3883d594fd121d99c5e315cdbd131ef0b475f2148cd"},
 ]

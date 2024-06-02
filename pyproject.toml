@@ -15,7 +15,7 @@ dependencies = [
     "toml>=0.10.2",
     "terminaltables>=3.1.10",
     "colorama>=0.4.6",
-    "upicvision>=0.1.0.2",
+    "upicvision>=0.1.0.3",
 ]
 requires-python = "==3.11.*"
 readme = "README.md"
