@@ -452,8 +452,8 @@ def make_surrounding_handler(
                 f"+(s6>{run_config.surrounding.right_adc_lower_threshold})*{SurroundingWeights.RIGHT_OBJECT}"
                 f"+s2 or s3 or s7>{run_config.surrounding.right_adc_lower_threshold}*{SurroundingWeights.BEHIND_OBJECT}"
             ),
-            return_type_varname="int",
-            extra_context={"int": int, "tag_d": tag_detector, "q_tb": query_table},
+            return_type=int,
+            extra_context={"tag_d": tag_detector, "q_tb": query_table},
             return_raw=False,
             function_name="surrounding_breaker_with_cam",
         )
@@ -486,8 +486,8 @@ def make_surrounding_handler(
                 f"+(s6>{run_config.surrounding.right_adc_lower_threshold})*{SurroundingWeights.RIGHT_OBJECT}"
                 f"+s2 or s3 or s7>{run_config.surrounding.right_adc_lower_threshold}*{SurroundingWeights.BEHIND_OBJECT}"
             ),
-            return_type_varname="int",
-            extra_context={"int": int, "q_tb": query_table},
+            return_type=int,
+            extra_context={"q_tb": query_table},
             return_raw=False,
             function_name="surrounding_breaker_without_cam",
         )
@@ -958,8 +958,7 @@ def make_gradient_move(app_config: APPConfig, run_config: RunConfig, is_salvo_en
             )
         ],
         judging_source=f"ret={conf.min_speed}+int({speed_range}*(s0-{conf.min_speed})/({conf.max_speed}-{conf.min_speed}))",
-        return_type_varname="int",
-        extra_context={"int": int},
+        return_type=int,
         return_raw=False,
         function_name="calc_gradient_speed",
     )
@@ -1267,8 +1266,7 @@ def make_reboot_handler(
             )
         ],
         judging_source=f"ret=s0>{run_config.boot.left_threshold} and s1>{run_config.boot.right_threshold}",
-        return_type_varname="bool",
-        extra_context={"bool": bool},
+        return_type=bool,
         return_raw=False,
         function_name="reboot_breaker",
     )
