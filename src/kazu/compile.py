@@ -1444,7 +1444,7 @@ def make_always_off_stage_battle_handler(
     end_state = make_salvo_end_state()
     start_state = continues_state.clone()
 
-    stage_breaker = Breakers.make_std_stage_breaker(app_config, run_config)
+    stage_breaker = Breakers.make_always_off_stage_breaker(app_config, run_config)
 
     reboot_pack = make_reboot_handler(app_config, run_config, end_state=end_state)
     fence_pack = make_fence_handler(app_config, run_config, stop_state=end_state)

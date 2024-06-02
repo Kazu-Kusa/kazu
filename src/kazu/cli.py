@@ -168,6 +168,7 @@ def run(conf: _InternalConfig, run_config: Path | None, mode: str, **_):
     app_config = conf.app_config
 
     from kazu.hardwares import inited_controller, sensors
+    from kazu.signal_light import set_all_black
 
     sensors.adc_io_open().MPU6500_Open()
     con = inited_controller(app_config)
@@ -217,6 +218,9 @@ def run(conf: _InternalConfig, run_config: Path | None, mode: str, **_):
     except KeyboardInterrupt:
         secho(f"Exited by user.", fg="red")
     finally:
+        set_all_black()
+        sensors.adc_io_close()
+
         con.send_cmd(CMD.FULL_STOP).send_cmd(CMD.RESET).stop_msg_sending()
         secho(f"KAZU stopped.", fg="green")
 
