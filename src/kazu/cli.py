@@ -167,11 +167,11 @@ def run(conf: _InternalConfig, run_config: Path | None, mode: str, **_):
 
     app_config = conf.app_config
 
-    from kazu.hardwares import inited_controller, sensors, init_ted_tag_detector
+    from kazu.hardwares import inited_controller, sensors, inited_tag_detector
     from kazu.signal_light import set_all_black
 
     sensors.adc_io_open().MPU6500_Open()
-    tag_detector = init_ted_tag_detector(app_config)
+    tag_detector = inited_tag_detector(app_config)
     con = inited_controller(app_config)
     con.context.update(ContextVar.export_context())
     try:
@@ -252,11 +252,11 @@ def test(conf: _InternalConfig, device: str):
     table = [[f"{Fore.YELLOW}Device{Fore.RESET}", f"{Fore.GREEN}Success{Fore.RESET}"]]
     if "all" in device:
         from bdmc import CMD
-        from kazu.hardwares import init_ted_tag_detector, inited_controller, sensors
+        from kazu.hardwares import inited_tag_detector, inited_controller, sensors
 
         sensors.adc_io_open().MPU6500_Open()
         controller = inited_controller(app_config)
-        tag_detector = init_ted_tag_detector(app_config)
+        tag_detector = inited_tag_detector(app_config)
         table.append(shader("IO", check_io(sensors)))
         table.append(shader("ADC", check_adc(sensors)))
         table.append(shader("MPU", check_mpu(sensors)))
@@ -293,9 +293,9 @@ def test(conf: _InternalConfig, device: str):
         table.append(shader("POWER", check_power(sensors)))
 
     if "cam" in device:
-        from kazu.hardwares import init_ted_tag_detector
+        from kazu.hardwares import inited_tag_detector
 
-        tag_detector = init_ted_tag_detector(app_config)
+        tag_detector = inited_tag_detector(app_config)
         table.append(shader("CAMERA", check_camera(tag_detector)))
         tag_detector.release_camera()
     if "mot" in device:

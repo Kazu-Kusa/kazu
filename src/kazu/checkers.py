@@ -20,7 +20,8 @@ def check_camera(tag_detector: TagDetector) -> bool:
 
     camera: VideoCapture = tag_detector.camera_device
     _logger.info("Start checking camera device.")
-    if camera.isOpened():
+    read_success, _ = camera.read()
+    if read_success:
         _logger.info("Camera communication channel is ready.")
         return True
     else:
