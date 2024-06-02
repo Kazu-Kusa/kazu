@@ -344,4 +344,62 @@ class Breakers:
             return_type_varname="int",
             extra_context={"int": int},
             return_raw=False,
+            function_name="std_stage_breaker",
+        )
+
+    @staticmethod
+    @lru_cache(maxsize=None)
+    def make_always_on_stage_breaker(app_config: APPConfig, run_config: RunConfig):
+        conf = run_config.stage
+        return menta.construct_inlined_function(
+            usages=[
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.adc_all,
+                    required_data_indexes=[
+                        app_config.sensor.gray_adc_index,  # s0
+                    ],
+                ),
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.io_all,
+                    required_data_indexes=[
+                        app_config.sensor.reboot_button_index,  # s1
+                    ],
+                ),
+            ],
+            judging_source=[  # true ret is reserved to emulate the performance consumption
+                f"true_ret={StageWeight.STAGE}*(s0<{conf.gray_adc_upper_threshold})"
+                f"+{StageWeight.REBOOT}*(s1=={app_config.sensor.io_activating_value})",
+                "ret=0",
+            ],
+            return_type_varname="int",
+            extra_context={"int": int},
+            return_raw=False,
+            function_name="always_on_stage_breaker",
+        )
+
+    @staticmethod
+    @lru_cache(maxsize=None)
+    def make_always_off_stage_breaker(app_config: APPConfig, run_config: RunConfig):
+        conf = run_config.stage
+        return menta.construct_inlined_function(
+            usages=[
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.adc_all,
+                    required_data_indexes=[
+                        app_config.sensor.gray_adc_index,  # s0
+                    ],
+                ),
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.io_all,
+                    required_data_indexes=[
+                        app_config.sensor.reboot_button_index,  # s1
+                    ],
+                ),
+            ],
+            judging_source=f"ret={StageWeight.STAGE}*(True)"
+            f"+{StageWeight.REBOOT}*(s1=={app_config.sensor.io_activating_value})",
+            return_type_varname="int",
+            extra_context={"int": int},
+            return_raw=False,
+            function_name="always_off_stage_breaker",
         )
