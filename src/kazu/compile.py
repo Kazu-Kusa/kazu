@@ -458,6 +458,7 @@ def make_surrounding_handler(
         )
 
     else:
+        # TODO: implement this no cam case
         raise NotImplementedError
 
     atk_breaker = Breakers.make_std_atk_breaker(app_config, run_config)
@@ -881,7 +882,17 @@ def make_scan_handler(
 def make_rand_turn_handler(
     app_config: APPConfig, run_config: RunConfig, end_state: MovingState = MovingState.halt()
 ) -> Tuple[List[MovingState], List[MovingTransition]]:
+    """
+    Generates a handler for a random turn action.
 
+    Args:
+        app_config (APPConfig): The application configuration.
+        run_config (RunConfig): The run configuration.
+        end_state (MovingState, optional): The state to transition to after the random turn. Defaults to MovingState.halt().
+
+    Returns:
+        Tuple[List[MovingState], List[MovingTransition]]: A tuple containing the list of states and the list of transitions.
+    """
     conf = run_config.search.rand_turn
 
     rand_lr_turn_state = MovingState.rand_dir_turn(controller, conf.turn_speed, turn_left_prob=conf.turn_left_prob)
@@ -893,6 +904,18 @@ def make_rand_turn_handler(
 
 
 def make_gradient_move(app_config: APPConfig, run_config: RunConfig, is_salvo_end: bool = True) -> MovingState:
+    """
+    Generates a MovingState object for a gradient move in a search algorithm.
+
+    Args:
+        app_config (APPConfig): The application configuration.
+        run_config (RunConfig): The run configuration.
+        is_salvo_end (bool, optional): Indicates if this is the last gradient move in a salvo. Defaults to True.
+
+    Returns:
+        MovingState: The MovingState object representing the gradient move.
+
+    """
     conf = run_config.search.gradient_move
 
     speed_range = conf.max_speed - conf.min_speed
@@ -937,6 +960,18 @@ def make_search_handler(
     start_state: Optional[MovingState] = None,
     stop_state: MovingState = MovingState.halt(),
 ) -> Tuple[List[MovingState], List[MovingTransition]]:
+    """
+    Generates a search handler for the given application configuration, run configuration, and optional start and stop states.
+
+    Args:
+        app_config (APPConfig): The application configuration.
+        run_config (RunConfig): The run configuration.
+        start_state (Optional[MovingState], optional): The optional start state. Defaults to None.
+        stop_state (MovingState, optional): The stop state. Defaults to MovingState.halt().
+
+    Returns:
+        Tuple[List[MovingState], List[MovingTransition]]: A tuple containing the list of states and the list of transitions.
+    """
     start_state = start_state or continues_state.clone()
     scan_states, scan_transitions = make_scan_handler(app_config, run_config, end_state=stop_state)
     rand_turn_states, rand_turn_transitions = make_rand_turn_handler(app_config, run_config, end_state=stop_state)
@@ -975,7 +1010,18 @@ def make_fence_handler(
     start_state: Optional[MovingState] = None,
     stop_state: MovingState = MovingState.halt(),
 ) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
+    """
+    Generates a fence handler for a given app configuration, run configuration, and optional start state.
 
+    Args:
+        app_config (APPConfig): The app configuration.
+        run_config (RunConfig): The run configuration.
+        start_state (Optional[MovingState], optional): The optional start state. Defaults to None.
+        stop_state (MovingState, optional): The stop state. Defaults to MovingState.halt().
+
+    Returns:
+        Tuple[MovingState, MovingState, List[MovingTransition]]: A tuple containing the start state, stop state, and list of transitions.
+    """
     fence_breaker = Breakers.make_std_fence_breaker(app_config, run_config)
 
     align_stage_breaker = Breakers.make_stage_align_breaker_mpu(app_config, run_config)
@@ -1088,10 +1134,24 @@ def make_fence_handler(
 def make_align_direction_handler(
     app_config: APPConfig,
     run_config: RunConfig,
-    not_aligned_state: Optional[MovingState] = MovingState.halt(),
+    not_aligned_state: MovingState = MovingState.halt(),
     aligned_state: Optional[MovingState] = None,
 ) -> Tuple[List[MovingState], List[MovingTransition]]:
-    # TODO impl
+    """
+    Constructs a state machine handler for aligning the direction.
+
+    Parameters:
+        app_config (APPConfig): The configuration object for the application.
+        run_config (RunConfig): The runtime configuration object.
+        not_aligned_state (MovingState): The state to transition to when not aligned. Defaults to MovingState.halt().
+        aligned_state (Optional[MovingState], optional): The state to transition to when aligned. Defaults to None.
+
+    Returns:
+        Tuple[List[MovingState], List[MovingTransition]]: A tuple containing the list of states and transitions.
+
+    Raises:
+        ValueError: If the align direction is invalid.
+    """
     conf = run_config.fence
 
     match conf.direction_align_direction:
@@ -1116,6 +1176,16 @@ def make_align_direction_handler(
 def make_back_to_stage_handler(
     run_config: RunConfig, end_state: Optional[MovingState] = MovingState.halt(), **_
 ) -> Tuple[List[MovingState], List[MovingTransition]]:
+    """
+    Creates a state machine handler for moving back to the stage.
+
+    Args:
+        run_config (RunConfig): Runtime configuration object with parameters for movement actions.
+        end_state (Optional[MovingState], optional): The final state of the state machine. Defaults to MovingState.halt().
+
+    Returns:
+        Tuple[List[MovingState], List[MovingTransition]]: A tuple containing lists of states and transitions.
+    """
     small_advance = MovingState(run_config.backstage.small_advance_speed)
     small_advance_transition = MovingTransition(run_config.backstage.small_advance_duration)
     stab_trans = MovingTransition(run_config.backstage.time_to_stabilize)
@@ -1196,6 +1266,28 @@ def make_reboot_handler(
 def make_rand_walk_handler(
     run_config: RunConfig, end_state: MovingState = MovingState.halt(), **_
 ) -> Tuple[List[MovingState], List[MovingTransition]]:
+    """
+    Generates a random walk handler for the given run configuration and end state.
+
+    Args:
+        run_config (RunConfig): The run configuration containing the fence settings.
+        end_state (MovingState, optional): The end state to transition to after the random walk. Defaults to MovingState.halt().
+        **_: Additional keyword arguments.
+
+    Returns:
+        Tuple[List[MovingState], List[MovingTransition]]: A tuple containing the list of states and the list of transitions.
+
+    Raises:
+        None
+
+    Description:
+        This function generates a random walk handler based on the given run configuration. It creates a list of moves
+        and their corresponding weights based on the fence settings in the run configuration. The moves can be either turns
+        or straight lines. The function then creates a random move state using the moves and weights, and a move transition
+        with the specified walk duration. Finally, it returns a tuple containing the random move state, move transition,
+        and the specified end state.
+
+    """
     conf = run_config.fence.rand_walk
 
     moves_seq = []
@@ -1219,12 +1311,21 @@ def make_std_battle_handler(
     run_config: RunConfig,
     tag_group: Optional[TagGroup] = None,
 ) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
-    end_state: MovingState = MovingState.halt()
+    """
+    Generates a standard battle handler for a given app configuration, run configuration, and optional tag group.
 
-    zero_salvo_speed_updater = controller.register_context_executor(
-        lambda: (0, 0, 0, 0), output_keys=[ContextVar.prev_salvo_speed.name], function_name="zero_salvo_speed_updater"
-    )
-    end_state.before_entering.append(zero_salvo_speed_updater)
+    Args:
+        app_config (APPConfig): The application configuration.
+        run_config (RunConfig): The run configuration.
+        tag_group (Optional[TagGroup], optional): The tag group. Defaults to None.
+
+    Returns:
+        Tuple[MovingState, MovingState, List[MovingTransition]]: A tuple containing the start state, end state, and transition pool.
+            - start_state (MovingState): The starting state of the battle handler.
+            - end_state (MovingState): The end state of the battle handler.
+            - transition_pool (List[MovingTransition]): The list of transition objects for the battle handler.
+    """
+    end_state: MovingState = make_salvo_end_state()
     start_state = continues_state.clone()
 
     stage_breaker = Breakers.make_std_stage_breaker(app_config, run_config)
@@ -1291,12 +1392,18 @@ def make_always_on_stage_battle_handler(
     run_config: RunConfig,
     tag_group: Optional[TagGroup] = None,
 ) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
-    end_state: MovingState = MovingState.halt()
+    """
+    Generates a handler for an always-on stage battle.
 
-    zero_salvo_speed_updater = controller.register_context_executor(
-        lambda: (0, 0, 0, 0), output_keys=[ContextVar.prev_salvo_speed.name], function_name="zero_salvo_speed_updater"
-    )
-    end_state.before_entering.append(zero_salvo_speed_updater)
+    Args:
+        app_config (APPConfig): The application configuration.
+        run_config (RunConfig): The run configuration.
+        tag_group (Optional[TagGroup], optional): The tag group. Defaults to None.
+
+    Returns:
+        Tuple[MovingState, MovingState, List[MovingTransition]]: A tuple containing the start state, end state, and transition pool.
+    """
+    end_state: MovingState = make_salvo_end_state()
     start_state = continues_state.clone()
 
     stage_breaker = Breakers.make_always_on_stage_breaker(app_config, run_config)
@@ -1320,12 +1427,20 @@ def make_always_off_stage_battle_handler(
     app_config: APPConfig,
     run_config: RunConfig,
 ) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
-    end_state: MovingState = MovingState.halt()
+    """
+    Generates a battle handler for when the stage is always off.
 
-    zero_salvo_speed_updater = controller.register_context_executor(
-        lambda: (0, 0, 0, 0), output_keys=[ContextVar.prev_salvo_speed.name], function_name="zero_salvo_speed_updater"
-    )
-    end_state.before_entering.append(zero_salvo_speed_updater)
+    Args:
+        app_config (APPConfig): The application configuration.
+        run_config (RunConfig): The run configuration.
+
+    Returns:
+        start_state (MovingState): The starting state of the battle handler.
+        end_state (MovingState): The end state of the battle handler.
+        transition_pool (List[MovingTransition]): The list of transition objects for the battle handler.
+
+    """
+    end_state = make_salvo_end_state()
     start_state = continues_state.clone()
 
     stage_breaker = Breakers.make_std_stage_breaker(app_config, run_config)
@@ -1344,3 +1459,20 @@ def make_always_off_stage_battle_handler(
     _, trans = composer.init_container().add(start_state).add(check_trans).export_structure()
     transition_pool.extend(trans)
     return start_state, end_state, transition_pool
+
+
+def make_salvo_end_state() -> MovingState:
+    """
+    创建并返回一个表示循环轮结束状态的移动状态。
+
+    这个状态在进入时会将之前的循环轮速度重置为零，以准备下一次循环轮。
+
+    返回:
+        MovingState: 一个配置了速度重置执行器的移动状态，用于循环轮结束时的状态转换。
+    """
+    end_state: MovingState = MovingState.halt()
+    zero_salvo_speed_updater = controller.register_context_executor(
+        lambda: (0, 0, 0, 0), output_keys=[ContextVar.prev_salvo_speed.name], function_name="zero_salvo_speed_updater"
+    )
+    end_state.before_entering.append(zero_salvo_speed_updater)
+    return end_state
