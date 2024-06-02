@@ -198,16 +198,16 @@ def run(conf: _InternalConfig, run_config: Path | None, mode: str, **_):
                 from kazu.assembly import assmbly_AFG_schema
 
                 botix.token_pool = assmbly_AFG_schema(app_config, run_config)
-                afg_func = botix.compile()
+                off_stage_func = botix.compile()
                 while 1:
-                    afg_func()
+                    off_stage_func()
             case RunMode.ANG:
                 from kazu.assembly import assmbly_ANG_schema
 
                 botix.token_pool = assmbly_ANG_schema(app_config, run_config)
-                ang_func = botix.compile()
+                on_stage_func = botix.compile()
                 while 1:
-                    ang_func()
+                    on_stage_func()
             case RunMode.FGDL:
                 from kazu.assembly import assmbly_FGDL_schema
 
