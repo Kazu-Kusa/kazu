@@ -23,6 +23,7 @@ from kazu.constant import (
 )
 from kazu.hardwares import controller, tag_detector, menta, SamplerIndexes
 from kazu.judgers import Breakers
+from kazu.signal_light import set_red_green, set_blue_yellow
 from kazu.static import continues_state
 
 botix = Botix(controller=controller)
@@ -1244,9 +1245,9 @@ def make_reboot_handler(
     # waiting for a booting signal, and dash on to the stage once received
     states, transitions = (
         composer.init_container()
-        .add(MovingState.halt())
+        .add(MovingState(0, before_entering=[set_red_green]))
         .add(holding_transition)
-        .add(MovingState.straight(-run_config.boot.dash_speed))
+        .add(MovingState(-run_config.boot.dash_speed, after_exiting=[set_blue_yellow]))
         .add(MovingTransition(run_config.boot.dash_duration))
         .add(MovingState.halt())
         .add(MovingTransition(run_config.boot.time_to_stabilize))
