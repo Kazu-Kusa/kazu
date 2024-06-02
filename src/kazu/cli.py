@@ -167,10 +167,12 @@ def run(conf: _InternalConfig, run_config: Path | None, mode: str, **_):
 
     app_config = conf.app_config
 
-    from kazu.hardwares import inited_controller
+    from kazu.hardwares import inited_controller, sensors
 
+    sensors.adc_io_open().MPU6500_Open()
     con = inited_controller(app_config)
     con.context.update(ContextVar.export_context())
+
     try:
         match mode:
             case RunMode.FGS:
