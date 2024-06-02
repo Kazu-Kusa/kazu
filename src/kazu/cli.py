@@ -21,18 +21,6 @@ from kazu.callbacks import (
     bench_add_app,
     bench_aps,
 )
-from kazu.compile import (
-    botix,
-    make_edge_handler,
-    make_reboot_handler,
-    make_back_to_stage_handler,
-    make_surrounding_handler,
-    make_scan_handler,
-    make_search_handler,
-    make_rand_walk_handler,
-    make_fence_handler,
-    make_stage_handler,
-)
 from kazu.config import (
     DEFAULT_APP_CONFIG_PATH,
     APPConfig,
@@ -173,6 +161,7 @@ def run(conf: _InternalConfig, run_config: Path | None, mode: str, **_):
     """
     Run command for the main group.
     """
+    from kazu.compile import botix
 
     run_config = load_run_config(run_config)
 
@@ -206,10 +195,16 @@ def run(conf: _InternalConfig, run_config: Path | None, mode: str, **_):
                 from kazu.assembly import assmbly_AFG_schema
 
                 botix.token_pool = assmbly_AFG_schema(app_config, run_config)
+                afg_func = botix.compile()
+                while 1:
+                    afg_func()
             case RunMode.ANG:
                 from kazu.assembly import assmbly_ANG_schema
 
                 botix.token_pool = assmbly_ANG_schema(app_config, run_config)
+                ang_func = botix.compile()
+                while 1:
+                    ang_func()
             case RunMode.FGDL:
                 from kazu.assembly import assmbly_FGDL_schema
 
@@ -374,7 +369,23 @@ def read_sensors(conf: _InternalConfig, interval: float, device: str):
 @click.pass_obj
 @click.argument(
     "packname",
-    type=click.Choice(["all", "edge", "surr", "search", "fence", "boot", "scan", "stage", "bkstage", "rdwalk"]),
+    type=click.Choice(
+        [
+            "all",
+            "edge",
+            "surr",
+            "search",
+            "fence",
+            "boot",
+            "scan",
+            "stdbat",
+            "bkstage",
+            "rdwalk",
+            "onstage",
+            "angbat",
+            "afgbat",
+        ]
+    ),
     nargs=-1,
 )
 @click.option(
@@ -404,6 +415,21 @@ def visualize(
     Visualize State-Transition Diagram of KAZU with PlantUML
 
     """
+    from kazu.compile import (
+        botix,
+        make_edge_handler,
+        make_reboot_handler,
+        make_back_to_stage_handler,
+        make_surrounding_handler,
+        make_scan_handler,
+        make_search_handler,
+        make_rand_walk_handler,
+        make_fence_handler,
+        make_std_battle_handler,
+        make_always_on_stage_battle_handler,
+        make_always_off_stage_battle_handler,
+    )
+
     destination.mkdir(parents=True, exist_ok=True)
 
     app_config = conf.app_config
@@ -419,7 +445,10 @@ def visualize(
         "search": make_search_handler,
         "fence": make_fence_handler,
         "rdwalk": make_rand_walk_handler,
-        "stage": partial(make_stage_handler, tag_group=tag_group),
+        "stdbat": partial(make_std_battle_handler, tag_group=tag_group),
+        "onstage": partial(make_always_on_stage_battle_handler, tag_group=tag_group),
+        "angbat": partial(make_always_on_stage_battle_handler, tag_group=tag_group),
+        "afgbat": make_always_off_stage_battle_handler,
     }
 
     # 如果packname是'all'，则导出所有；否则，仅导出指定的包
