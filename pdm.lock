@@ -20,7 +20,7 @@ files = [
 
 [[package]]
 name = "bdmc"
-version = "0.1.5.11"
+version = "0.1.5.12"
 requires_python = ">=3.11"
 summary = "An api wrapper lib designed for the uptech BDMC divers"
 groups = ["default"]
@@ -29,8 +29,8 @@ dependencies = [
     "pyserial>=3.5",
 ]
 files = [
-    {file = "bdmc-0.1.5.11-py3-none-any.whl", hash = "sha256:dc79e863f8abee81ebed2c2880d39bfd6859fc10fc13edaa26f99c7c31203200"},
-    {file = "bdmc-0.1.5.11.tar.gz", hash = "sha256:816fb618b85db1cf40108557373516f92a0d207bd885d30f72e0cb121ccf49f0"},
+    {file = "bdmc-0.1.5.12-py3-none-any.whl", hash = "sha256:00b0b2774dd606fa207dd8d2ee2e0510c0375c7372176201db1efd19183e4f6c"},
+    {file = "bdmc-0.1.5.12.tar.gz", hash = "sha256:8faa80bccb93527be64b8ac7037dc6237de73d372d6632394e7813e7b0e75601"},
 ]
 
 [[package]]
