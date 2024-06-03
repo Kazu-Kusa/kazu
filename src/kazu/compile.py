@@ -22,7 +22,23 @@ from kazu.constant import (
 )
 from kazu.hardwares import controller, tag_detector, menta, SamplerIndexes
 from kazu.judgers import Breakers
-from kazu.signal_light import set_red_green, set_blue_yellow
+from kazu.signal_light import (
+    set_red_green,
+    set_blue_yellow,
+    set_all_black,
+    set_all_orange,
+    set_all_blue,
+    set_all_yellow,
+    set_all_red,
+    set_all_white,
+    set_all_green,
+    set_all_purple,
+    set_purple_red,
+    set_purple_yellow,
+    set_purple_white,
+    set_purple_green,
+    set_all_cyan,
+)
 from kazu.static import continues_state
 
 botix = Botix(controller=controller)
@@ -103,6 +119,7 @@ def make_edge_handler(
 
     # <editor-fold desc="Initialize Containers">
     transitions_pool: List[MovingTransition] = []
+    abnormal_exit.after_exiting.append(set_all_purple)
     (case_reg := CaseRegistry(EdgeCodeSign)).register(EdgeCodeSign.O_O_O_O, normal_exit)
     # </editor-fold>
 
@@ -478,11 +495,15 @@ def make_surrounding_handler(
     # <editor-fold desc="Templates">
 
     atk_enemy_car_state = MovingState.straight(run_config.surrounding.atk_speed_enemy_car)
+    atk_enemy_car_state.after_exiting.append(set_purple_red)
     atk_enemy_box_state = MovingState.straight(run_config.surrounding.atk_speed_enemy_box)
+    atk_enemy_box_state.after_exiting.append(set_purple_yellow)
     atk_neutral_box_state = MovingState.straight(run_config.surrounding.atk_speed_neutral_box)
+    atk_neutral_box_state.after_exiting.append(set_purple_white)
     allay_fallback_state = MovingState.straight(-run_config.surrounding.fallback_speed_ally_box)
+    allay_fallback_state.after_exiting.append(set_purple_green)
     edge_fallback_state = MovingState.straight(-run_config.surrounding.fallback_speed_edge)
-
+    edge_fallback_state.after_exiting.append(set_all_cyan)
     atk_enemy_car_transition = MovingTransition(run_config.surrounding.atk_speed_enemy_car, breaker=atk_breaker)
     atk_enemy_box_transition = MovingTransition(run_config.surrounding.atk_speed_enemy_box, breaker=atk_breaker)
     atk_neutral_box_transition = MovingTransition(run_config.surrounding.atk_neutral_box_duration, breaker=atk_breaker)
@@ -809,7 +830,7 @@ def make_scan_handler(
     case_reg = CaseRegistry(to_cover=ScanCodesign)
 
     scan_state = MovingState.rand_dir_turn(controller, conf.scan_speed, conf.scan_turn_left_prob)
-
+    scan_state.after_exiting.append(set_red_green)
     rand_turn_state = MovingState.rand_dir_turn(controller, conf.turn_speed, conf.turn_left_prob)
 
     turn_left_state = MovingState.turn("l", conf.turn_speed)
@@ -821,6 +842,7 @@ def make_scan_handler(
     fall_back_state = MovingState.straight(-conf.fall_back_speed)
     fall_back_transition = MovingTransition(conf.fall_back_duration, breaker=rear_edge_breaker)
 
+    end_state.after_exiting.append(set_all_red)
     transitions_pool: List[MovingTransition] = []
     # ---------------------------------------------------------------------
     [head_state, *_], transitions = composer.init_container().add(end_state).export_structure()
@@ -940,7 +962,7 @@ def make_rand_turn_handler(
     conf = run_config.search.rand_turn
 
     rand_lr_turn_state = MovingState.rand_dir_turn(controller, conf.turn_speed, turn_left_prob=conf.turn_left_prob)
-
+    rand_lr_turn_state.after_exiting.append(set_all_yellow)
     half_turn_transition = MovingTransition(conf.half_turn_duration)
 
     states, transitions = composer.add(rand_lr_turn_state).add(half_turn_transition).add(end_state).export_structure()
@@ -991,10 +1013,12 @@ def make_gradient_move(app_config: APPConfig, run_config: RunConfig, is_salvo_en
             _update_salvo_end_speed, [ContextVar.prev_salvo_speed.name], function_name="_update_salvo_end_speed"
         )
         updaters.append(salvo_end_speed_updater)
+
     return MovingState(
         speed_expressions=ContextVar.gradient_speed.name,
         used_context_variables=[ContextVar.gradient_speed.name],
         before_entering=updaters,
+        after_exiting=[set_all_blue],
     )
 
 
@@ -1159,6 +1183,7 @@ def make_fence_handler(
     case_reg.batch_register([FenceCodeSign.O_O_O_O, FenceCodeSign.X_X_X_X], head_state)
     # ---------------------------------------------------------------------
 
+    start_state.after_exiting.append(set_all_orange)
     # <editor-fold desc="Assembly">
     _, head_trans = (
         composer.init_container()
@@ -1234,6 +1259,7 @@ def make_back_to_stage_handler(
     small_advance_transition = MovingTransition(run_config.backstage.small_advance_duration)
     stab_trans = MovingTransition(run_config.backstage.time_to_stabilize)
     # waiting for a booting signal, and dash on to the stage once received
+    small_advance.after_exiting.append(set_all_green)
     states, transitions = (
         composer.init_container()
         .add(small_advance)
@@ -1346,6 +1372,7 @@ def make_rand_walk_handler(
             weights.append(w * conf.straight_weight)
 
     rand_move_state = MovingState.rand_move(controller, moves_seq, weights)
+    rand_move_state.after_exiting.append(set_all_white)
     move_transition = MovingTransition(conf.walk_duration)
     return composer.init_container().add(rand_move_state).add(move_transition).add(end_state).export_structure()
 
@@ -1519,4 +1546,5 @@ def make_salvo_end_state() -> MovingState:
         lambda: (0, 0, 0, 0), output_keys=[ContextVar.prev_salvo_speed.name], function_name="zero_salvo_speed_updater"
     )
     end_state.before_entering.append(zero_salvo_speed_updater)
+    end_state.after_exiting.append(set_all_black)
     return end_state

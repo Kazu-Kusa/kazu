@@ -30,9 +30,37 @@ def set_all_black() -> None:
     set_all(Color.BLACK)
 
 
+def set_all_orange() -> None:
+    set_all(Color.ORANGE)
+
+
+def set_all_cyan() -> None:
+    set_all(Color.CYAN)
+
+
+def set_all_purple() -> None:
+    set_all(Color.PURPLE)
+
+
 def set_red_green() -> None:
     set_all_single(Color.RED, Color.GREEN)
 
 
 def set_blue_yellow() -> None:
     set_all_single(Color.BLUE, Color.YELLOW)
+
+
+def set_purple_green() -> None:
+    set_all_single(Color.PURPLE, Color.GREEN)
+
+
+def set_purple_yellow() -> None:
+    set_all_single(Color.PURPLE, Color.YELLOW)
+
+
+def set_purple_red() -> None:
+    set_all_single(Color.PURPLE, Color.RED)
+
+
+def set_purple_white() -> None:
+    set_all_single(Color.PURPLE, Color.WHITE)
