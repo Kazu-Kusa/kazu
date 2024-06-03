@@ -17,11 +17,11 @@ jobs:
       - name: Get Project Version
         id: get_version
         run: |
-          echo "::set-output name=version::$(pdm show --version)"
+          echo "version=$(pdm show --version)" >> $GITHUB_OUTPUT
         shell: bash
 
       - name: Create Git Tag
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master' && steps.get_version.outputs.version != ''
+
         run: |
           git tag v${{ steps.get_version.outputs.version }}
           git push origin v${{ steps.get_version.outputs.version }}
