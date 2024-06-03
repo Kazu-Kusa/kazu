@@ -126,7 +126,7 @@ def make_edge_handler(
 
     # <editor-fold desc="Initialize Containers">
     transitions_pool: List[MovingTransition] = []
-    case_dict: Dict = {EdgeCodeSign.O_O_O_O.value: normal_exit}
+    (case_reg := CaseRegistry(EdgeCodeSign)).register(EdgeCodeSign.O_O_O_O, normal_exit)
     # </editor-fold>
 
     # <editor-fold desc="1-Activation Cases">
@@ -143,7 +143,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.X_O_O_O.value] = head_state
+    case_reg.register(EdgeCodeSign.X_O_O_O, head_state)
 
     # -----------------------------------------------------------------------------
     # fallback and full turn left
@@ -159,7 +159,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.O_O_O_X.value] = head_state
+    case_reg.register(EdgeCodeSign.O_O_O_X, head_state)
 
     # -----------------------------------------------------------------------------
 
@@ -176,7 +176,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.O_X_O_O.value] = head_state
+    case_reg.register(EdgeCodeSign.O_X_O_O, head_state)
 
     # -----------------------------------------------------------------------------
 
@@ -193,7 +193,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.O_O_X_O.value] = head_state
+    case_reg.register(EdgeCodeSign.O_O_X_O, head_state)
 
     # </editor-fold>
 
@@ -209,7 +209,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.X_X_O_O.value] = head_state
+    case_reg.register(EdgeCodeSign.X_X_O_O, head_state)
 
     # -----------------------------------------------------------------------------
 
@@ -224,7 +224,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.O_O_X_X.value] = head_state
+    case_reg.register(EdgeCodeSign.O_O_X_X, head_state)
 
     # -----------------------------------------------------------------------------
 
@@ -241,7 +241,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.X_O_O_X.value] = head_state
+    case_reg.register(EdgeCodeSign.X_O_O_X, head_state)
 
     # -----------------------------------------------------------------------------
 
@@ -256,7 +256,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.O_X_X_O.value] = head_state
+    case_reg.register(EdgeCodeSign.O_X_X_O, head_state)
 
     # -----------------------------------------------------------------------------
 
@@ -271,7 +271,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.X_O_X_O.value] = head_state
+    case_reg.register(EdgeCodeSign.X_O_X_O, head_state)
 
     # -----------------------------------------------------------------------------
 
@@ -286,7 +286,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.O_X_O_X.value] = head_state
+    case_reg.register(EdgeCodeSign.O_X_O_X, head_state)
 
     # </editor-fold>
 
@@ -305,7 +305,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.O_X_X_X.value] = head_state
+    case_reg.register(EdgeCodeSign.O_X_X_X, head_state)
 
     # -----------------------------------------------------------------------------
 
@@ -322,7 +322,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.X_X_X_O.value] = head_state
+    case_reg.register(EdgeCodeSign.X_X_X_O, head_state)
 
     # -----------------------------------------------------------------------------
 
@@ -339,7 +339,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.X_O_X_X.value] = head_state
+    case_reg.register(EdgeCodeSign.X_O_X_X, head_state)
 
     # -----------------------------------------------------------------------------
 
@@ -356,7 +356,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.X_X_O_X.value] = head_state
+    case_reg.register(EdgeCodeSign.X_X_O_X, head_state)
 
     # </editor-fold>
 
@@ -366,7 +366,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.X_X_X_X.value] = head_state
+    case_reg.register(EdgeCodeSign.X_X_X_X, head_state)
 
     # </editor-fold>
 
@@ -374,17 +374,16 @@ def make_edge_handler(
     _, head_trans = (
         composer.init_container()
         .add(start_state)
-        .add(MovingTransition(run_config.perf.min_sync_interval, breaker=edge_full_breaker, to_states=case_dict))
+        .add(
+            MovingTransition(run_config.perf.min_sync_interval, breaker=edge_full_breaker, to_states=case_reg.export())
+        )
         .export_structure()
     )
 
     transitions_pool.extend(head_trans)
 
-    botix.export_structure("strac.puml", transitions_pool)
-
     # </editor-fold>
 
-    check_all_case_defined(branch_dict=case_dict, case_list=EdgeCodeSign)
     return start_state, normal_exit, abnormal_exit, transitions_pool
 
 
