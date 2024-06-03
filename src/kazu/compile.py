@@ -1,5 +1,4 @@
-from enum import Enum
-from typing import Callable, List, Tuple, Dict, Optional, Iterable, TypeVar, Type
+from typing import Callable, List, Tuple, Dict, Optional, TypeVar
 
 from mentabotix import (
     MovingChainComposer,
@@ -23,7 +22,23 @@ from kazu.constant import (
 )
 from kazu.hardwares import controller, tag_detector, menta, SamplerIndexes
 from kazu.judgers import Breakers
-from kazu.signal_light import set_red_green, set_blue_yellow
+from kazu.signal_light import (
+    set_red_green,
+    set_blue_yellow,
+    set_all_black,
+    set_all_orange,
+    set_all_blue,
+    set_all_yellow,
+    set_all_red,
+    set_all_white,
+    set_all_green,
+    set_all_purple,
+    set_purple_red,
+    set_purple_yellow,
+    set_purple_white,
+    set_purple_green,
+    set_all_cyan,
+)
 from kazu.static import continues_state
 
 botix = Botix(controller=controller)
@@ -31,28 +46,6 @@ botix = Botix(controller=controller)
 composer = MovingChainComposer()
 
 T = TypeVar("T")
-
-
-def check_all_case_defined(branch_dict: Dict[T, MovingState], case_list: Iterable[T] | Type[Enum]) -> None:
-    """
-    Check if all cases in the `case_list` are defined in the `branch_dict`.
-
-    Args:
-        branch_dict (Dict[T, MovingState]): A dictionary mapping cases to their corresponding MovingState.
-        case_list (Iterable[T] | Type[Enum]): An iterable of cases or an Enum class.
-
-    Raises:
-        ValueError: If any case in the `case_list` is not defined in the `branch_dict`.
-
-    Returns:
-        None
-    """
-    if issubclass(case_list, Enum):
-        undefined_cases = list(filter(lambda x: x.value not in branch_dict, case_list))
-    else:
-        undefined_cases = list(filter(lambda x: x not in branch_dict, case_list))
-    if undefined_cases:
-        raise ValueError(f"Case not defined: {undefined_cases}")
 
 
 def make_edge_handler(
@@ -126,7 +119,8 @@ def make_edge_handler(
 
     # <editor-fold desc="Initialize Containers">
     transitions_pool: List[MovingTransition] = []
-    case_dict: Dict = {EdgeCodeSign.O_O_O_O.value: normal_exit}
+    abnormal_exit.after_exiting.append(set_all_purple)
+    (case_reg := CaseRegistry(EdgeCodeSign)).register(EdgeCodeSign.O_O_O_O, normal_exit)
     # </editor-fold>
 
     # <editor-fold desc="1-Activation Cases">
@@ -143,7 +137,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.X_O_O_O.value] = head_state
+    case_reg.register(EdgeCodeSign.X_O_O_O, head_state)
 
     # -----------------------------------------------------------------------------
     # fallback and full turn left
@@ -159,7 +153,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.O_O_O_X.value] = head_state
+    case_reg.register(EdgeCodeSign.O_O_O_X, head_state)
 
     # -----------------------------------------------------------------------------
 
@@ -176,7 +170,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.O_X_O_O.value] = head_state
+    case_reg.register(EdgeCodeSign.O_X_O_O, head_state)
 
     # -----------------------------------------------------------------------------
 
@@ -193,7 +187,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.O_O_X_O.value] = head_state
+    case_reg.register(EdgeCodeSign.O_O_X_O, head_state)
 
     # </editor-fold>
 
@@ -209,7 +203,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.X_X_O_O.value] = head_state
+    case_reg.register(EdgeCodeSign.X_X_O_O, head_state)
 
     # -----------------------------------------------------------------------------
 
@@ -224,7 +218,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.O_O_X_X.value] = head_state
+    case_reg.register(EdgeCodeSign.O_O_X_X, head_state)
 
     # -----------------------------------------------------------------------------
 
@@ -241,7 +235,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.X_O_O_X.value] = head_state
+    case_reg.register(EdgeCodeSign.X_O_O_X, head_state)
 
     # -----------------------------------------------------------------------------
 
@@ -256,7 +250,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.O_X_X_O.value] = head_state
+    case_reg.register(EdgeCodeSign.O_X_X_O, head_state)
 
     # -----------------------------------------------------------------------------
 
@@ -271,7 +265,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.X_O_X_O.value] = head_state
+    case_reg.register(EdgeCodeSign.X_O_X_O, head_state)
 
     # -----------------------------------------------------------------------------
 
@@ -286,7 +280,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.O_X_O_X.value] = head_state
+    case_reg.register(EdgeCodeSign.O_X_O_X, head_state)
 
     # </editor-fold>
 
@@ -305,7 +299,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.O_X_X_X.value] = head_state
+    case_reg.register(EdgeCodeSign.O_X_X_X, head_state)
 
     # -----------------------------------------------------------------------------
 
@@ -322,7 +316,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.X_X_X_O.value] = head_state
+    case_reg.register(EdgeCodeSign.X_X_X_O, head_state)
 
     # -----------------------------------------------------------------------------
 
@@ -339,7 +333,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.X_O_X_X.value] = head_state
+    case_reg.register(EdgeCodeSign.X_O_X_X, head_state)
 
     # -----------------------------------------------------------------------------
 
@@ -356,7 +350,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.X_X_O_X.value] = head_state
+    case_reg.register(EdgeCodeSign.X_X_O_X, head_state)
 
     # </editor-fold>
 
@@ -366,7 +360,7 @@ def make_edge_handler(
 
     transitions_pool.extend(transition)
 
-    case_dict[EdgeCodeSign.X_X_X_X.value] = head_state
+    case_reg.register(EdgeCodeSign.X_X_X_X, head_state)
 
     # </editor-fold>
 
@@ -374,17 +368,16 @@ def make_edge_handler(
     _, head_trans = (
         composer.init_container()
         .add(start_state)
-        .add(MovingTransition(run_config.perf.min_sync_interval, breaker=edge_full_breaker, to_states=case_dict))
+        .add(
+            MovingTransition(run_config.perf.min_sync_interval, breaker=edge_full_breaker, to_states=case_reg.export())
+        )
         .export_structure()
     )
 
     transitions_pool.extend(head_trans)
 
-    botix.export_structure("strac.puml", transitions_pool)
-
     # </editor-fold>
 
-    check_all_case_defined(branch_dict=case_dict, case_list=EdgeCodeSign)
     return start_state, normal_exit, abnormal_exit, transitions_pool
 
 
@@ -502,11 +495,15 @@ def make_surrounding_handler(
     # <editor-fold desc="Templates">
 
     atk_enemy_car_state = MovingState.straight(run_config.surrounding.atk_speed_enemy_car)
+    atk_enemy_car_state.after_exiting.append(set_purple_red)
     atk_enemy_box_state = MovingState.straight(run_config.surrounding.atk_speed_enemy_box)
+    atk_enemy_box_state.after_exiting.append(set_purple_yellow)
     atk_neutral_box_state = MovingState.straight(run_config.surrounding.atk_speed_neutral_box)
+    atk_neutral_box_state.after_exiting.append(set_purple_white)
     allay_fallback_state = MovingState.straight(-run_config.surrounding.fallback_speed_ally_box)
+    allay_fallback_state.after_exiting.append(set_purple_green)
     edge_fallback_state = MovingState.straight(-run_config.surrounding.fallback_speed_edge)
-
+    edge_fallback_state.after_exiting.append(set_all_cyan)
     atk_enemy_car_transition = MovingTransition(run_config.surrounding.atk_speed_enemy_car, breaker=atk_breaker)
     atk_enemy_box_transition = MovingTransition(run_config.surrounding.atk_speed_enemy_box, breaker=atk_breaker)
     atk_neutral_box_transition = MovingTransition(run_config.surrounding.atk_neutral_box_duration, breaker=atk_breaker)
@@ -542,7 +539,7 @@ def make_surrounding_handler(
     # <editor-fold desc="Init Container">
     transitions_pool: List[MovingTransition] = []
 
-    case_dict: Dict[int, MovingState] = {SurroundingCodeSign.NOTHING.value: normal_exit}
+    (case_reg := CaseRegistry(SurroundingCodeSign)).register(SurroundingCodeSign.NOTHING, normal_exit)
     # </editor-fold>
 
     # <editor-fold desc="Front enemy car">
@@ -562,14 +559,20 @@ def make_surrounding_handler(
     )
 
     transitions_pool.extend(transitions)
-    case_dict[SurroundingCodeSign.FRONT_ENEMY_CAR.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ENEMY_CAR_RIGHT_OBJECT.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ENEMY_CAR_LEFT_OBJECT.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ENEMY_CAR_BEHIND_OBJECT.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ENEMY_CAR_LEFT_RIGHT_OBJECTS.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ENEMY_CAR_RIGHT_BEHIND_OBJECTS.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ENEMY_CAR_LEFT_BEHIND_OBJECTS.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ENEMY_CAR_LEFT_RIGHT_BEHIND_OBJECTS.value] = head_state
+
+    case_reg.batch_register(
+        [
+            SurroundingCodeSign.FRONT_ENEMY_CAR,
+            SurroundingCodeSign.FRONT_ENEMY_CAR_RIGHT_OBJECT,
+            SurroundingCodeSign.FRONT_ENEMY_CAR_LEFT_OBJECT,
+            SurroundingCodeSign.FRONT_ENEMY_CAR_BEHIND_OBJECT,
+            SurroundingCodeSign.FRONT_ENEMY_CAR_LEFT_RIGHT_OBJECTS,
+            SurroundingCodeSign.FRONT_ENEMY_CAR_RIGHT_BEHIND_OBJECTS,
+            SurroundingCodeSign.FRONT_ENEMY_CAR_LEFT_BEHIND_OBJECTS,
+            SurroundingCodeSign.FRONT_ENEMY_CAR_LEFT_RIGHT_BEHIND_OBJECTS,
+        ],
+        head_state,
+    )
     # ---------------------------------------------------------------------
     # </editor-fold>
 
@@ -591,15 +594,19 @@ def make_surrounding_handler(
     )
 
     transitions_pool.extend(transitions)
-    case_dict[SurroundingCodeSign.BEHIND_OBJECT.value] = head_state
-    case_dict[SurroundingCodeSign.LEFT_RIGHT_BEHIND_OBJECTS.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ENEMY_BOX_BEHIND_OBJECT.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ALLY_BOX_BEHIND_OBJECT.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_NEUTRAL_BOX_BEHIND_OBJECT.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ALLY_BOX_LEFT_RIGHT_BEHIND_OBJECTS.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_NEUTRAL_BOX_LEFT_RIGHT_BEHIND_OBJECTS.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ENEMY_BOX_LEFT_RIGHT_BEHIND_OBJECTS.value] = head_state
-    # ---------------------------------------------------------------------
+    case_reg.batch_register(
+        [
+            SurroundingCodeSign.BEHIND_OBJECT,
+            SurroundingCodeSign.LEFT_RIGHT_BEHIND_OBJECTS,
+            SurroundingCodeSign.FRONT_ENEMY_BOX_BEHIND_OBJECT,
+            SurroundingCodeSign.FRONT_ALLY_BOX_BEHIND_OBJECT,
+            SurroundingCodeSign.FRONT_NEUTRAL_BOX_BEHIND_OBJECT,
+            SurroundingCodeSign.FRONT_ALLY_BOX_LEFT_RIGHT_BEHIND_OBJECTS,
+            SurroundingCodeSign.FRONT_NEUTRAL_BOX_LEFT_RIGHT_BEHIND_OBJECTS,
+            SurroundingCodeSign.FRONT_ENEMY_BOX_LEFT_RIGHT_BEHIND_OBJECTS,
+        ],
+        head_state,
+    )  # ---------------------------------------------------------------------
     # half turn left atk and fallback and full random turn then stop
     [head_state, *_], transitions = (
         composer.init_container()
@@ -616,10 +623,15 @@ def make_surrounding_handler(
     )
 
     transitions_pool.extend(transitions)
-    case_dict[SurroundingCodeSign.LEFT_OBJECT.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ENEMY_BOX_LEFT_OBJECT.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ALLY_BOX_LEFT_OBJECT.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_NEUTRAL_BOX_LEFT_OBJECT.value] = head_state
+    case_reg.batch_register(
+        [
+            SurroundingCodeSign.LEFT_OBJECT,
+            SurroundingCodeSign.FRONT_ENEMY_BOX_LEFT_OBJECT,
+            SurroundingCodeSign.FRONT_ALLY_BOX_LEFT_OBJECT,
+            SurroundingCodeSign.FRONT_NEUTRAL_BOX_LEFT_OBJECT,
+        ],
+        head_state,
+    )
     # ---------------------------------------------------------------------
     # half turn right atk and fallback and full random turn then stop
     [head_state, *_], transitions = (
@@ -637,10 +649,15 @@ def make_surrounding_handler(
     )
 
     transitions_pool.extend(transitions)
-    case_dict[SurroundingCodeSign.RIGHT_OBJECT.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ENEMY_BOX_RIGHT_OBJECT.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ALLY_BOX_RIGHT_OBJECT.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_NEUTRAL_BOX_RIGHT_OBJECT.value] = head_state
+    case_reg.batch_register(
+        [
+            SurroundingCodeSign.RIGHT_OBJECT,
+            SurroundingCodeSign.FRONT_ENEMY_BOX_RIGHT_OBJECT,
+            SurroundingCodeSign.FRONT_ALLY_BOX_RIGHT_OBJECT,
+            SurroundingCodeSign.FRONT_NEUTRAL_BOX_RIGHT_OBJECT,
+        ],
+        head_state,
+    )
     # ---------------------------------------------------------------------
     # half random turn atk and fallback and full random turn then stop
     [head_state, *_], transitions = (
@@ -658,10 +675,15 @@ def make_surrounding_handler(
     )
 
     transitions_pool.extend(transitions)
-    case_dict[SurroundingCodeSign.LEFT_RIGHT_OBJECTS.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ENEMY_BOX_LEFT_RIGHT_OBJECTS.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ALLY_BOX_LEFT_RIGHT_OBJECTS.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_NEUTRAL_BOX_LEFT_RIGHT_OBJECTS.value] = head_state
+    case_reg.batch_register(
+        [
+            SurroundingCodeSign.LEFT_RIGHT_OBJECTS,
+            SurroundingCodeSign.FRONT_ENEMY_BOX_LEFT_RIGHT_OBJECTS,
+            SurroundingCodeSign.FRONT_ALLY_BOX_LEFT_RIGHT_OBJECTS,
+            SurroundingCodeSign.FRONT_NEUTRAL_BOX_LEFT_RIGHT_OBJECTS,
+        ],
+        head_state,
+    )
 
     # ---------------------------------------------------------------------
     # random spd turn left atk and fallback and full random turn then stop
@@ -680,10 +702,15 @@ def make_surrounding_handler(
     )
 
     transitions_pool.extend(transitions)
-    case_dict[SurroundingCodeSign.LEFT_BEHIND_OBJECTS.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ENEMY_BOX_LEFT_BEHIND_OBJECTS.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ALLY_BOX_LEFT_BEHIND_OBJECTS.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_NEUTRAL_BOX_LEFT_BEHIND_OBJECTS.value] = head_state
+    case_reg.batch_register(
+        [
+            SurroundingCodeSign.LEFT_BEHIND_OBJECTS,
+            SurroundingCodeSign.FRONT_ENEMY_BOX_LEFT_BEHIND_OBJECTS,
+            SurroundingCodeSign.FRONT_ALLY_BOX_LEFT_BEHIND_OBJECTS,
+            SurroundingCodeSign.FRONT_NEUTRAL_BOX_LEFT_BEHIND_OBJECTS,
+        ],
+        head_state,
+    )
     # ---------------------------------------------------------------------
     # random spd turn right atk and fallback and full random turn then stop
     [head_state, *_], transitions = (
@@ -701,10 +728,15 @@ def make_surrounding_handler(
     )
 
     transitions_pool.extend(transitions)
-    case_dict[SurroundingCodeSign.RIGHT_BEHIND_OBJECTS.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ENEMY_BOX_RIGHT_BEHIND_OBJECTS.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ALLY_BOX_RIGHT_BEHIND_OBJECTS.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_NEUTRAL_BOX_RIGHT_BEHIND_OBJECTS.value] = head_state
+    case_reg.batch_register(
+        [
+            SurroundingCodeSign.RIGHT_BEHIND_OBJECTS,
+            SurroundingCodeSign.FRONT_ENEMY_BOX_RIGHT_BEHIND_OBJECTS,
+            SurroundingCodeSign.FRONT_ALLY_BOX_RIGHT_BEHIND_OBJECTS,
+            SurroundingCodeSign.FRONT_NEUTRAL_BOX_RIGHT_BEHIND_OBJECTS,
+        ],
+        head_state,
+    )
     # ---------------------------------------------------------------------
     # </editor-fold>
 
@@ -724,7 +756,7 @@ def make_surrounding_handler(
     )
 
     transitions_pool.extend(transitions)
-    case_dict[SurroundingCodeSign.FRONT_ENEMY_BOX.value] = head_state
+    case_reg.register(SurroundingCodeSign.FRONT_ENEMY_BOX, head_state)
     # ---------------------------------------------------------------------
     # atk and fallback and full random turn then stop
     [head_state, *_], transitions = (
@@ -739,7 +771,7 @@ def make_surrounding_handler(
         .export_structure()
     )
     transitions_pool.extend(transitions)
-    case_dict[SurroundingCodeSign.FRONT_NEUTRAL_BOX.value] = head_state
+    case_reg.register(SurroundingCodeSign.FRONT_NEUTRAL_BOX, head_state)
     # ---------------------------------------------------------------------
     # fallback and full random turn then stop
     [head_state, *_], transitions = (
@@ -752,7 +784,8 @@ def make_surrounding_handler(
         .export_structure()
     )
     transitions_pool.extend(transitions)
-    case_dict[SurroundingCodeSign.FRONT_ALLY_BOX.value] = head_state
+    case_reg.register(SurroundingCodeSign.FRONT_ALLY_BOX, head_state)
+
     # ---------------------------------------------------------------------
     # </editor-fold>
 
@@ -760,7 +793,9 @@ def make_surrounding_handler(
     _, head_trans = (
         composer.init_container()
         .add(start_state)
-        .add(MovingTransition(run_config.perf.min_sync_interval, breaker=surr_full_breaker, to_states=case_dict))
+        .add(
+            MovingTransition(run_config.perf.min_sync_interval, breaker=surr_full_breaker, to_states=case_reg.export())
+        )
         .export_structure()
     )
     # </editor-fold>
@@ -768,7 +803,6 @@ def make_surrounding_handler(
     # <editor-fold desc="Make Return">
     transitions_pool.extend(head_trans)
 
-    check_all_case_defined(case_dict, SurroundingCodeSign)
     return start_state, normal_exit, abnormal_exit, transitions_pool
     # </editor-fold>
 
@@ -796,7 +830,7 @@ def make_scan_handler(
     case_reg = CaseRegistry(to_cover=ScanCodesign)
 
     scan_state = MovingState.rand_dir_turn(controller, conf.scan_speed, conf.scan_turn_left_prob)
-
+    scan_state.after_exiting.append(set_red_green)
     rand_turn_state = MovingState.rand_dir_turn(controller, conf.turn_speed, conf.turn_left_prob)
 
     turn_left_state = MovingState.turn("l", conf.turn_speed)
@@ -808,6 +842,7 @@ def make_scan_handler(
     fall_back_state = MovingState.straight(-conf.fall_back_speed)
     fall_back_transition = MovingTransition(conf.fall_back_duration, breaker=rear_edge_breaker)
 
+    end_state.after_exiting.append(set_all_red)
     transitions_pool: List[MovingTransition] = []
     # ---------------------------------------------------------------------
     [head_state, *_], transitions = composer.init_container().add(end_state).export_structure()
@@ -927,7 +962,7 @@ def make_rand_turn_handler(
     conf = run_config.search.rand_turn
 
     rand_lr_turn_state = MovingState.rand_dir_turn(controller, conf.turn_speed, turn_left_prob=conf.turn_left_prob)
-
+    rand_lr_turn_state.after_exiting.append(set_all_yellow)
     half_turn_transition = MovingTransition(conf.half_turn_duration)
 
     states, transitions = composer.add(rand_lr_turn_state).add(half_turn_transition).add(end_state).export_structure()
@@ -978,10 +1013,12 @@ def make_gradient_move(app_config: APPConfig, run_config: RunConfig, is_salvo_en
             _update_salvo_end_speed, [ContextVar.prev_salvo_speed.name], function_name="_update_salvo_end_speed"
         )
         updaters.append(salvo_end_speed_updater)
+
     return MovingState(
         speed_expressions=ContextVar.gradient_speed.name,
         used_context_variables=[ContextVar.gradient_speed.name],
         before_entering=updaters,
+        after_exiting=[set_all_blue],
     )
 
 
@@ -1146,6 +1183,7 @@ def make_fence_handler(
     case_reg.batch_register([FenceCodeSign.O_O_O_O, FenceCodeSign.X_X_X_X], head_state)
     # ---------------------------------------------------------------------
 
+    start_state.after_exiting.append(set_all_orange)
     # <editor-fold desc="Assembly">
     _, head_trans = (
         composer.init_container()
@@ -1221,6 +1259,7 @@ def make_back_to_stage_handler(
     small_advance_transition = MovingTransition(run_config.backstage.small_advance_duration)
     stab_trans = MovingTransition(run_config.backstage.time_to_stabilize)
     # waiting for a booting signal, and dash on to the stage once received
+    small_advance.after_exiting.append(set_all_green)
     states, transitions = (
         composer.init_container()
         .add(small_advance)
@@ -1333,6 +1372,7 @@ def make_rand_walk_handler(
             weights.append(w * conf.straight_weight)
 
     rand_move_state = MovingState.rand_move(controller, moves_seq, weights)
+    rand_move_state.after_exiting.append(set_all_white)
     move_transition = MovingTransition(conf.walk_duration)
     return composer.init_container().add(rand_move_state).add(move_transition).add(end_state).export_structure()
 
@@ -1506,4 +1546,5 @@ def make_salvo_end_state() -> MovingState:
         lambda: (0, 0, 0, 0), output_keys=[ContextVar.prev_salvo_speed.name], function_name="zero_salvo_speed_updater"
     )
     end_state.before_entering.append(zero_salvo_speed_updater)
+    end_state.after_exiting.append(set_all_black)
     return end_state
