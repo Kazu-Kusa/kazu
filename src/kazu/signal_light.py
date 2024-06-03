@@ -36,3 +36,15 @@ def set_red_green() -> None:
 
 def set_blue_yellow() -> None:
     set_all_single(Color.BLUE, Color.YELLOW)
+
+
+def set_purple_green() -> None:
+    set_all_single(Color.PURPLE, Color.GREEN)
+
+
+def set_purple_yellow() -> None:
+    set_all_single(Color.PURPLE, Color.YELLOW)
+
+
+def set_purple_red() -> None:
+    set_all_single(Color.PURPLE, Color.RED)
