@@ -1,5 +1,4 @@
-from enum import Enum
-from typing import Callable, List, Tuple, Dict, Optional, Iterable, TypeVar, Type
+from typing import Callable, List, Tuple, Dict, Optional, TypeVar
 
 from mentabotix import (
     MovingChainComposer,
@@ -31,28 +30,6 @@ botix = Botix(controller=controller)
 composer = MovingChainComposer()
 
 T = TypeVar("T")
-
-
-def check_all_case_defined(branch_dict: Dict[T, MovingState], case_list: Iterable[T] | Type[Enum]) -> None:
-    """
-    Check if all cases in the `case_list` are defined in the `branch_dict`.
-
-    Args:
-        branch_dict (Dict[T, MovingState]): A dictionary mapping cases to their corresponding MovingState.
-        case_list (Iterable[T] | Type[Enum]): An iterable of cases or an Enum class.
-
-    Raises:
-        ValueError: If any case in the `case_list` is not defined in the `branch_dict`.
-
-    Returns:
-        None
-    """
-    if issubclass(case_list, Enum):
-        undefined_cases = list(filter(lambda x: x.value not in branch_dict, case_list))
-    else:
-        undefined_cases = list(filter(lambda x: x not in branch_dict, case_list))
-    if undefined_cases:
-        raise ValueError(f"Case not defined: {undefined_cases}")
 
 
 def make_edge_handler(
@@ -541,7 +518,7 @@ def make_surrounding_handler(
     # <editor-fold desc="Init Container">
     transitions_pool: List[MovingTransition] = []
 
-    case_dict: Dict[int, MovingState] = {SurroundingCodeSign.NOTHING.value: normal_exit}
+    (case_reg := CaseRegistry(SurroundingCodeSign)).register(SurroundingCodeSign.NOTHING, normal_exit)
     # </editor-fold>
 
     # <editor-fold desc="Front enemy car">
@@ -561,14 +538,20 @@ def make_surrounding_handler(
     )
 
     transitions_pool.extend(transitions)
-    case_dict[SurroundingCodeSign.FRONT_ENEMY_CAR.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ENEMY_CAR_RIGHT_OBJECT.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ENEMY_CAR_LEFT_OBJECT.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ENEMY_CAR_BEHIND_OBJECT.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ENEMY_CAR_LEFT_RIGHT_OBJECTS.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ENEMY_CAR_RIGHT_BEHIND_OBJECTS.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ENEMY_CAR_LEFT_BEHIND_OBJECTS.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ENEMY_CAR_LEFT_RIGHT_BEHIND_OBJECTS.value] = head_state
+
+    case_reg.batch_register(
+        [
+            SurroundingCodeSign.FRONT_ENEMY_CAR,
+            SurroundingCodeSign.FRONT_ENEMY_CAR_RIGHT_OBJECT,
+            SurroundingCodeSign.FRONT_ENEMY_CAR_LEFT_OBJECT,
+            SurroundingCodeSign.FRONT_ENEMY_CAR_BEHIND_OBJECT,
+            SurroundingCodeSign.FRONT_ENEMY_CAR_LEFT_RIGHT_OBJECTS,
+            SurroundingCodeSign.FRONT_ENEMY_CAR_RIGHT_BEHIND_OBJECTS,
+            SurroundingCodeSign.FRONT_ENEMY_CAR_LEFT_BEHIND_OBJECTS,
+            SurroundingCodeSign.FRONT_ENEMY_CAR_LEFT_RIGHT_BEHIND_OBJECTS,
+        ],
+        head_state,
+    )
     # ---------------------------------------------------------------------
     # </editor-fold>
 
@@ -590,15 +573,19 @@ def make_surrounding_handler(
     )
 
     transitions_pool.extend(transitions)
-    case_dict[SurroundingCodeSign.BEHIND_OBJECT.value] = head_state
-    case_dict[SurroundingCodeSign.LEFT_RIGHT_BEHIND_OBJECTS.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ENEMY_BOX_BEHIND_OBJECT.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ALLY_BOX_BEHIND_OBJECT.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_NEUTRAL_BOX_BEHIND_OBJECT.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ALLY_BOX_LEFT_RIGHT_BEHIND_OBJECTS.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_NEUTRAL_BOX_LEFT_RIGHT_BEHIND_OBJECTS.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ENEMY_BOX_LEFT_RIGHT_BEHIND_OBJECTS.value] = head_state
-    # ---------------------------------------------------------------------
+    case_reg.batch_register(
+        [
+            SurroundingCodeSign.BEHIND_OBJECT,
+            SurroundingCodeSign.LEFT_RIGHT_BEHIND_OBJECTS,
+            SurroundingCodeSign.FRONT_ENEMY_BOX_BEHIND_OBJECT,
+            SurroundingCodeSign.FRONT_ALLY_BOX_BEHIND_OBJECT,
+            SurroundingCodeSign.FRONT_NEUTRAL_BOX_BEHIND_OBJECT,
+            SurroundingCodeSign.FRONT_ALLY_BOX_LEFT_RIGHT_BEHIND_OBJECTS,
+            SurroundingCodeSign.FRONT_NEUTRAL_BOX_LEFT_RIGHT_BEHIND_OBJECTS,
+            SurroundingCodeSign.FRONT_ENEMY_BOX_LEFT_RIGHT_BEHIND_OBJECTS,
+        ],
+        head_state,
+    )  # ---------------------------------------------------------------------
     # half turn left atk and fallback and full random turn then stop
     [head_state, *_], transitions = (
         composer.init_container()
@@ -615,10 +602,15 @@ def make_surrounding_handler(
     )
 
     transitions_pool.extend(transitions)
-    case_dict[SurroundingCodeSign.LEFT_OBJECT.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ENEMY_BOX_LEFT_OBJECT.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ALLY_BOX_LEFT_OBJECT.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_NEUTRAL_BOX_LEFT_OBJECT.value] = head_state
+    case_reg.batch_register(
+        [
+            SurroundingCodeSign.LEFT_OBJECT,
+            SurroundingCodeSign.FRONT_ENEMY_BOX_LEFT_OBJECT,
+            SurroundingCodeSign.FRONT_ALLY_BOX_LEFT_OBJECT,
+            SurroundingCodeSign.FRONT_NEUTRAL_BOX_LEFT_OBJECT,
+        ],
+        head_state,
+    )
     # ---------------------------------------------------------------------
     # half turn right atk and fallback and full random turn then stop
     [head_state, *_], transitions = (
@@ -636,10 +628,15 @@ def make_surrounding_handler(
     )
 
     transitions_pool.extend(transitions)
-    case_dict[SurroundingCodeSign.RIGHT_OBJECT.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ENEMY_BOX_RIGHT_OBJECT.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ALLY_BOX_RIGHT_OBJECT.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_NEUTRAL_BOX_RIGHT_OBJECT.value] = head_state
+    case_reg.batch_register(
+        [
+            SurroundingCodeSign.RIGHT_OBJECT,
+            SurroundingCodeSign.FRONT_ENEMY_BOX_RIGHT_OBJECT,
+            SurroundingCodeSign.FRONT_ALLY_BOX_RIGHT_OBJECT,
+            SurroundingCodeSign.FRONT_NEUTRAL_BOX_RIGHT_OBJECT,
+        ],
+        head_state,
+    )
     # ---------------------------------------------------------------------
     # half random turn atk and fallback and full random turn then stop
     [head_state, *_], transitions = (
@@ -657,10 +654,15 @@ def make_surrounding_handler(
     )
 
     transitions_pool.extend(transitions)
-    case_dict[SurroundingCodeSign.LEFT_RIGHT_OBJECTS.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ENEMY_BOX_LEFT_RIGHT_OBJECTS.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ALLY_BOX_LEFT_RIGHT_OBJECTS.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_NEUTRAL_BOX_LEFT_RIGHT_OBJECTS.value] = head_state
+    case_reg.batch_register(
+        [
+            SurroundingCodeSign.LEFT_RIGHT_OBJECTS,
+            SurroundingCodeSign.FRONT_ENEMY_BOX_LEFT_RIGHT_OBJECTS,
+            SurroundingCodeSign.FRONT_ALLY_BOX_LEFT_RIGHT_OBJECTS,
+            SurroundingCodeSign.FRONT_NEUTRAL_BOX_LEFT_RIGHT_OBJECTS,
+        ],
+        head_state,
+    )
 
     # ---------------------------------------------------------------------
     # random spd turn left atk and fallback and full random turn then stop
@@ -679,10 +681,15 @@ def make_surrounding_handler(
     )
 
     transitions_pool.extend(transitions)
-    case_dict[SurroundingCodeSign.LEFT_BEHIND_OBJECTS.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ENEMY_BOX_LEFT_BEHIND_OBJECTS.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ALLY_BOX_LEFT_BEHIND_OBJECTS.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_NEUTRAL_BOX_LEFT_BEHIND_OBJECTS.value] = head_state
+    case_reg.batch_register(
+        [
+            SurroundingCodeSign.LEFT_BEHIND_OBJECTS,
+            SurroundingCodeSign.FRONT_ENEMY_BOX_LEFT_BEHIND_OBJECTS,
+            SurroundingCodeSign.FRONT_ALLY_BOX_LEFT_BEHIND_OBJECTS,
+            SurroundingCodeSign.FRONT_NEUTRAL_BOX_LEFT_BEHIND_OBJECTS,
+        ],
+        head_state,
+    )
     # ---------------------------------------------------------------------
     # random spd turn right atk and fallback and full random turn then stop
     [head_state, *_], transitions = (
@@ -700,10 +707,15 @@ def make_surrounding_handler(
     )
 
     transitions_pool.extend(transitions)
-    case_dict[SurroundingCodeSign.RIGHT_BEHIND_OBJECTS.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ENEMY_BOX_RIGHT_BEHIND_OBJECTS.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_ALLY_BOX_RIGHT_BEHIND_OBJECTS.value] = head_state
-    case_dict[SurroundingCodeSign.FRONT_NEUTRAL_BOX_RIGHT_BEHIND_OBJECTS.value] = head_state
+    case_reg.batch_register(
+        [
+            SurroundingCodeSign.RIGHT_BEHIND_OBJECTS,
+            SurroundingCodeSign.FRONT_ENEMY_BOX_RIGHT_BEHIND_OBJECTS,
+            SurroundingCodeSign.FRONT_ALLY_BOX_RIGHT_BEHIND_OBJECTS,
+            SurroundingCodeSign.FRONT_NEUTRAL_BOX_RIGHT_BEHIND_OBJECTS,
+        ],
+        head_state,
+    )
     # ---------------------------------------------------------------------
     # </editor-fold>
 
@@ -723,7 +735,7 @@ def make_surrounding_handler(
     )
 
     transitions_pool.extend(transitions)
-    case_dict[SurroundingCodeSign.FRONT_ENEMY_BOX.value] = head_state
+    case_reg.register(SurroundingCodeSign.FRONT_ENEMY_BOX, head_state)
     # ---------------------------------------------------------------------
     # atk and fallback and full random turn then stop
     [head_state, *_], transitions = (
@@ -738,7 +750,7 @@ def make_surrounding_handler(
         .export_structure()
     )
     transitions_pool.extend(transitions)
-    case_dict[SurroundingCodeSign.FRONT_NEUTRAL_BOX.value] = head_state
+    case_reg.register(SurroundingCodeSign.FRONT_NEUTRAL_BOX, head_state)
     # ---------------------------------------------------------------------
     # fallback and full random turn then stop
     [head_state, *_], transitions = (
@@ -751,7 +763,8 @@ def make_surrounding_handler(
         .export_structure()
     )
     transitions_pool.extend(transitions)
-    case_dict[SurroundingCodeSign.FRONT_ALLY_BOX.value] = head_state
+    case_reg.register(SurroundingCodeSign.FRONT_ALLY_BOX, head_state)
+
     # ---------------------------------------------------------------------
     # </editor-fold>
 
@@ -759,7 +772,9 @@ def make_surrounding_handler(
     _, head_trans = (
         composer.init_container()
         .add(start_state)
-        .add(MovingTransition(run_config.perf.min_sync_interval, breaker=surr_full_breaker, to_states=case_dict))
+        .add(
+            MovingTransition(run_config.perf.min_sync_interval, breaker=surr_full_breaker, to_states=case_reg.export())
+        )
         .export_structure()
     )
     # </editor-fold>
@@ -767,7 +782,6 @@ def make_surrounding_handler(
     # <editor-fold desc="Make Return">
     transitions_pool.extend(head_trans)
 
-    check_all_case_defined(case_dict, SurroundingCodeSign)
     return start_state, normal_exit, abnormal_exit, transitions_pool
     # </editor-fold>
 
