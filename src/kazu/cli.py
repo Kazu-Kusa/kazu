@@ -177,6 +177,7 @@ def run(conf: _InternalConfig, run_config: Path | None, mode: str, **_):
     try:
         match mode:
             case RunMode.FGS:
+                # O[F]F STA[G]E [S]TART
                 from kazu.assembly import assmbly_FGS_schema
 
                 boot_pool, stage_pool = assmbly_FGS_schema(app_config, run_config)
@@ -188,6 +189,7 @@ def run(conf: _InternalConfig, run_config: Path | None, mode: str, **_):
                 while 1:
                     stage_func()
             case RunMode.NGS:
+                # O[N] STA[G]E [S]TART
                 from kazu.assembly import assmbly_NGS_schema
 
                 botix.token_pool = assmbly_NGS_schema(app_config, run_config)
@@ -195,6 +197,7 @@ def run(conf: _InternalConfig, run_config: Path | None, mode: str, **_):
                 while 1:
                     stage_func()
             case RunMode.AFG:
+                # [A]LWAYS O[F]F STA[G]E
                 from kazu.assembly import assmbly_AFG_schema
 
                 botix.token_pool = assmbly_AFG_schema(app_config, run_config)
@@ -202,6 +205,7 @@ def run(conf: _InternalConfig, run_config: Path | None, mode: str, **_):
                 while 1:
                     off_stage_func()
             case RunMode.ANG:
+                # [A]LWAYS O[N] STA[G]E
                 from kazu.assembly import assmbly_ANG_schema
 
                 botix.token_pool = assmbly_ANG_schema(app_config, run_config)
@@ -209,6 +213,7 @@ def run(conf: _InternalConfig, run_config: Path | None, mode: str, **_):
                 while 1:
                     on_stage_func()
             case RunMode.FGDL:
+                # O[F]F STA[G]E [D]ASH [L]OOP
                 from kazu.assembly import assmbly_FGDL_schema
 
                 botix.token_pool = assmbly_FGDL_schema(app_config, run_config)
