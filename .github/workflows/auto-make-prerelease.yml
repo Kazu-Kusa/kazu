@@ -28,22 +28,46 @@ jobs:
           echo "version=$(pdm show --version)" >> $GITHUB_OUTPUT
         shell: bash
 
-      - name: Create Git Tag
+      - name: Check if Git Tag exists
+        id: check_tag_exists
+        env:
+          VERSION: ${{ steps.get_version.outputs.version }}
+        run: |
+          git fetch --tags
+          if git rev-list -n 1 "v$VERSION" > /dev/null 2>&1; then
+            echo "Tag v$VERSION already exists."
+            echo "exists=1" >> $GITHUB_OUTPUT
 
+          else
+            echo "Tag v$VERSION does not exist."
+            echo "exists=0" >> $GITHUB_OUTPUT
+
+          fi
+        shell: bash
+
+      - name: Create Git Tag
+        if: steps.check_tag_exists.outputs.exists == 0
         run: |
           git tag v${{ steps.get_version.outputs.version }}
           git push origin v${{ steps.get_version.outputs.version }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+        shell: bash
 
       - name: Install Dependencies
         run: pdm install
+        shell: bash
+
 
       - name: Build Package
         run: pdm build
+        shell: bash
+
+
 
       - name: Create GitHub Release
+        if: steps.check_tag_exists.outputs.exists == 0
+
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.get_version.outputs.version }}
@@ -54,3 +78,4 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
