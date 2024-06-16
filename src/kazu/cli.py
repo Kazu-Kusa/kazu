@@ -9,6 +9,7 @@ import mentabotix
 import pyuptech
 from bdmc import CMD
 from click import secho, echo, clear
+from colorama import Fore
 from mentabotix import MovingState, MovingTransition
 
 from kazu import __version__, __command__
@@ -478,64 +479,155 @@ def visualize(
 @main.command("cmd", context_settings={"ignore_unknown_options": True})
 @click.help_option("-h", "--help")
 @click.pass_obj
-@click.argument("duration", type=click.FLOAT, required=True)
-@click.argument("speeds", nargs=-1, type=click.INT, required=True)
-def control_motor(conf: _InternalConfig, duration: float, speeds: list[int]):
+@click.option("-s", "--shell", is_flag=True, help="Run in shell mode", default=False, show_default=True)
+@click.option("-p", "--port", type=click.STRING, help="Set the serial port temporarily", default=None)
+@click.argument("duration", type=click.FLOAT, required=False)
+@click.argument("speeds", nargs=-1, type=click.INT, required=False)
+def control_motor(
+    conf: _InternalConfig, duration: Optional[float], speeds: Optional[list[int]], shell: bool, port: str
+):
     """
     Control motor by sending command.
 
     move the bot at <SPEEDS> for <DURATION> seconds, then stop.
 
     Args:
-
-        SPEEDS: (int) | (int,int) | (int,int,int,int)
-
         DURATION: (float)
+        SPEEDS: (int) | (int,int) | (int,int,int,int)
     """
     from kazu.compile import composer, botix
     from kazu.hardwares import inited_controller
     from colorama import Fore
-
-    app_config = conf.app_config
-    controller = inited_controller(app_config)
-    try:
-        states, transitions = (
-            composer.init_container()
-            .add(state := MovingState(*speeds))
-            .add(MovingTransition(duration))
-            .add(MovingState(0))
-            .export_structure()
-        )
-    except ValueError as e:
-        secho(f"{e}", fg="red")
-        return
-
-    botix.token_pool = transitions
-
-    secho(
-        f"Move as {Fore.YELLOW}{state.unwrap()}{Fore.RESET} for {Fore.YELLOW}{duration}{Fore.RESET} seconds",
-    )
-    fi: Callable[[], None] = botix.compile(return_median=False)
-
-    def _bar():
-        with click.progressbar(
-            range(int(duration / 0.1) - 1),
-            show_percent=True,
-            show_eta=True,
-            label="Moving",
-            color=True,
-            fill_char=f"{Fore.GREEN}█{Fore.RESET}",
-            empty_char=f"{Fore.LIGHTWHITE_EX}█{Fore.RESET}",
-        ) as bar:
-            for _ in bar:
-                sleep(0.1)
-
     import threading
 
-    t = threading.Thread(target=_bar, daemon=True)
-    t.start()
-    fi()
+    if port:
+        conf.app_config.motion.port = port
+
+    controller = inited_controller(conf.app_config)
+    if not controller.serial_client.is_connected:
+        secho(f"Serial client is not connected to {conf.app_config.motion.port}, exiting...", fg="red", bold=True)
+        return
+
+    supported_token_len = {2, 3, 5}
+
+    def _send_cmd(mov_duration, mov_speeds):
+        try:
+            states, transitions = (
+                composer.init_container()
+                .add(state := MovingState(*mov_speeds))
+                .add(MovingTransition(mov_duration))
+                .add(MovingState(0))
+                .export_structure()
+            )
+        except ValueError as e:
+            secho(f"{e}", fg="red")
+            return
+
+        botix.token_pool = transitions
+
+        secho(
+            f"{Fore.RESET}Move as {Fore.YELLOW}{state.unwrap()}{Fore.RESET} for {Fore.YELLOW}{mov_duration}{Fore.RESET} seconds",
+        )
+        fi: Callable[[], None] = botix.compile(return_median=False)
+
+        def _bar():
+            with click.progressbar(
+                range(int(mov_duration / 0.1) - 1),
+                show_percent=True,
+                show_eta=True,
+                label="Moving",
+                color=True,
+                fill_char=f"{Fore.GREEN}█{Fore.RESET}",
+                empty_char=f"{Fore.LIGHTWHITE_EX}█{Fore.RESET}",
+            ) as bar:
+                for _ in bar:
+                    sleep(0.1)
+            sleep(0.1)
+
+        t = threading.Thread(target=_bar, daemon=True)
+        t.start()
+        fi()
+
+    def _cmd_validator(raw_cmd: str) -> Tuple[float, list[int]] | Tuple[None, None]:
+        tokens = raw_cmd.split()
+        token_len = len(tokens)
+        if token_len not in supported_token_len:
+            secho(f"Only support 2, 3 or 5 cmd tokens, got {token_len}", fg="red")
+            return None, None
+
+        try:
+            conv_cmd = float(tokens.pop(0)), list(map(int, tokens))
+        except ValueError:
+            secho(f"Invalid cmd: {raw_cmd}", fg="red")
+            return None, None
+
+        return conv_cmd
+
+    if shell:
+
+        cmd: str = ""
+        while cmd != "q":
+
+            cmd = click.prompt(
+                f"{Fore.GREEN}>> ",
+                type=click.STRING,
+                show_default=False,
+                show_choices=False,
+                prompt_suffix=f"{Fore.MAGENTA}",
+            )
+            duration, speeds = _cmd_validator(cmd)
+
+            if duration and speeds:
+                _send_cmd(duration, speeds)
+    elif duration and speeds:
+        _send_cmd(duration, speeds)
+    else:
+        secho(
+            "You should specify duration and speeds if you want to a single send cmd or add '-s' to open shell",
+            fg="red",
+        )
     controller.stop_msg_sending()
+
+
+@main.command("msg")
+@click.help_option("-h", "--help")
+@click.pass_obj
+@click.option("-p", "--port", type=click.STRING, help="Set the serial port temporarily", default=None)
+def stream_send_msg(conf: _InternalConfig, port: Optional[str]):
+    """
+    Sending msg in streaming input mode.
+    """
+    from kazu.hardwares import inited_controller
+
+    if port is not None:
+        conf.app_config.motion.port = port
+
+    con = inited_controller(conf.app_config)
+    if not con.serial_client.is_connected:
+        secho(f"Serial client is not connected to {conf.app_config.motion.port}, exiting...", fg="red", bold=True)
+        return
+    secho("Start reading thread", fg="green", bold=True)
+
+    def _ret_handler(msg: str):
+        print(f"\n{Fore.YELLOW}< {msg}{Fore.RESET}")
+
+    con.serial_client.start_read_thread(_ret_handler)
+
+    cmd = ""
+    secho("Start streaming input, enter 'q' to quit", fg="green", bold=True)
+    while cmd != "q":
+        cmd = click.prompt(
+            f"{Fore.GREEN}> ",
+            type=str,
+            default="",
+            prompt_suffix=f"{Fore.MAGENTA}",
+            show_choices=False,
+            show_default=False,
+        )
+    con.stop_msg_sending()
+    con.serial_client.stop_read_thread()
+
+    secho("Quit streaming", fg="green", bold=True)
 
 
 @main.command("light")
