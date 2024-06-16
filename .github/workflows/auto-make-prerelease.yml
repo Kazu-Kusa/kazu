@@ -63,14 +63,7 @@ jobs:
         run: pdm build
         shell: bash
 
-      - name: Publish package
-        if: steps.check_tag_exists.outputs.exists == 0
 
-        env:
-          PDM_PUBLISH_USERNAME: __token__
-          PDM_PUBLISH_PASSWORD: ${{ secrets.PYPI_TOKEN }}
-        run: pdm publish
-        shell: bash
 
       - name: Create GitHub Release
         if: steps.check_tag_exists.outputs.exists == 0
