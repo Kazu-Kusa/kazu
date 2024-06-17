@@ -1,26 +1,23 @@
 from functools import partial
 from pathlib import Path
 from time import sleep
-from typing import Callable, Optional, Tuple
+from typing import Callable, Optional, Tuple, List
 
-import bdmc
 import click
-import mentabotix
-import pyuptech
-from bdmc import CMD
 from click import secho, echo, clear
 from colorama import Fore
-from mentabotix import MovingState, MovingTransition
 
 from kazu import __version__, __command__
 from kazu.callbacks import (
     export_default_app_config,
     export_default_run_config,
     disable_cam_callback,
-    log_level_callback,
     team_color_callback,
     bench_add_app,
     bench_aps,
+    set_port_callback,
+    set_camera_callback,
+    log_level_callback,
 )
 from kazu.config import (
     DEFAULT_APP_CONFIG_PATH,
@@ -32,15 +29,7 @@ from kazu.config import (
     load_app_config,
 )
 from kazu.constant import Env, RunMode
-from kazu.logger import set_log_level
 from kazu.visualize import print_colored_toml
-
-
-def _set_all_log_level(level: int | str):
-    pyuptech.set_log_level(level)
-    mentabotix.set_log_level(level)
-    bdmc.set_log_level(level)
-    set_log_level(level)
 
 
 @click.group(
@@ -57,12 +46,21 @@ def _set_all_log_level(level: int | str):
     type=click.Path(dir_okay=False, writable=True, path_type=Path),
     help=f"config file path, also can receive env {Env.KAZU_APP_CONFIG_PATH}",
 )
-def main(ctx: click.Context, app_config_path: Path):
+@click.option(
+    "-l",
+    "--log-level",
+    type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
+    help="Change log level temporarily.",
+    default=None,
+    show_default=True,
+)
+def main(ctx: click.Context, app_config_path: Path, log_level: str):
     """A Dedicated Robots Control System"""
     app_config = load_app_config(app_config_path)
 
     ctx.obj = _InternalConfig(app_config=app_config, app_config_file_path=app_config_path)
-    _set_all_log_level(ctx.obj.app_config.logger.log_level)
+
+    log_level_callback(ctx=ctx, _=None, value=log_level)
 
 
 @main.command("config")
@@ -124,6 +122,24 @@ def configure(
     callback=disable_cam_callback,
 )
 @click.option(
+    "-p",
+    "--port",
+    type=click.STRING,
+    help="Set the serial port temporarily",
+    default=None,
+    show_default=True,
+    callback=set_port_callback,
+)
+@click.option(
+    "-c",
+    "--camera",
+    type=click.INT,
+    help="Set camera id temporarily",
+    default=None,
+    show_default=True,
+    callback=set_camera_callback,
+)
+@click.option(
     "-t",
     "--team-color",
     default=None,
@@ -132,17 +148,8 @@ def configure(
     callback=team_color_callback,
 )
 @click.option(
-    "-l",
-    "--log-level",
-    type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
-    help="Change log level temporarily.",
-    default=None,
-    show_default=True,
-    callback=log_level_callback,
-)
-@click.option(
     "-c",
-    "--run-config",
+    "--run-config-path",
     show_default=True,
     default=None,
     help=f"config file path, also can receive env {Env.KAZU_RUN_CONFIG_PATH}",
@@ -158,13 +165,14 @@ def configure(
     help=f"run mode, also can receive env {Env.KAZU_RUN_MODE}",
     envvar=Env.KAZU_RUN_MODE,
 )
-def run(conf: _InternalConfig, run_config: Path | None, mode: str, **_):
+def run(conf: _InternalConfig, run_config_path: Path | None, mode: str, **_):
     """
     Run command for the main group.
     """
     from kazu.compile import botix
+    from bdmc import CMD
 
-    run_config = load_run_config(run_config)
+    run_config = load_run_config(run_config_path)
 
     app_config = conf.app_config
 
@@ -233,13 +241,31 @@ def run(conf: _InternalConfig, run_config: Path | None, mode: str, **_):
 
 @main.command("check")
 @click.help_option("-h", "--help")
+@click.option(
+    "-p",
+    "--port",
+    type=click.STRING,
+    help="Set the serial port temporarily",
+    default=None,
+    show_default=True,
+    callback=set_port_callback,
+)
+@click.option(
+    "-c",
+    "--camera",
+    type=click.INT,
+    help="Set camera id temporarily",
+    default=None,
+    show_default=True,
+    callback=set_camera_callback,
+)
 @click.pass_obj
 @click.argument(
     "device",
-    type=click.Choice(["mot", "cam", "adc", "io", "mpu", "pow", "all"]),
+    type=click.Choice(devs := ["mot", "cam", "adc", "io", "mpu", "pow", "all"]),
     nargs=-1,
 )
-def test(conf: _InternalConfig, device: str):
+def test(conf: _InternalConfig, device: str, **_):
     """
     Check devices' normal functions
     """
@@ -247,62 +273,45 @@ def test(conf: _InternalConfig, device: str):
 
     from kazu.checkers import check_io, check_camera, check_adc, check_motor, check_power, check_mpu
     from terminaltables import SingleTable
-    from colorama import Fore
 
-    device = device or ("all",)
-    shader = lambda dev_name, success: [
-        f"{Fore.LIGHTYELLOW_EX if success else Fore.RED}{dev_name}{Fore.RESET}",
-        f"{Fore.GREEN if success else Fore.RED}{success}{Fore.RESET}",
-    ]
+    def _shader(dev_name: str, success: bool) -> List[str]:
+        return [
+            f"{Fore.LIGHTYELLOW_EX if success else Fore.RED}{dev_name}{Fore.RESET}",
+            f"{Fore.GREEN if success else Fore.RED}{success}{Fore.RESET}",
+        ]
 
     table = [[f"{Fore.YELLOW}Device{Fore.RESET}", f"{Fore.GREEN}Success{Fore.RESET}"]]
-    if "all" in device:
-        from bdmc import CMD
-        from kazu.hardwares import inited_tag_detector, inited_controller, sensors
-
-        sensors.adc_io_open().MPU6500_Open()
-        controller = inited_controller(app_config)
-        tag_detector = inited_tag_detector(app_config)
-        table.append(shader("IO", check_io(sensors)))
-        table.append(shader("ADC", check_adc(sensors)))
-        table.append(shader("MPU", check_mpu(sensors)))
-        table.append(shader("CAMERA", check_camera(tag_detector)))
-        table.append(shader("MOTOR", check_motor(controller)))
-        table.append(shader("POWER", check_power(sensors)))
-        secho(SingleTable(table).table)
-        controller.stop_msg_sending()
-        sensors.adc_io_close()
-        tag_detector.release_camera()
-        return
+    if not device or "all" in device:
+        device = devs
 
     if "adc" in device:
         from kazu.hardwares import sensors
 
         sensors.adc_io_open()
-        table.append(shader("ADC", check_adc(sensors)))
+        table.append(_shader("ADC", check_adc(sensors)))
         sensors.adc_io_close()
     if "io" in device:
         from kazu.hardwares import sensors
 
         sensors.adc_io_open()
-        table.append(shader("IO", check_io(sensors)))
+        table.append(_shader("IO", check_io(sensors)))
         sensors.adc_io_close()
     if "mpu" in device:
         from kazu.hardwares import sensors
 
         sensors.MPU6500_Open()
-        table.append(shader("MPU", check_mpu(sensors)))
+        table.append(_shader("MPU", check_mpu(sensors)))
 
     if "pow" in device:
         from kazu.hardwares import sensors
 
-        table.append(shader("POWER", check_power(sensors)))
+        table.append(_shader("POWER", check_power(sensors)))
 
     if "cam" in device:
         from kazu.hardwares import inited_tag_detector
 
         tag_detector = inited_tag_detector(app_config)
-        table.append(shader("CAMERA", check_camera(tag_detector)))
+        table.append(_shader("CAMERA", check_camera(tag_detector)))
         tag_detector.release_camera()
     if "mot" in device:
         from kazu.hardwares import inited_controller
@@ -310,7 +319,7 @@ def test(conf: _InternalConfig, device: str):
         from bdmc import CMD
 
         controller = inited_controller(app_config)
-        table.append(shader("MOTOR", check_motor(controller)))
+        table.append(_shader("MOTOR", check_motor(controller)))
         controller.stop_msg_sending()
     secho(SingleTable(table).table)
 
@@ -480,12 +489,18 @@ def visualize(
 @click.help_option("-h", "--help")
 @click.pass_obj
 @click.option("-s", "--shell", is_flag=True, help="Run in shell mode", default=False, show_default=True)
-@click.option("-p", "--port", type=click.STRING, help="Set the serial port temporarily", default=None)
+@click.option(
+    "-p",
+    "--port",
+    type=click.STRING,
+    help="Set the serial port temporarily",
+    default=None,
+    show_default=True,
+    callback=set_port_callback,
+)
 @click.argument("duration", type=click.FLOAT, required=False)
 @click.argument("speeds", nargs=-1, type=click.INT, required=False)
-def control_motor(
-    conf: _InternalConfig, duration: Optional[float], speeds: Optional[list[int]], shell: bool, port: str
-):
+def control_motor(conf: _InternalConfig, duration: Optional[float], speeds: Optional[list[int]], shell: bool, **_):
     """
     Control motor by sending command.
 
@@ -497,11 +512,10 @@ def control_motor(
     """
     from kazu.compile import composer, botix
     from kazu.hardwares import inited_controller
-    from colorama import Fore
-    import threading
 
-    if port:
-        conf.app_config.motion.port = port
+    from mentabotix import MovingState, MovingTransition
+
+    import threading
 
     controller = inited_controller(conf.app_config)
     if not controller.serial_client.is_connected:
@@ -592,15 +606,20 @@ def control_motor(
 @main.command("msg")
 @click.help_option("-h", "--help")
 @click.pass_obj
-@click.option("-p", "--port", type=click.STRING, help="Set the serial port temporarily", default=None)
-def stream_send_msg(conf: _InternalConfig, port: Optional[str]):
+@click.option(
+    "-p",
+    "--port",
+    type=click.STRING,
+    help="Set the serial port temporarily",
+    default=None,
+    show_default=True,
+    callback=set_port_callback,
+)
+def stream_send_msg(conf: _InternalConfig, **_):
     """
     Sending msg in streaming input mode.
     """
     from kazu.hardwares import inited_controller
-
-    if port is not None:
-        conf.app_config.motion.port = port
 
     con = inited_controller(conf.app_config)
     if not con.serial_client.is_connected:
