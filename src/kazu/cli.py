@@ -3,26 +3,21 @@ from pathlib import Path
 from time import sleep
 from typing import Callable, Optional, Tuple, List
 
-import bdmc
 import click
-import mentabotix
-import pyuptech
-from bdmc import CMD
 from click import secho, echo, clear
 from colorama import Fore
-from mentabotix import MovingState, MovingTransition
 
 from kazu import __version__, __command__
 from kazu.callbacks import (
     export_default_app_config,
     export_default_run_config,
     disable_cam_callback,
-    log_level_callback,
     team_color_callback,
     bench_add_app,
     bench_aps,
     set_port_callback,
     set_camera_callback,
+    log_level_callback,
 )
 from kazu.config import (
     DEFAULT_APP_CONFIG_PATH,
@@ -34,15 +29,7 @@ from kazu.config import (
     load_app_config,
 )
 from kazu.constant import Env, RunMode
-from kazu.logger import set_log_level
 from kazu.visualize import print_colored_toml
-
-
-def _set_all_log_level(level: int | str):
-    pyuptech.set_log_level(level)
-    mentabotix.set_log_level(level)
-    bdmc.set_log_level(level)
-    set_log_level(level)
 
 
 @click.group(
@@ -59,12 +46,21 @@ def _set_all_log_level(level: int | str):
     type=click.Path(dir_okay=False, writable=True, path_type=Path),
     help=f"config file path, also can receive env {Env.KAZU_APP_CONFIG_PATH}",
 )
-def main(ctx: click.Context, app_config_path: Path):
+@click.option(
+    "-l",
+    "--log-level",
+    type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
+    help="Change log level temporarily.",
+    default=None,
+    show_default=True,
+)
+def main(ctx: click.Context, app_config_path: Path, log_level: str):
     """A Dedicated Robots Control System"""
     app_config = load_app_config(app_config_path)
 
     ctx.obj = _InternalConfig(app_config=app_config, app_config_file_path=app_config_path)
-    _set_all_log_level(ctx.obj.app_config.logger.log_level)
+
+    log_level_callback(ctx=ctx, _=None, value=log_level)
 
 
 @main.command("config")
@@ -152,15 +148,6 @@ def configure(
     callback=team_color_callback,
 )
 @click.option(
-    "-l",
-    "--log-level",
-    type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
-    help="Change log level temporarily.",
-    default=None,
-    show_default=True,
-    callback=log_level_callback,
-)
-@click.option(
     "-c",
     "--run-config-path",
     show_default=True,
@@ -183,6 +170,7 @@ def run(conf: _InternalConfig, run_config_path: Path | None, mode: str, **_):
     Run command for the main group.
     """
     from kazu.compile import botix
+    from bdmc import CMD
 
     run_config = load_run_config(run_config_path)
 
@@ -285,7 +273,6 @@ def test(conf: _InternalConfig, device: str, **_):
 
     from kazu.checkers import check_io, check_camera, check_adc, check_motor, check_power, check_mpu
     from terminaltables import SingleTable
-    from colorama import Fore
 
     def _shader(dev_name: str, success: bool) -> List[str]:
         return [
@@ -525,7 +512,9 @@ def control_motor(conf: _InternalConfig, duration: Optional[float], speeds: Opti
     """
     from kazu.compile import composer, botix
     from kazu.hardwares import inited_controller
-    from colorama import Fore
+
+    from mentabotix import MovingState, MovingTransition
+
     import threading
 
     controller = inited_controller(conf.app_config)

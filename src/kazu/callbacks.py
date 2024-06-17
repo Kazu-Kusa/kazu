@@ -58,6 +58,18 @@ def disable_cam_callback(conf: _InternalConfig, ctx: click.Context, _, value: st
         conf.app_config.vision.use_camera = False
 
 
+def _set_all_log_level(level: int | str):
+    import pyuptech
+    import bdmc
+    import mentabotix
+    from kazu.logger import set_log_level
+
+    pyuptech.set_log_level(level)
+    mentabotix.set_log_level(level)
+    bdmc.set_log_level(level)
+    set_log_level(level)
+
+
 @click.pass_obj
 def log_level_callback(conf: _InternalConfig, ctx: click.Context, _, value: str):
     """
@@ -67,6 +79,7 @@ def log_level_callback(conf: _InternalConfig, ctx: click.Context, _, value: str)
 
         secho(f"Change log level to {value}", fg="magenta", bold=True)
         conf.app_config.logger.log_level = value
+        _set_all_log_level(value)
 
 
 @click.pass_obj
