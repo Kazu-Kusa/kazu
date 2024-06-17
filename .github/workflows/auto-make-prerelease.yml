@@ -63,6 +63,11 @@ jobs:
         run: pdm build
         shell: bash
 
+      - name: build binary
+        run: |
+          eval $(pdm venv activate)
+          make
+        shell: bash
 
 
       - name: Create GitHub Release

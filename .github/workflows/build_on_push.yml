@@ -39,7 +39,11 @@ jobs:
           pdm list
       - name: Build package
         run: pdm build
-
+      - name: build binary
+        run: |
+          eval $(pdm venv activate)
+          make
+        shell: bash
       - name: try to import package
         run: |
           eval $(pdm venv activate)
