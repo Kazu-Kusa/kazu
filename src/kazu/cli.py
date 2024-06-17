@@ -607,6 +607,47 @@ def control_motor(conf: _InternalConfig, duration: Optional[float], speeds: Opti
     controller.stop_msg_sending()
 
 
+@main.command("ports")
+@click.help_option("-h", "--help")
+@click.option("-c", "--check", is_flag=True, default=False, show_default=True, help="Check if ports are available")
+@click.option("-t", "--timeout", type=click.FLOAT, default=1.0, show_default=True, help="Check timeout, in seconds")
+@click.pass_obj
+def list_ports(conf: _InternalConfig, check: bool, timeout: float):
+    """
+    List serial ports and check if they are in use.
+    """
+    import serial
+    from bdmc import find_serial_ports
+    from terminaltables import SingleTable
+    from colorama import Fore, Style
+
+    def is_port_open(port_to_check):
+        """检查端口是否开放（未被占用）"""
+        try:
+            with serial.Serial(port_to_check, timeout=timeout) as ser:
+                return True, "Available."
+        except (OSError, serial.SerialException):
+            return False, "Not available or Busy."
+
+    ports = sorted(find_serial_ports(), reverse=True)
+    data = [["Serial Ports", "Status"]]
+
+    for port in ports:
+        if check:
+            open_status, message = is_port_open(port)
+            status_color = Fore.GREEN if open_status else Fore.RED
+            data.append([port, f"{status_color}{message}{Style.RESET_ALL}"])
+        else:
+            data.append([port, f"{Fore.YELLOW}---{Style.RESET_ALL}"])
+
+    data.append(["Configured port", conf.app_config.motion.port])
+    table = SingleTable(data)
+    table.inner_footing_row_border = True
+    table.inner_row_border = False
+    table.justify_columns[1] = "right"
+    secho(table.table, bold=True)
+
+
 @main.command("msg")
 @click.help_option("-h", "--help")
 @click.pass_obj
