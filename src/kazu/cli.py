@@ -422,10 +422,19 @@ def read_sensors(conf: _InternalConfig, interval: float, device: str):
     type=click.Path(dir_okay=False, readable=True, path_type=Path),
     envvar=Env.KAZU_RUN_CONFIG_PATH,
 )
+@click.option(
+    "-r",
+    "--render",
+    show_default=True,
+    is_flag=True,
+    default=False,
+    help="Render PlantUML files into SVG files",
+)
 def visualize(
     conf: _InternalConfig,
     destination: Path,
     run_config: Optional[Path],
+    render: bool,
     packname: str = ("all",),
 ):
     """
@@ -446,9 +455,12 @@ def visualize(
         make_always_on_stage_battle_handler,
         make_always_off_stage_battle_handler,
     )
+    from plantuml import PlantUML
+
+    puml_d = PlantUML(url="http://www.plantuml.com/plantuml/svg/")
 
     destination.mkdir(parents=True, exist_ok=True)
-
+    secho(f"Destination directory: {destination.absolute().as_posix()}", fg="yellow")
     app_config = conf.app_config
     run_config = load_run_config(run_config)
 
@@ -481,8 +493,13 @@ def visualize(
         (*_, handler_data) = handler_func(app_config=app_config, run_config=run_config)
         filename = f_name + ".puml"
         destination_filename = (destination / filename).as_posix()
-        secho(f"Exporting {filename}", fg="green", bold=True)
+
         botix.export_structure(destination_filename, handler_data)
+
+        if render:
+            secho(f"Rendering {filename}", fg="green", bold=True)
+            puml_d.processes_file(destination_filename, destination_filename.replace(".puml", ".svg"))
+        secho(f"Exported {filename}", fg="green", bold=True)
 
 
 @main.command("cmd", context_settings={"ignore_unknown_options": True})
