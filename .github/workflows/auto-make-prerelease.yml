@@ -55,7 +55,7 @@ jobs:
         shell: bash
 
       - name: Install Dependencies
-        run: pdm install
+        run: pdm install -d
         shell: bash
 
 
