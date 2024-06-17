@@ -17,6 +17,8 @@ dependencies = [
     "colorama>=0.4.6",
     "upicvision>=0.1.0.4",
     "pyserial>=3.5",
+    "plantuml>=0.3.0",
+    "six>=1.16.0",
 ]
 requires-python = "==3.11.*"
 readme = "README.md"
