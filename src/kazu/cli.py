@@ -548,7 +548,7 @@ def control_motor(conf: _InternalConfig, duration: Optional[float], speeds: Opti
 
         def _bar():
             with click.progressbar(
-                range(int(mov_duration / 0.1) - 1),
+                range(int(mov_duration / 0.1)),
                 show_percent=True,
                 show_eta=True,
                 label="Moving",
@@ -558,11 +558,11 @@ def control_motor(conf: _InternalConfig, duration: Optional[float], speeds: Opti
             ) as bar:
                 for _ in bar:
                     sleep(0.1)
-            sleep(0.1)
 
         t = threading.Thread(target=_bar, daemon=True)
         t.start()
         fi()
+        t.join()
 
     def _cmd_validator(raw_cmd: str) -> Tuple[float, list[int]] | Tuple[None, None]:
         tokens = raw_cmd.split()
