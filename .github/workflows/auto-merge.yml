@@ -37,8 +37,11 @@ jobs:
       - uses: pdm-project/setup-pdm@v3
       - name: Install dependencies
         run: pdm install -d
-      - name: Build package
-        run: pdm build
+      - name: Build
+        run: |
+          eval $(pdm venv activate)
+          make
+        shell: bash
 
   automerge:
     needs: [build_and_test]
