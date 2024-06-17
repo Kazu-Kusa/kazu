@@ -1,7 +1,7 @@
 # 定义变量
 APP_NAME = kazu
-SOURCE = src\kazu\__main__.py
-ICON = assets\Ka.ico
+SOURCE = src/kazu/__main__.py
+ICON = assets/Ka.ico
 DIST_DIR = dist
 SPEC_FILE = $(APP_NAME).spec
 
