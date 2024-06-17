@@ -6,10 +6,12 @@ DIST_DIR = dist
 SPEC_FILE = $(APP_NAME).spec
 
 # 编译规则
-all: build
+all: build_bin build_whl
 
-build:
-	@echo "Start building $(APP_NAME)..."
+
+
+build_bin:
+	@echo "Start building Binary $(APP_NAME)..."
 	pyinstaller --name=$(APP_NAME) \
 	              --onefile \
 	              --distpath=$(DIST_DIR) \
@@ -20,6 +22,12 @@ build:
 	              $(SOURCE)
 	@echo "$(APP_NAME) was successfully built! See $(DIST_DIR)/$(APP_NAME)"
 
+build_whl:
+	@echo "Start building whl $(APP_NAME)..."
+	pdm build -d $(DIST_DIR) --no-clean
+
+	@echo "$(APP_NAME) was successfully built! See $(DIST_DIR)"
+
 clean:
 	@echo "Start cleaning..."
 	rm -rf $(DIST_DIR) $(SPEC_FILE)
@@ -28,4 +36,4 @@ clean:
 rebuild: clean all
 	@echo "$(APP_NAME) was successfully rebuilt!"
 
-.PHONY: clean rebuild build
+.PHONY: clean rebuild build_bin build_whl
