@@ -16,6 +16,7 @@ dependencies = [
     "terminaltables>=3.1.10",
     "colorama>=0.4.6",
     "upicvision>=0.1.0.4",
+    "pyserial>=3.5",
 ]
 requires-python = "==3.11.*"
 readme = "README.md"
