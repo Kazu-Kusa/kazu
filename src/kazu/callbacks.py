@@ -1,12 +1,13 @@
 from pathlib import Path
+from typing import Optional
 
 import click
 from click import secho, echo
 
-from kazu.config import APPConfig, RunConfig
+from kazu.config import APPConfig, RunConfig, _InternalConfig
 
 
-def export_default_app_config(ctx: click.Context, _, path):
+def export_default_app_config(ctx: click.Context, _, path: Path):
     """
      Export the default application configuration to the specified path.
     Args:
@@ -17,12 +18,13 @@ def export_default_app_config(ctx: click.Context, _, path):
         None: If the path is not provided.
     """
     if path:
-        ctx.obj.app_config = APPConfig()
-        with open(ctx.obj.app_config_file_path, "w") as fp:
-            APPConfig.dump_config(fp, ctx.obj.app_config)
+        path.parent.mkdir(exist_ok=True, parents=True)
+        with open(path, "w") as fp:
+            APPConfig.dump_config(fp, APPConfig())
         secho(
-            f"Exported DEFAULT app config file at {Path(ctx.obj.app_config_file_path).absolute().as_posix()} to default.",
+            f"Exported DEFAULT app config file at {path.as_posix()}.",
             fg="yellow",
+            bold=True,
         )
         ctx.exit(0)
 
@@ -45,37 +47,37 @@ def export_default_run_config(ctx: click.Context, _, path: Path):
         ctx.exit(0)
 
 
-def disable_cam_callback(ctx: click.Context, _, value: bool):
+@click.pass_obj
+def disable_cam_callback(conf: _InternalConfig, ctx: click.Context, _, value: str):
     """
     Disable the camera.
     """
     if value:
-        app_config: APPConfig = ctx.obj.app_config
 
         secho("Disable camera", fg="red", bold=True)
-        app_config.vision.use_camera = False
+        conf.app_config.vision.use_camera = False
 
 
-def log_level_callback(ctx: click.Context, _, value: str):
+@click.pass_obj
+def log_level_callback(conf: _InternalConfig, ctx: click.Context, _, value: str):
     """
     Change the log level.
     """
     if value:
-        app_config: APPConfig = ctx.obj.app_config
 
         secho(f"Change log level to {value}", fg="magenta", bold=True)
-        app_config.logger.log_level = value
+        conf.app_config.logger.log_level = value
 
 
-def team_color_callback(ctx: click.Context, _, value: str):
+@click.pass_obj
+def team_color_callback(conf: _InternalConfig, ctx: click.Context, _, value: str):
     """
     Change the team color.
     """
     if value:
-        app_config: APPConfig = ctx.obj.app_config
 
         secho(f"Change team color to {value}", fg=value, bold=True)
-        app_config.vision.team_color = value
+        conf.app_config.vision.team_color = value
 
 
 def bench_add_app(ctx: click.Context, _, add_up_to):
@@ -111,3 +113,23 @@ def bench_aps(ctx: click.Context, _, add_up_per_second: bool):
             counter += 1
 
         echo(f"Operations per second: {counter}\nAverage counts per ms: {counter / 1000}")
+
+
+@click.pass_obj
+def set_port_callback(conf: _InternalConfig, ctx, _, port: Optional[str]):
+    """
+    Set the port.
+    """
+    if port is not None:
+        conf.app_config.motion.port = port
+        secho(f"Set serial port to {port}", fg="blue", bold=True)
+
+
+@click.pass_obj
+def set_camera_callback(conf: _InternalConfig, ctx, _, camera: Optional[int]):
+    """
+    Set the port.
+    """
+    if camera is not None:
+        conf.app_config.vision.camera_device_id = camera
+        secho(f"Set camera device id to {camera}", fg="blue", bold=True)
