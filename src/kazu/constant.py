@@ -3,6 +3,9 @@ from enum import IntEnum, auto
 from typing import List, Tuple
 
 
+QUIT: str = "q"
+
+
 @dataclass(frozen=True)
 class Attitude:
     pitch: int = 0

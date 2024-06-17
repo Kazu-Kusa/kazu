@@ -28,7 +28,7 @@ from kazu.config import (
     load_run_config,
     load_app_config,
 )
-from kazu.constant import Env, RunMode
+from kazu.constant import Env, RunMode, QUIT
 from kazu.visualize import print_colored_toml
 
 
@@ -507,7 +507,9 @@ def control_motor(conf: _InternalConfig, duration: Optional[float], speeds: Opti
     move the bot at <SPEEDS> for <DURATION> seconds, then stop.
 
     Args:
+
         DURATION: (float)
+
         SPEEDS: (int) | (int,int) | (int,int,int,int)
     """
     from kazu.compile import composer, botix
@@ -578,9 +580,8 @@ def control_motor(conf: _InternalConfig, duration: Optional[float], speeds: Opti
         return conv_cmd
 
     if shell:
-
-        cmd: str = ""
-        while cmd != "q":
+        secho(f"Open shell mode, enter '{QUIT}' to exit", fg="green", bold=True)
+        while 1:
 
             cmd = click.prompt(
                 f"{Fore.GREEN}>> ",
@@ -589,6 +590,9 @@ def control_motor(conf: _InternalConfig, duration: Optional[float], speeds: Opti
                 show_choices=False,
                 prompt_suffix=f"{Fore.MAGENTA}",
             )
+
+            if cmd == QUIT:
+                break
             duration, speeds = _cmd_validator(cmd)
 
             if duration and speeds:
@@ -633,8 +637,9 @@ def stream_send_msg(conf: _InternalConfig, **_):
     con.serial_client.start_read_thread(_ret_handler)
 
     cmd = ""
-    secho("Start streaming input, enter 'q' to quit", fg="green", bold=True)
-    while cmd != "q":
+    secho(f"Start streaming input, enter '{QUIT}' to quit", fg="green", bold=True)
+
+    while cmd != QUIT:
         cmd = click.prompt(
             f"{Fore.GREEN}> ",
             type=str,
