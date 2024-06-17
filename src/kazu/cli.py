@@ -636,10 +636,9 @@ def stream_send_msg(conf: _InternalConfig, **_):
 
     con.serial_client.start_read_thread(_ret_handler)
 
-    cmd = ""
     secho(f"Start streaming input, enter '{QUIT}' to quit", fg="green", bold=True)
 
-    while cmd != QUIT:
+    while 1:
         cmd = click.prompt(
             f"{Fore.GREEN}> ",
             type=str,
@@ -648,6 +647,10 @@ def stream_send_msg(conf: _InternalConfig, **_):
             show_choices=False,
             show_default=False,
         )
+        if cmd == QUIT:
+            break
+        con.cmd_queue.put(f"{cmd}\r".encode("ascii"))
+
     con.stop_msg_sending()
     con.serial_client.stop_read_thread()
 
