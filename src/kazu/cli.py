@@ -18,6 +18,7 @@ from kazu.callbacks import (
     set_port_callback,
     set_camera_callback,
     log_level_callback,
+    set_res_multiplier_callback,
 )
 from kazu.config import (
     DEFAULT_APP_CONFIG_PATH,
@@ -138,6 +139,15 @@ def configure(
     default=None,
     show_default=True,
     callback=set_camera_callback,
+)
+@click.option(
+    "-m",
+    "--camera-res-mul",
+    type=click.FLOAT,
+    help="Set the camera resolution multiplier temporarily",
+    default=None,
+    show_default=True,
+    callback=set_res_multiplier_callback,
 )
 @click.option(
     "-t",
@@ -735,6 +745,63 @@ def control_display(channel: Tuple[int, int, int]):
         .print(f"R:{channel[0]}\nG:{channel[1]}\nB:{channel[2]}")
         .refresh()
     )
+
+
+@main.command("tag")
+@click.help_option("-h", "--help")
+@click.pass_obj
+@click.option(
+    "-c",
+    "--camera-id",
+    type=click.INT,
+    help="Set the camera id temporarily",
+    default=None,
+    show_default=True,
+    callback=set_camera_callback,
+)
+@click.option(
+    "-m",
+    "--camera-res-mul",
+    type=click.FLOAT,
+    help="Set the camera resolution multiplier temporarily",
+    default=None,
+    show_default=True,
+    callback=set_res_multiplier_callback,
+)
+def tag_test(conf: _InternalConfig, **_):
+    """
+    Use tag detector to test tag ID detection.
+    """
+    from kazu.hardwares import inited_tag_detector
+    from kazu.checkers import check_camera
+    from threading import Thread
+
+    detector = inited_tag_detector(conf.app_config)
+    if not check_camera(detector):
+        secho("Camera is not ready, exiting...", fg="red", bold=True)
+        return
+    detector.apriltag_detect_start()
+
+    cmd = ""
+
+    def _display_tags():
+        while cmd != QUIT:
+            secho(f"\rTag: {detector.tag_id}", fg="green", bold=True, nl=False)
+        detector.apriltag_detect_end()
+        detector.release_camera()
+
+    t = Thread(target=_display_tags, daemon=True)
+    t.start()
+    while cmd != QUIT:
+        cmd = click.prompt(
+            f"{Fore.YELLOW}Enter '{QUIT}' to quit {Fore.RESET}",
+            type=str,
+            default="",
+            prompt_suffix="",
+            show_choices=False,
+            show_default=False,
+        )
+    t.join()
 
 
 @main.command("bench")

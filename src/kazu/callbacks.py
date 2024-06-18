@@ -141,8 +141,18 @@ def set_port_callback(conf: _InternalConfig, ctx, _, port: Optional[str]):
 @click.pass_obj
 def set_camera_callback(conf: _InternalConfig, ctx, _, camera: Optional[int]):
     """
-    Set the port.
+    Set the Camera device id.
     """
     if camera is not None:
         conf.app_config.vision.camera_device_id = camera
         secho(f"Set camera device id to {camera}", fg="blue", bold=True)
+
+
+@click.pass_obj
+def set_res_multiplier_callback(conf: _InternalConfig, ctx, _, multiplier: Optional[int]):
+    """
+    Set the Camera device id.
+    """
+    if multiplier is not None:
+        conf.app_config.vision.camera_device_id = multiplier
+        secho(f"Set camera resolution multiplier to {multiplier}", fg="blue", bold=True)
