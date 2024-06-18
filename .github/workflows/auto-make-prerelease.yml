@@ -101,8 +101,7 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-        with:
-          path: kazu-win
+
 
       - name: Set up Python
         uses: actions/setup-python@v3
@@ -120,6 +119,7 @@ jobs:
           .venv\Scripts\activate
           make build_bin
         shell: cmd
+
       - name: Upload Release Asset
         id: upload-release-asset
         uses: actions/upload-release-asset@v1
@@ -127,5 +127,5 @@ jobs:
          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
          upload_url: ${{ needs.release.outputs.upload_url }}
-         asset_path: ./dist/*
+         asset_path: ./dist/kazu.exe
          asset_name: kazu-win-${{ needs.release.outputs.version }}.exe
