@@ -93,7 +93,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.get_version.outputs.version }}
-          files:
+          files: |
             ./dist/*
             ./diagrams.tar.gz
           draft: false
