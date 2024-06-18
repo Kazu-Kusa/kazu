@@ -8,8 +8,15 @@ on:
       - 'pyproject.toml' # 当pyproject.toml文件变动时触发
 
 jobs:
+
+
   release:
+
     runs-on: ubuntu-latest
+    outputs:
+      tag_exists: ${{ steps.check_tag_exists.outputs.exists }}
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      version: ${{ steps.get_version.outputs.version }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -63,11 +70,13 @@ jobs:
           eval $(pdm venv activate)
           make
         shell: bash
-
+      - name: rename binary
+        run: |
+          mv dist/kazu dist/kazu-linux-${{ steps.get_version.outputs.version }}
 
       - name: Create GitHub Release
         if: steps.check_tag_exists.outputs.exists == 0
-
+        id: create_release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.get_version.outputs.version }}
@@ -79,3 +88,39 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+
+  build_win_binary:
+    needs: [release]
+    if: ${{ needs.release.outputs.tag_exists == 0 }}
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          path: kazu-win
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.11'
+
+      - name: Install PDM
+        uses: pdm-project/setup-pdm@v3
+
+      - name: Install Dependencies
+        run: pdm install -d
+
+      - name: build
+        run: |
+          .venv\Scripts\activate
+          make build_bin
+        shell: cmd
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+         upload_url: ${{ needs.release.outputs.upload_url }}
+         asset_path: ./dist/*
+         asset_name: kazu-win-${{ needs.release.outputs.version }}.exe
