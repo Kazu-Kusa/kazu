@@ -8,8 +8,13 @@ on:
       - 'pyproject.toml' # 当pyproject.toml文件变动时触发
 
 jobs:
-  release:
-    runs-on: ubuntu-latest
+  build_and_release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ['3.11']
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -17,7 +22,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.11'
+          python-version: ${{ matrix.python-version }}
 
       - name: Install PDM
         uses: pdm-project/setup-pdm@v3
@@ -37,11 +42,9 @@ jobs:
           if git rev-list -n 1 "v$VERSION" > /dev/null 2>&1; then
             echo "Tag v$VERSION already exists."
             echo "exists=1" >> $GITHUB_OUTPUT
-
           else
             echo "Tag v$VERSION does not exist."
             echo "exists=0" >> $GITHUB_OUTPUT
-
           fi
         shell: bash
 
@@ -58,24 +61,43 @@ jobs:
         run: pdm install -d
         shell: bash
 
-      - name: build
+      - name: l-Build
+        # 针对不同操作系统使用不同的激活和构建命令
+        if: runner.os == 'ubuntu-latest'
         run: |
           eval $(pdm venv activate)
           make
         shell: bash
 
+      - name: w-Build
+
+        if: runner.os == 'windows-latest'
+        run: |
+          # 对于Windows，假设pdm可以直接通过Python调用，或者有特定的激活方式
+          # 这里需要根据pdm在Windows下的实际使用情况调整
+          .venv\Scripts\activate
+          make # 或者是适合Windows的构建命令
+        shell: cmd
+
+      - name: Collect Artifacts
+        # 注意：此处根据实际情况调整dist目录结构或文件名
+        # 对于Windows，使用cmd或pwsh作为shell
+        if: runner.os == 'windows-latest'
+        shell: cmd
+        run: |
+          mkdir artifacts/windows
+          move dist/kazu.exe artifacts/windows/
 
       - name: Create GitHub Release
         if: steps.check_tag_exists.outputs.exists == 0
-
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.get_version.outputs.version }}
-          files: dist/*
+          files: |
+            ${{ matrix.os == 'ubuntu-latest' && 'dist/*' || 'artifacts/windows/*' }}
           draft: false
           fail_on_unmatched_files: true
           generate_release_notes: true
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
