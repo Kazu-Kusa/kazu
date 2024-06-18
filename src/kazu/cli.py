@@ -768,7 +768,10 @@ def control_display(channel: Tuple[int, int, int]):
     show_default=True,
     callback=set_res_multiplier_callback,
 )
-def tag_test(conf: _InternalConfig, **_):
+@click.option(
+    "-i", "--interval", type=click.FLOAT, default=0.1, show_default=True, help="Set the interval of the tag detector"
+)
+def tag_test(conf: _InternalConfig, interval: float, **_):
     """
     Use tag detector to test tag ID detection.
     """
@@ -786,6 +789,7 @@ def tag_test(conf: _InternalConfig, **_):
 
     def _display_tags():
         while cmd != QUIT:
+            sleep(interval)
             secho(f"\rTag: {detector.tag_id}", fg="green", bold=True, nl=False)
         detector.apriltag_detect_end()
         detector.release_camera()
