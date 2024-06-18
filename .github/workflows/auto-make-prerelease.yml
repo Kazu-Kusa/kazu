@@ -129,3 +129,4 @@ jobs:
          upload_url: ${{ needs.release.outputs.upload_url }}
          asset_path: ./dist/kazu.exe
          asset_name: kazu-win-${{ needs.release.outputs.version }}.exe
+         asset_content_type: application/octet-stream
