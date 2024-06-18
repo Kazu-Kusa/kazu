@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = ["cross_platform", "inherit_metadata"]
 lock_version = "4.4.1"
-content_hash = "sha256:8b54cb17548a195a681f6b55db2ae9b43be76af500060a16c349006d176ad70f"
+content_hash = "sha256:0b8a69e9453cd1e21a3dfcfec1343e968bcc0f3570f10dd872b741b75edc405e"
 
 [[package]]
 name = "altgraph"
@@ -471,7 +471,7 @@ files = [
 
 [[package]]
 name = "upicvision"
-version = "0.1.0.4"
+version = "0.1.0.5"
 requires_python = ">=3.11"
 summary = "pi vision lib"
 groups = ["default"]
@@ -482,8 +482,8 @@ dependencies = [
     "pyapriltags>=3.3.0.3",
 ]
 files = [
-    {file = "upicvision-0.1.0.4-py3-none-any.whl", hash = "sha256:5adbee3bb0e1750211bb5ddd9d587b3089952324fc5487fe9c0f0c5e64da6d37"},
-    {file = "upicvision-0.1.0.4.tar.gz", hash = "sha256:30b043a51e366e8ddc4e860cebbe457cc3fb92985bc69026a07ea59155ea34cd"},
+    {file = "upicvision-0.1.0.5-py3-none-any.whl", hash = "sha256:9978b8753aebbd55f795f97241acdec72a796f3872eada9c727c3de4c31fcef3"},
+    {file = "upicvision-0.1.0.5.tar.gz", hash = "sha256:14c56bb9ec652bcde57820c79931fec85dc37208395e79aadf0e1fc8dd3de52d"},
 ]
 
 [[package]]
