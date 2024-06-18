@@ -79,13 +79,23 @@ jobs:
         run: |
           mv dist/kazu dist/kazu-linux-${{ steps.get_version.outputs.version }}
 
+      - name: Render Default State-Transition Diagram
+        if: steps.check_tag_exists.outputs.exists == 0
+        run: |
+          eval $(pdm venv activate)
+          mkdir -p diagrams
+          kazu viz all -r -d diagrams
+          tar -zcvf diagrams.tar.gz diagrams
+        shell: bash
       - name: Create GitHub Release
         if: steps.check_tag_exists.outputs.exists == 0
         id: create_release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.get_version.outputs.version }}
-          files: dist/*
+          files:
+            ./dist/*
+            ./diagrams.tar.gz
           draft: false
           fail_on_unmatched_files: true
           generate_release_notes: true
