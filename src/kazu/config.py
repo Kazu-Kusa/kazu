@@ -313,6 +313,7 @@ class MotionConfig(BaseModel):
 
 class VisionConfig(BaseModel):
     team_color: Literal["yellow", "blue"] = "blue"
+    resolution_multiplier: float = 1.0
     use_camera: bool = True
     camera_device_id: int = 0
 

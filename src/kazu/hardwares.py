@@ -7,6 +7,7 @@ from pyuptech.modules.screen import Screen
 from pyuptech.modules.sensors import OnBoardSensors
 from upic.vision.tagdetector import TagDetector
 
+from kazu.config import APPConfig
 from kazu.logger import _logger
 
 controller = CloseLoopController()
@@ -41,7 +42,7 @@ class SamplerIndexes:
     acc_all: int = 6
 
 
-def inited_controller(app_config) -> CloseLoopController:
+def inited_controller(app_config: APPConfig) -> CloseLoopController:
     """
     Initializes the controller with the given configuration.
 
@@ -69,7 +70,7 @@ def inited_controller(app_config) -> CloseLoopController:
     return controller.start_msg_sending().send_cmd(CMD.RESET)
 
 
-def inited_tag_detector(app_config) -> TagDetector:
+def inited_tag_detector(app_config: APPConfig) -> TagDetector:
     """
     Initializes the tag detector with the given configuration.
 
@@ -87,6 +88,7 @@ def inited_tag_detector(app_config) -> TagDetector:
     """
     _logger.info(f"Open Camera-{app_config.vision.camera_device_id}")
     tag_detector.open_camera(app_config.vision.camera_device_id)
+    tag_detector.set_cam_resolution_mul(app_config.vision.resolution_multiplier)
     success, _ = tag_detector.camera_device.read()
     if success:
         _logger.info("Camera is successfully opened !")
