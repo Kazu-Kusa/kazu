@@ -115,11 +115,10 @@ jobs:
         run: pdm install -d
 
       - name: build
+        shell: pwsh
         run: |
-          eval $(pdm venv activate)
-
+          $env:PATH = ".venv\Scripts;" + $env:PATH
           make build_bin
-        shell: bash
 
       - name: Upload Release Asset
         id: upload-release-asset
