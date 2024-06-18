@@ -62,15 +62,20 @@ jobs:
         shell: bash
 
       - name: Install Dependencies
-        run: pdm install -d
+        if: steps.check_tag_exists.outputs.exists == 0
+        run: |
+          pdm install -d
+          pdm list
         shell: bash
 
       - name: build
+        if: steps.check_tag_exists.outputs.exists == 0
         run: |
           eval $(pdm venv activate)
           make
         shell: bash
       - name: rename binary
+        if: steps.check_tag_exists.outputs.exists == 0
         run: |
           mv dist/kazu dist/kazu-linux-${{ steps.get_version.outputs.version }}
 
