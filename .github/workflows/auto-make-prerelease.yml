@@ -116,9 +116,10 @@ jobs:
 
       - name: build
         run: |
-          .venv\Scripts\activate
+          eval $(pdm venv activate)
+
           make build_bin
-        shell: cmd
+        shell: bash
 
       - name: Upload Release Asset
         id: upload-release-asset
