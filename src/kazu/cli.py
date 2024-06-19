@@ -114,7 +114,7 @@ def configure(
 @click.pass_obj
 @click.help_option("-h", "--help")
 @click.option(
-    "-e",
+    "-b",
     "--disable-camera",
     is_flag=True,
     default=False,
