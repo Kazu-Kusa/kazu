@@ -356,25 +356,48 @@ def read_sensors(conf: _InternalConfig, interval: float, device: str):
 
     app_config: APPConfig = conf.app_config
     device = set(device) or ("all",)
+    sensor_config = app_config.sensor
     (
         sensors.adc_io_open()
         .MPU6500_Open()
         .set_all_io_mode(0)
-        .mpu_set_gyro_fsr(app_config.sensor.gyro_fsr)
-        .mpu_set_accel_fsr(app_config.sensor.accel_fsr)
+        .mpu_set_gyro_fsr(sensor_config.gyro_fsr)
+        .mpu_set_accel_fsr(sensor_config.accel_fsr)
     )
 
     if "all" in device:
         device = ("adc", "io", "mpu")
 
     packs = []
+
+    adc_labels = {
+        sensor_config.edge_fl_index: "EDG-FL",
+        sensor_config.edge_fr_index: "EDG-FR",
+        sensor_config.edge_rl_index: "EDG-RL",
+        sensor_config.edge_rr_index: "EDG-RR",
+        sensor_config.left_adc_index: "LEFT",
+        sensor_config.right_adc_index: "RIGHT",
+        sensor_config.front_adc_index: "FRONT",
+        sensor_config.rb_adc_index: "BACK",
+        sensor_config.gray_adc_index: "GRAY",
+    }
+
+    io_labels = {
+        sensor_config.fl_io_index: "FL",
+        sensor_config.fr_io_index: "FR",
+        sensor_config.rl_io_index: "RL",
+        sensor_config.rr_io_index: "RR",
+        sensor_config.reboot_button_index: "REBOOT",
+        sensor_config.gray_io_left_index: "GRAY-LEFT",
+        sensor_config.gray_io_right_index: "GRAY-RIGHT",
+    }
     for dev in device:
         match dev:
             case "adc":
-                packs.append(lambda: make_adc_table(sensors))
+                packs.append(lambda: make_adc_table(sensors, adc_labels))
 
             case "io":
-                packs.append(lambda: make_io_table(sensors))
+                packs.append(lambda: make_io_table(sensors, io_labels))
             case "mpu":
                 packs.append(lambda: make_mpu_table(sensors))
             case _:
