@@ -132,7 +132,7 @@ def configure(
     callback=set_port_callback,
 )
 @click.option(
-    "-c",
+    "-e",
     "--camera",
     type=click.INT,
     help="Set camera id temporarily",
@@ -141,7 +141,7 @@ def configure(
     callback=set_camera_callback,
 )
 @click.option(
-    "-m",
+    "-l",
     "--camera-res-mul",
     type=click.FLOAT,
     help="Set the camera resolution multiplier temporarily",
