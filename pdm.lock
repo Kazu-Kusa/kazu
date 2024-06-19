@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = ["cross_platform", "inherit_metadata"]
 lock_version = "4.4.1"
-content_hash = "sha256:0b8a69e9453cd1e21a3dfcfec1343e968bcc0f3570f10dd872b741b75edc405e"
+content_hash = "sha256:0d19df07b45d8f366edf7b8408bfda87e9bccd35436bd7c6da63ef6aded83875"
 
 [[package]]
 name = "altgraph"
@@ -126,20 +126,20 @@ files = [
 
 [[package]]
 name = "mentabotix"
-version = "0.1.5.16"
+version = "0.1.5.17"
 requires_python = ">=3.11"
 summary = "A Bot control lib"
 groups = ["default"]
 dependencies = [
-    "bdmc>=0.1.5.11",
+    "bdmc>=0.1.5.14",
     "colorama>=0.4.6",
     "coloredlogs>=15.0.1",
-    "numpy>=1.26.4",
+    "numpy<2.0.0",
     "terminaltables>=3.1.10",
 ]
 files = [
-    {file = "mentabotix-0.1.5.16-py3-none-any.whl", hash = "sha256:6d20a77354e330d55095ad5d93842edae29e721bb1c527221cd979c5a92d21a6"},
-    {file = "mentabotix-0.1.5.16.tar.gz", hash = "sha256:97f677e58fc887d46c13b984deeb19085f2de5b65346038962505b5586989782"},
+    {file = "mentabotix-0.1.5.17-py3-none-any.whl", hash = "sha256:c17c84d1da172426562a06ea95f6366cf0bfae79da983dd7780a265921c253a5"},
+    {file = "mentabotix-0.1.5.17.tar.gz", hash = "sha256:4594311fac46a2b9cb68c8b36d7032b9041cd1be918e1ab3ea38e409e32e7bd6"},
 ]
 
 [[package]]
