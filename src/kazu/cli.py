@@ -342,7 +342,7 @@ def test(conf: _InternalConfig, device: str, **_):
     type=click.Choice(["adc", "io", "mpu", "all"]),
     nargs=-1,
 )
-@click.option("-i", "interval", type=click.FLOAT, default=0.1, show_default=True)
+@click.option("-i", "interval", type=click.FLOAT, default=0.5, show_default=True)
 def read_sensors(conf: _InternalConfig, interval: float, device: str):
     """
     Read sensors data and print to terminal
@@ -792,7 +792,7 @@ def control_display(channel: Tuple[int, int, int]):
     callback=set_res_multiplier_callback,
 )
 @click.option(
-    "-i", "--interval", type=click.FLOAT, default=0.1, show_default=True, help="Set the interval of the tag detector"
+    "-i", "--interval", type=click.FLOAT, default=0.5, show_default=True, help="Set the interval of the tag detector"
 )
 def tag_test(conf: _InternalConfig, interval: float, **_):
     """
