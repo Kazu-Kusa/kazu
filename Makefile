@@ -6,9 +6,17 @@ DIST_DIR = dist
 SPEC_FILE = $(APP_NAME).spec
 
 # 编译规则
-all: build_bin build_whl
+all: build_bin build_whl build_bin_ntk
 
-
+build_bin_ntk:
+	@echo "Start building Binary $(APP_NAME) with Nuitka..."
+	nuitka --standalone \
+	        --onefile \
+	        --output-dir=$(DIST_DIR) \
+	        --assume-yes-for-downloads \
+	        --windows-icon-from-ico=$(ICON) \
+	        --onefile-no-compression \
+	        $(SOURCE)
 
 build_bin:
 	@echo "Start building Binary $(APP_NAME)..."
@@ -36,4 +44,4 @@ clean:
 rebuild: clean all
 	@echo "$(APP_NAME) was successfully rebuilt!"
 
-.PHONY: clean rebuild build_bin build_whl
+.PHONY: clean rebuild build_bin build_whl build_bin_ntk
