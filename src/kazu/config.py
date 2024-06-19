@@ -210,7 +210,7 @@ class BootConfig(BaseModel):
     right_threshold: int = 1100
 
     dash_speed: int = 8000
-    dash_duration: float = 0.7
+    dash_duration: float = 0.4
 
     turn_speed: int = 5000
     full_turn_duration: float = 0.9
