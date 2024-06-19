@@ -1401,22 +1401,25 @@ def make_std_battle_handler(
 
     stage_breaker = Breakers.make_std_stage_breaker(app_config, run_config)
 
-    reboot_pack = make_reboot_handler(app_config, run_config, end_state=end_state)
-    fence_pack = make_fence_handler(app_config, run_config, stop_state=end_state)
+    reboot_states_pack, reboot_transitions_pack = make_reboot_handler(app_config, run_config, end_state=end_state)
+    [reboot_start_state, *_] = reboot_states_pack
+    fence_start_state, _, fence_pack = make_fence_handler(app_config, run_config, stop_state=end_state)
     on_stage_start_state, _, stage_pack = make_on_stage_handler(
         app_config, run_config, abnormal_exit=end_state, tag_group=tag_group
     )
-
+    if app_config.vision.use_camera:
+        fence_start_state.before_entering.append(tag_detector.halt_detection)
+        reboot_start_state.after_exiting.append(tag_detector.halt_detection)
     case_reg = CaseRegistry(StageCodeSign)
-    transition_pool = [*reboot_pack[-1], *fence_pack[-1], *stage_pack]
+    transition_pool = [*reboot_transitions_pack, *fence_pack, *stage_pack]
 
     (
         case_reg.batch_register(
             [StageCodeSign.ON_STAGE_REBOOT, StageCodeSign.OFF_STAGE_REBOOT],
-            reboot_pack[0][0],
+            reboot_start_state,
         )
         .register(StageCodeSign.ON_STAGE, on_stage_start_state)
-        .register(StageCodeSign.OFF_STAGE, fence_pack[0])
+        .register(StageCodeSign.OFF_STAGE, fence_start_state)
     )
 
     check_trans = MovingTransition(
@@ -1454,6 +1457,8 @@ def make_on_stage_handler(
     surr_pack = make_surrounding_handler(
         app_config, run_config, tag_group, start_state=edge_pack[1], abnormal_exit=abnormal_exit
     )
+    if app_config.vision.use_camera:
+        edge_pack[1].before_entering.append(tag_detector.resume_detection)
     search_pack = make_search_handler(app_config, run_config, start_state=surr_pack[1], stop_state=abnormal_exit)
     return edge_pack[0], abnormal_exit, [*edge_pack[-1], *surr_pack[-1], *search_pack[-1]]
 
