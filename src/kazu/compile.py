@@ -22,6 +22,7 @@ from kazu.constant import (
 )
 from kazu.hardwares import controller, tag_detector, menta, SamplerIndexes
 from kazu.judgers import Breakers
+from kazu.logger import _logger
 from kazu.signal_light import (
     set_red_green,
     set_blue_yellow,
@@ -71,7 +72,12 @@ def make_edge_handler(
         abnormal_exit: 异常退出的移动状态。
         transitions_pool: 状态转换列表。
     """
+    if app_config.logger.log_level == "DEBUG":
 
+        def _log_state():
+            _logger.debug("Entering Edge State")
+
+        start_state.after_exiting.append(_log_state)
     # <editor-fold desc="Breakers">
     # 创建不同类型的边缘中断器（breaker），用于处理边缘检测逻辑
     # 边缘全中断器：用于实施分支逻辑
@@ -404,6 +410,13 @@ def make_surrounding_handler(
         Tuple[MovingState, MovingState, MovingState, List[MovingTransition]]:
       一个四元组，包含开始状态、正常退出状态、异常退出状态和一系列可能的状态转换。
     """
+
+    if app_config.logger.log_level == "DEBUG":
+
+        def _log_state():
+            _logger.debug("Entering Surr State")
+
+        start_state.after_exiting.append(_log_state)
 
     # <editor-fold desc="Breakers">
     query_table: Dict[Tuple[int, bool], int] = {
@@ -831,6 +844,13 @@ def make_scan_handler(
 
     scan_state = MovingState.rand_dir_turn(controller, conf.scan_speed, conf.scan_turn_left_prob)
     scan_state.after_exiting.append(set_red_green)
+    if app_config.logger.log_level == "DEBUG":
+
+        def _log_state():
+            _logger.debug("Entering Scan State")
+
+        scan_state.after_exiting.append(_log_state)
+
     rand_turn_state = MovingState.rand_dir_turn(controller, conf.turn_speed, conf.turn_left_prob)
 
     turn_left_state = MovingState.turn("l", conf.turn_speed)
@@ -1075,7 +1095,7 @@ def make_search_handler(
 def make_fence_handler(
     app_config: APPConfig,
     run_config: RunConfig,
-    start_state: Optional[MovingState] = None,
+    start_state: MovingState = continues_state.clone(),
     stop_state: MovingState = MovingState.halt(),
 ) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
     """
@@ -1090,6 +1110,12 @@ def make_fence_handler(
     Returns:
         Tuple[MovingState, MovingState, List[MovingTransition]]: A tuple containing the start state, stop state, and list of transitions.
     """
+    if app_config.logger.log_level == "DEBUG":
+
+        def _log_state():
+            _logger.debug("Entering Fence State")
+
+        start_state.after_exiting.append(_log_state)
     fence_breaker = Breakers.make_std_fence_breaker(app_config, run_config)
 
     align_stage_breaker = Breakers.make_stage_align_breaker_mpu(app_config, run_config)
@@ -1100,8 +1126,6 @@ def make_fence_handler(
     align_direction_pack = make_align_direction_handler(app_config, run_config, rand_move_pack[0][0])
 
     conf = run_config.fence
-
-    start_state = start_state or continues_state.clone()
 
     rear_exit_corner_state = MovingState.straight(-conf.exit_corner_speed)
     front_exit_corner_state = MovingState.straight(conf.exit_corner_speed)
