@@ -69,7 +69,7 @@ class Breakers:
         source = [
             "ret=sum(["
             + ",".join(
-                f"({lt}>s{s_id} or {s_id}<{ut})*{wt}"
+                f"({lt}>s{s_id} or {ut}<{s_id})*{wt}"
                 for s_id, lt, ut, wt in zip(range(4), lt_seq, ut_seq, EdgeWeights.export_std_weight_seq())
             )
             + "])"
