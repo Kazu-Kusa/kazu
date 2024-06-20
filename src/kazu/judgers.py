@@ -427,7 +427,6 @@ class Breakers:
         )
 
     @staticmethod
-    @lru_cache(maxsize=None)
     def make_cam_surr_breaker(app_config: APPConfig, run_config: RunConfig, query_table: Dict[Tuple[int, bool], int]):
         source = [
             (
@@ -472,7 +471,6 @@ class Breakers:
         return surr_full_breaker
 
     @staticmethod
-    @lru_cache(maxsize=None)
     def make_nocam_surr_breaker(
         app_config: APPConfig, run_config: RunConfig, query_table: Dict[Tuple[int, bool], int], tag_group: TagGroup
     ):
