@@ -7,6 +7,7 @@ from typing import Callable, Optional, Tuple, List, Type
 import click
 from click import secho, echo, clear
 from colorama import Fore
+
 from kazu import __version__, __command__
 from kazu.callbacks import (
     export_default_app_config,
@@ -860,7 +861,9 @@ def breaker_test(
     from kazu.judgers import Breakers
     from kazu.constant import EdgeCodeSign, SurroundingCodeSign, ScanCodesign, FenceCodeSign
     from terminaltables import SingleTable
+    from hardwares import sensors
 
+    sensors.adc_io_open().MPU6500_Open()
     run_config = load_run_config(run_config_path)
     config_pack = conf.app_config, run_config
 
@@ -897,14 +900,17 @@ def breaker_test(
         ("Scan", scan_breaker_display),
         ("Fence", fence_breaker_display),
     ]
-
-    while 1:
-        data.clear()
-        for name, d in displays:
-            data.append([name, *d()])
-        click.clear()
-        secho(table.table, bold=True)
-        sleep(interval)
+    try:
+        while 1:
+            data.clear()
+            for name, d in displays:
+                data.append([name, *d()])
+            click.clear()
+            secho(table.table, bold=True)
+            sleep(interval)
+    finally:
+        sensors.adc_io_close()
+        secho("Exit breaker test.")
 
 
 @main.command("bench")
