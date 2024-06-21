@@ -905,6 +905,7 @@ def breaker_test(
     try:
         while 1:
             data.clear()
+            data.append(["Breaker", "CodeSign", "Value"])
             for name, d in displays:
                 data.append([name, *d()])
             click.clear()
