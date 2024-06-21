@@ -67,11 +67,11 @@ class EdgeConfig(BaseModel):
 class SurroundingConfig(BaseModel):
     io_encounter_object_value: int = 0
 
-    left_adc_lower_threshold: int = 1700
-    right_adc_lower_threshold: int = 1700
+    left_adc_lower_threshold: int = 1300
+    right_adc_lower_threshold: int = 1300
 
-    front_adc_lower_threshold: int = 1700
-    back_adc_lower_threshold: int = 1700
+    front_adc_lower_threshold: int = 1300
+    back_adc_lower_threshold: int = 1500
     atk_break_front_lower_threshold: int = 1700
 
     atk_speed_enemy_car: int = 2300
@@ -167,10 +167,10 @@ class RandWalk(BaseModel):
 
 
 class fenceConfig(BaseModel):
-    front_adc_lower_threshold: int = 1750
-    rear_adc_lower_threshold: int = 1750
-    left_adc_lower_threshold: int = 1750
-    right_adc_lower_threshold: int = 1750
+    front_adc_lower_threshold: int = 1200
+    rear_adc_lower_threshold: int = 1300
+    left_adc_lower_threshold: int = 1300
+    right_adc_lower_threshold: int = 1300
 
     io_encounter_fence_value: int = 0
     max_yaw_tolerance: float = 20.0
@@ -252,8 +252,6 @@ class RunConfig(CounterHashable):
 
     strategy: StrategyConfig = StrategyConfig()
     perf: PerformanceConfig = PerformanceConfig()
-    # TODO fill the configs that still remain
-    ...
 
     @classmethod
     def read_config(cls, fp: TextIO) -> Self:
