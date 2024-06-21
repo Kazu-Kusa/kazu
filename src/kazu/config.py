@@ -45,23 +45,23 @@ class TagGroup(BaseModel):
 
 
 class EdgeConfig(BaseModel):
-    lower_threshold: List[float] = [1700] * 4
-    upper_threshold: List[float] = [2200] * 4
+    lower_threshold: List[float] = [1400, 1500, 1500, 1400]
+    upper_threshold: List[float] = [2100, 2200, 2200, 2100]
 
-    fallback_speed: int = 6000
-    fallback_duration: float = 0.5
+    fallback_speed: int = 4000
+    fallback_duration: float = 0.3
 
-    advance_speed: int = 6000
-    advance_duration: float = 0.5
+    advance_speed: int = 4000
+    advance_duration: float = 0.3
 
     turn_speed: int = 5000
-    full_turn_duration: float = 0.9
-    half_turn_duration: float = 0.5
+    full_turn_duration: float = 0.45
+    half_turn_duration: float = 0.225
 
-    turn_left_prob: float = 0.5
+    turn_left_prob: float = 0.225
 
     drift_speed: int = 6000
-    drift_duration: float = 0.5
+    drift_duration: float = 0.3
 
 
 class SurroundingConfig(BaseModel):
@@ -73,34 +73,34 @@ class SurroundingConfig(BaseModel):
     back_adc_lower_threshold: int = 1700
     atk_break_front_lower_threshold: int = 1700
 
-    atk_speed_enemy_car: int = 3500
-    atk_speed_enemy_box: int = 3000
-    atk_speed_neutral_box: int = 3000
+    atk_speed_enemy_car: int = 2300
+    atk_speed_enemy_box: int = 1600
+    atk_speed_neutral_box: int = 1300
     fallback_speed_ally_box: int = 4000
-    fallback_speed_edge: int = 5000
+    fallback_speed_edge: int = 3000
 
-    atk_enemy_car_duration: float = 12.0
-    atk_enemy_box_duration: float = 5.0
-    atk_neutral_box_duration: float = 8.0
-    fallback_duration_ally_box: float = 0.5
-    fallback_duration_edge: float = 0.4
+    atk_enemy_car_duration: float = 6.0
+    atk_enemy_box_duration: float = 6.0
+    atk_neutral_box_duration: float = 6.0
+    fallback_duration_ally_box: float = 0.3
+    fallback_duration_edge: float = 0.2
 
     turn_speed: int = 5000
-    turn_left_prob: float = 0.5
+    turn_left_prob: float = 0.225
 
-    rand_turn_speeds: List[int] = [4000, 8000]
+    rand_turn_speeds: List[int] = [3000, 5000]
     rand_turn_speed_weights: List[float] = [1, 3]
 
-    full_turn_duration: float = 0.9
-    half_turn_duration: float = 0.5
+    full_turn_duration: float = 0.45
+    half_turn_duration: float = 0.225
 
 
 class GradientConfig(BaseModel):
 
-    max_speed: int = 5000
-    min_speed: int = 2500
-    lower_bound: int = 2200
-    upper_bound: int = 3200
+    max_speed: int = 3000
+    min_speed: int = 1400
+    lower_bound: int = 2800
+    upper_bound: int = 3700
 
 
 class ScanConfig(BaseModel):
@@ -114,24 +114,24 @@ class ScanConfig(BaseModel):
 
     scan_speed: int = 1200
     scan_duration: float = 5.0
-    scan_turn_left_prob: float = 0.5
+    scan_turn_left_prob: float = 0.225
 
     fall_back_speed: int = 4000
     fall_back_duration: float = 0.5
 
     turn_speed: int = 5000
-    turn_left_prob: float = 0.5
+    turn_left_prob: float = 0.225
 
-    full_turn_duration: float = 0.9
-    half_turn_duration: float = 0.5
+    full_turn_duration: float = 0.45
+    half_turn_duration: float = 0.225
 
 
 class RandTurn(BaseModel):
 
     turn_speed: int = 5000
-    turn_left_prob: float = 0.5
-    full_turn_duration: float = 0.9
-    half_turn_duration: float = 0.5
+    turn_left_prob: float = 0.225
+    full_turn_duration: float = 0.45
+    half_turn_duration: float = 0.225
 
 
 class SearchConfig(BaseModel):
@@ -152,14 +152,14 @@ class SearchConfig(BaseModel):
 class RandWalk(BaseModel):
 
     use_straight: bool = True
-    straight_weight: int | float = 2
+    straight_weight: int | float = 3
 
-    rand_straight_speeds: List[int] = [2500, 3000]
+    rand_straight_speeds: List[int] = [1300, 1600]
     rand_straight_speed_weights: List[int | float] = [1, 3]
 
     use_turn: bool = True
     turn_weight: int | float = 1
-    rand_turn_speeds: List[int] = [4000, 8000]
+    rand_turn_speeds: List[int] = [3000, 5000]
     rand_turn_speed_weights: List[int | float] = [1, 3]
 
     walk_duration: float = 0.5
@@ -174,12 +174,12 @@ class fenceConfig(BaseModel):
     io_activated_value: int = 0
     max_yaw_tolerance: float = 20.0
 
-    stage_align_speed: int = 1500
-    max_stage_align_duration: float = 5.0
+    stage_align_speed: int = 1000
+    max_stage_align_duration: float = 3.0
     stage_align_direction: Literal["l", "r", "rand"] = "rand"
 
-    direction_align_speed: int = 1500
-    max_direction_align_duration: float = 5.0
+    direction_align_speed: int = 1000
+    max_direction_align_duration: float = 3.0
     direction_align_direction: Literal["l", "r", "rand"] = "rand"
 
     exit_corner_speed: int = 2500
@@ -202,19 +202,19 @@ class PerformanceConfig(BaseModel):
 
 
 class BootConfig(BaseModel):
-    time_to_stabilize: float = 0.3
+    time_to_stabilize: float = 0.1
 
-    max_holding_duration: float = 180
+    max_holding_duration: float = 180.0
 
     left_threshold: int = 1100
     right_threshold: int = 1100
 
-    dash_speed: int = 8000
-    dash_duration: float = 0.4
+    dash_speed: int = 6000
+    dash_duration: float = 0.3
 
     turn_speed: int = 5000
-    full_turn_duration: float = 0.9
-    turn_left_prob: float = 0.5
+    full_turn_duration: float = 0.45
+    turn_left_prob: float = 0.225
 
 
 class BackStageConfig(BaseModel):
@@ -227,12 +227,12 @@ class BackStageConfig(BaseModel):
     dash_duration: float = 0.7
 
     turn_speed: int = 5000
-    full_turn_duration: float = 0.9
-    turn_left_prob: float = 0.5
+    full_turn_duration: float = 0.45
+    turn_left_prob: float = 0.225
 
 
 class StageConfig(BaseModel):
-    gray_adc_upper_threshold: int = 2500
+    gray_adc_upper_threshold: int = 2850
 
 
 class RunConfig(CounterHashable):
