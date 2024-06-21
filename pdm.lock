@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = ["cross_platform", "inherit_metadata"]
 lock_version = "4.4.1"
-content_hash = "sha256:0d19df07b45d8f366edf7b8408bfda87e9bccd35436bd7c6da63ef6aded83875"
+content_hash = "sha256:608572a05f9e0e1a7533903e3f93bf5c92076e41cec29684a9ba671f1f998bbe"
 
 [[package]]
 name = "altgraph"
@@ -30,7 +30,7 @@ files = [
 
 [[package]]
 name = "bdmc"
-version = "0.1.5.14"
+version = "0.1.5.15"
 requires_python = ">=3.11"
 summary = "An api wrapper lib designed for the uptech BDMC divers"
 groups = ["default"]
@@ -39,8 +39,8 @@ dependencies = [
     "pyserial>=3.5",
 ]
 files = [
-    {file = "bdmc-0.1.5.14-py3-none-any.whl", hash = "sha256:a36f8382ff8bee287051ef0c6864a09f4480286a57bd5c604e06b3e4ad6195c4"},
-    {file = "bdmc-0.1.5.14.tar.gz", hash = "sha256:d83df6e5b9e3492f8ea6a646d3db86a194189f3c3d980471f0959fe4557039b7"},
+    {file = "bdmc-0.1.5.15-py3-none-any.whl", hash = "sha256:15cfbc938fce7be447dd607728e9c51ab84f114e880290c23ad294aed15cbb9a"},
+    {file = "bdmc-0.1.5.15.tar.gz", hash = "sha256:3b89ecc7b0f0cc8560220463232e992650b98cba6daa4abbfa9395293a6a756a"},
 ]
 
 [[package]]
