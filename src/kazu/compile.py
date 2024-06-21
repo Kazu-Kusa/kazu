@@ -1,15 +1,5 @@
 from typing import Callable, List, Tuple, Optional, TypeVar
 
-from mentabotix import (
-    MovingChainComposer,
-    CaseRegistry,
-    Botix,
-    MovingState,
-    MovingTransition,
-    SamplerUsage,
-    make_weighted_selector,
-)
-
 from kazu.config import APPConfig, RunConfig, ContextVar, TagGroup
 from kazu.constant import (
     EdgeCodeSign,
@@ -22,24 +12,18 @@ from kazu.constant import (
 from kazu.hardwares import controller, tag_detector, menta, SamplerIndexes
 from kazu.judgers import Breakers
 from kazu.logger import _logger
-from kazu.signal_light import (
-    set_red_green,
-    set_blue_yellow,
-    set_all_black,
-    set_all_orange,
-    set_all_blue,
-    set_all_yellow,
-    set_all_red,
-    set_all_white,
-    set_all_green,
-    set_all_purple,
-    set_purple_red,
-    set_purple_yellow,
-    set_purple_white,
-    set_purple_green,
-    set_all_cyan,
-)
+from kazu.signal_light import sig_light_registry, set_all_black
 from kazu.static import continues_state
+from mentabotix import (
+    MovingChainComposer,
+    CaseRegistry,
+    Botix,
+    MovingState,
+    MovingTransition,
+    SamplerUsage,
+    make_weighted_selector,
+)
+from pyuptech import Color
 
 botix = Botix(controller=controller)
 
@@ -124,7 +108,7 @@ def make_edge_handler(
 
     # <editor-fold desc="Initialize Containers">
     transitions_pool: List[MovingTransition] = []
-    abnormal_exit.after_exiting.append(set_all_purple)
+    abnormal_exit.after_exiting.append(sig_light_registry.register_all("Edge|Abnormal Exit", Color.PURPLE))
     (case_reg := CaseRegistry(EdgeCodeSign)).register(EdgeCodeSign.O_O_O_O, normal_exit)
     # </editor-fold>
 
@@ -444,15 +428,27 @@ def make_surrounding_handler(
     # <editor-fold desc="Templates">
 
     atk_enemy_car_state = MovingState.straight(run_config.surrounding.atk_speed_enemy_car)
-    atk_enemy_car_state.after_exiting.append(set_purple_red)
     atk_enemy_box_state = MovingState.straight(run_config.surrounding.atk_speed_enemy_box)
-    atk_enemy_box_state.after_exiting.append(set_purple_yellow)
     atk_neutral_box_state = MovingState.straight(run_config.surrounding.atk_speed_neutral_box)
-    atk_neutral_box_state.after_exiting.append(set_purple_white)
     allay_fallback_state = MovingState.straight(-run_config.surrounding.fallback_speed_ally_box)
-    allay_fallback_state.after_exiting.append(set_purple_green)
     edge_fallback_state = MovingState.straight(-run_config.surrounding.fallback_speed_edge)
-    edge_fallback_state.after_exiting.append(set_all_cyan)
+
+    atk_enemy_car_state.after_exiting.append(
+        sig_light_registry.register_singles("Surr|Attack enemy car", Color.PURPLE, Color.RED)
+    )
+    atk_enemy_box_state.after_exiting.append(
+        sig_light_registry.register_singles("Surr|Attack enemy box", Color.PURPLE, Color.YELLOW)
+    )
+
+    atk_neutral_box_state.after_exiting.append(
+        sig_light_registry.register_singles("Surr|Attack neutral box", Color.PURPLE, Color.WHITE)
+    )
+
+    allay_fallback_state.after_exiting.append(
+        sig_light_registry.register_singles("Surr|Ally fallback", Color.PURPLE, Color.GREEN)
+    )
+
+    edge_fallback_state.after_exiting.append(sig_light_registry.register_all("Surr|Edge fallback", Color.CYAN))
     atk_enemy_car_transition = MovingTransition(run_config.surrounding.atk_speed_enemy_car, breaker=atk_breaker)
     atk_enemy_box_transition = MovingTransition(run_config.surrounding.atk_speed_enemy_box, breaker=atk_breaker)
     atk_neutral_box_transition = MovingTransition(run_config.surrounding.atk_neutral_box_duration, breaker=atk_breaker)
@@ -779,7 +775,7 @@ def make_scan_handler(
     case_reg = CaseRegistry(to_cover=ScanCodesign)
 
     scan_state = MovingState.rand_dir_turn(controller, conf.scan_speed, conf.scan_turn_left_prob)
-    scan_state.after_exiting.append(set_red_green)
+    scan_state.after_exiting.append(sig_light_registry.register_singles("Scan|Start Scanning", Color.RED, Color.GREEN))
     if app_config.logger.log_level == "DEBUG":
 
         def _log_state():
@@ -798,7 +794,7 @@ def make_scan_handler(
     fall_back_state = MovingState.straight(-conf.fall_back_speed)
     fall_back_transition = MovingTransition(conf.fall_back_duration, breaker=rear_edge_breaker)
 
-    end_state.after_exiting.append(set_all_red)
+    end_state.after_exiting.append(sig_light_registry.register_all("Scan|End Scanning", Color.RED))
     transitions_pool: List[MovingTransition] = []
     # ---------------------------------------------------------------------
     [head_state, *_], transitions = composer.init_container().add(end_state).export_structure()
@@ -918,7 +914,7 @@ def make_rand_turn_handler(
     conf = run_config.search.rand_turn
 
     rand_lr_turn_state = MovingState.rand_dir_turn(controller, conf.turn_speed, turn_left_prob=conf.turn_left_prob)
-    rand_lr_turn_state.after_exiting.append(set_all_yellow)
+    rand_lr_turn_state.after_exiting.append(sig_light_registry.register_all("Rturn|Start Rturn", Color.YELLOW))
     half_turn_transition = MovingTransition(conf.half_turn_duration)
 
     states, transitions = composer.add(rand_lr_turn_state).add(half_turn_transition).add(end_state).export_structure()
@@ -974,7 +970,7 @@ def make_gradient_move(app_config: APPConfig, run_config: RunConfig, is_salvo_en
         speed_expressions=ContextVar.gradient_speed.name,
         used_context_variables=[ContextVar.gradient_speed.name],
         before_entering=updaters,
-        after_exiting=[set_all_blue],
+        after_exiting=[sig_light_registry.register_all("GMove|Start gradient move", Color.BLUE)],
     )
 
 
@@ -1143,7 +1139,7 @@ def make_fence_handler(
     case_reg.batch_register([FenceCodeSign.O_O_O_O, FenceCodeSign.X_X_X_X], head_state)
     # ---------------------------------------------------------------------
 
-    start_state.after_exiting.append(set_all_orange)
+    start_state.after_exiting.append(sig_light_registry.register_all("Fence|Starting Fence finding", Color.ORANGE))
     # <editor-fold desc="Assembly">
     _, head_trans = (
         composer.init_container()
@@ -1219,7 +1215,7 @@ def make_back_to_stage_handler(
     small_advance_transition = MovingTransition(run_config.backstage.small_advance_duration)
     stab_trans = MovingTransition(run_config.backstage.time_to_stabilize)
     # waiting for a booting signal, and dash on to the stage once received
-    small_advance.after_exiting.append(set_all_green)
+    small_advance.after_exiting.append(sig_light_registry.register_all("BStage|Small move", Color.GREEN))
     states, transitions = (
         composer.init_container()
         .add(small_advance)
@@ -1274,9 +1270,23 @@ def make_reboot_handler(
     # waiting for a booting signal, and dash on to the stage once received
     states, transitions = (
         composer.init_container()
-        .add(MovingState(0, before_entering=[set_red_green]))
+        .add(
+            MovingState(
+                0,
+                before_entering=[
+                    sig_light_registry.register_singles("Reboot|Start rebooting", Color.G_RED, Color.R_GREEN)
+                ],
+            )
+        )
         .add(holding_transition)
-        .add(MovingState(-run_config.boot.dash_speed, after_exiting=[set_blue_yellow]))
+        .add(
+            MovingState(
+                -run_config.boot.dash_speed,
+                after_exiting=[
+                    sig_light_registry.register_singles("Reboot|In rebooting", Color.DARKBLUE, Color.DARKGREEN)
+                ],
+            )
+        )
         .add(MovingTransition(run_config.boot.dash_duration))
         .add(MovingState.halt())
         .add(MovingTransition(run_config.boot.time_to_stabilize))
@@ -1332,7 +1342,8 @@ def make_rand_walk_handler(
             weights.append(w * conf.straight_weight)
 
     rand_move_state = MovingState.rand_move(controller, moves_seq, weights)
-    rand_move_state.after_exiting.append(set_all_white)
+    rand_move_state.after_exiting.append(sig_light_registry.register_all("Rwalk|Start rand walking", Color.WHITE))
+
     move_transition = MovingTransition(conf.walk_duration)
     return composer.init_container().add(rand_move_state).add(move_transition).add(end_state).export_structure()
 

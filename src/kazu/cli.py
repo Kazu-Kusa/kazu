@@ -7,7 +7,6 @@ from typing import Callable, Optional, Tuple, List, Type
 import click
 from click import secho, echo, clear
 from colorama import Fore
-
 from kazu import __version__, __command__
 from kazu.callbacks import (
     export_default_app_config,
@@ -33,6 +32,7 @@ from kazu.config import (
 )
 from kazu.constant import Env, RunMode, QUIT
 from kazu.logger import _logger
+from kazu.signal_light import sig_light_registry
 from kazu.visualize import print_colored_toml
 
 
@@ -529,8 +529,8 @@ def visualize(
         # 假设每个处理函数返回一个可以被导出的数据结构
         # 这里简化处理，实际可能需要根据handler的不同调用不同的导出方法
         handler_func: Callable = handlers.get(f_name)
-
-        (*_, handler_data) = handler_func(app_config=app_config, run_config=run_config)
+        with sig_light_registry:
+            (*_, handler_data) = handler_func(app_config=app_config, run_config=run_config)
         filename = f_name + ".puml"
         destination_filename = (destination / filename).as_posix()
 
