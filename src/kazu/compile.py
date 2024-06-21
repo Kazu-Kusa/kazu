@@ -1,4 +1,4 @@
-from typing import Callable, List, Tuple, Dict, Optional, TypeVar
+from typing import Callable, List, Tuple, Optional, TypeVar
 
 from mentabotix import (
     MovingChainComposer,
@@ -13,7 +13,6 @@ from mentabotix import (
 from kazu.config import APPConfig, RunConfig, ContextVar, TagGroup
 from kazu.constant import (
     EdgeCodeSign,
-    SurroundingWeights,
     SurroundingCodeSign,
     FenceCodeSign,
     ScanCodesign,
@@ -419,29 +418,19 @@ def make_surrounding_handler(
         start_state.after_exiting.append(_log_state)
 
     # <editor-fold desc="Breakers">
-    query_table: Dict[Tuple[int, bool], int] = {
-        (tag_group.default_tag, True): SurroundingWeights.FRONT_ENEMY_CAR,
-        (tag_group.default_tag, False): SurroundingWeights.NOTHING,
-        (tag_group.allay_tag, True): SurroundingWeights.FRONT_ALLY_BOX,
-        (tag_group.allay_tag, False): SurroundingWeights.FRONT_ALLY_BOX,
-        (tag_group.neutral_tag, True): SurroundingWeights.FRONT_NEUTRAL_BOX,
-        (tag_group.neutral_tag, False): SurroundingWeights.NOTHING,
-        (tag_group.enemy_tag, True): SurroundingWeights.FRONT_ENEMY_BOX,
-        (tag_group.enemy_tag, False): SurroundingWeights.FRONT_ENEMY_BOX,
-    }
+
     if app_config.vision.use_camera:
 
         surr_full_breaker = Breakers.make_cam_surr_breaker(
             app_config,
             run_config,
-            query_table,
+            tag_group,
         )
 
     else:
         surr_full_breaker = Breakers.make_nocam_surr_breaker(
             app_config,
             run_config,
-            query_table,
             tag_group,
         )
 

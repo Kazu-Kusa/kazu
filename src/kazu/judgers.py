@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Callable, Tuple, Dict
+from typing import Callable, Tuple
 
 from mentabotix import SamplerUsage
 
@@ -7,6 +7,7 @@ from kazu.config import APPConfig, RunConfig, ContextVar, TagGroup
 from kazu.constant import EdgeWeights, Attitude, ScanWeights, StageWeight, SurroundingWeights
 from kazu.hardwares import controller, menta, SamplerIndexes, tag_detector
 from kazu.logger import _logger
+from kazu.static import make_query_table
 
 
 class Breakers:
@@ -427,7 +428,8 @@ class Breakers:
         )
 
     @staticmethod
-    def make_cam_surr_breaker(app_config: APPConfig, run_config: RunConfig, query_table: Dict[Tuple[int, bool], int]):
+    def make_cam_surr_breaker(app_config: APPConfig, run_config: RunConfig, tag_group: TagGroup):
+        query_table = make_query_table(tag_group)
         source = [
             (
                 f"ret=q_tb.get((tag_d.tag_id, bool(s0 or s1 or s4>{run_config.surrounding.front_adc_lower_threshold})))"
@@ -471,9 +473,8 @@ class Breakers:
         return surr_full_breaker
 
     @staticmethod
-    def make_nocam_surr_breaker(
-        app_config: APPConfig, run_config: RunConfig, query_table: Dict[Tuple[int, bool], int], tag_group: TagGroup
-    ):
+    def make_nocam_surr_breaker(app_config: APPConfig, run_config: RunConfig, tag_group: TagGroup):
+        query_table = make_query_table(tag_group)
         source = [
             (
                 f"ret=q_tb.get(({tag_group.default_tag}, bool(s0 or s1 or s4>{run_config.surrounding.front_adc_lower_threshold})))"

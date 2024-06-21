@@ -1,7 +1,8 @@
+from enum import Enum
 from functools import partial
 from pathlib import Path
 from time import sleep
-from typing import Callable, Optional, Tuple, List
+from typing import Callable, Optional, Tuple, List, Type
 
 import click
 from click import secho, echo, clear
@@ -30,6 +31,7 @@ from kazu.config import (
     load_app_config,
 )
 from kazu.constant import Env, RunMode, QUIT
+from kazu.logger import _logger
 from kazu.visualize import print_colored_toml
 
 
@@ -114,7 +116,7 @@ def configure(
 @click.pass_obj
 @click.help_option("-h", "--help")
 @click.option(
-    "-b",
+    "-d",
     "--disable-camera",
     is_flag=True,
     default=False,
@@ -132,7 +134,7 @@ def configure(
     callback=set_port_callback,
 )
 @click.option(
-    "-e",
+    "-c",
     "--camera",
     type=click.INT,
     help="Set camera id temporarily",
@@ -158,7 +160,7 @@ def configure(
     callback=team_color_callback,
 )
 @click.option(
-    "-c",
+    "-r",
     "--run-config-path",
     show_default=True,
     default=None,
@@ -193,6 +195,7 @@ def run(conf: _InternalConfig, run_config_path: Path | None, mode: str, **_):
     tag_detector = inited_tag_detector(app_config)
     con = inited_controller(app_config)
     con.context.update(ContextVar.export_context())
+    _logger.info(f"Run Mode: {mode}")
     try:
         match mode:
             case RunMode.FGS:
@@ -240,13 +243,14 @@ def run(conf: _InternalConfig, run_config_path: Path | None, mode: str, **_):
                 while 1:
                     boot_func()
     except KeyboardInterrupt:
-        secho(f"Exited by user.", fg="red")
+        _logger.info("KAZU stopped by keyboard interrupt.")
     finally:
+        _logger.info(f"Releasing hardware resources...")
         set_all_black()
         sensors.adc_io_close()
         tag_detector.release_camera()
         con.send_cmd(CMD.FULL_STOP).send_cmd(CMD.RESET).stop_msg_sending()
-        secho(f"KAZU stopped.", fg="green")
+        _logger.info(f"KAZU stopped.")
 
 
 @main.command("check")
@@ -409,9 +413,11 @@ def read_sensors(conf: _InternalConfig, interval: float, device: str):
             echo(stdout)
             sleep(interval)
     except KeyboardInterrupt:
-        echo("Exit reading.")
-
-    sensors.adc_io_close()
+        _logger.info("Read sensors data interrupted.")
+    finally:
+        _logger.info("Closing sensors...")
+        sensors.adc_io_close()
+        _logger.info("Exit reading successfully.")
 
 
 @main.command("viz")
@@ -800,35 +806,104 @@ def tag_test(conf: _InternalConfig, interval: float, **_):
     """
     from kazu.hardwares import inited_tag_detector
     from kazu.checkers import check_camera
-    from threading import Thread
 
     detector = inited_tag_detector(conf.app_config)
     if not check_camera(detector):
         secho("Camera is not ready, exiting...", fg="red", bold=True)
         return
-    detector.apriltag_detect_start()
 
-    cmd = ""
-
-    def _display_tags():
-        while cmd != QUIT:
+    try:
+        detector.apriltag_detect_start()
+        while 1:
             sleep(interval)
             secho(f"\rTag: {detector.tag_id}", fg="green", bold=True, nl=False)
+
+    except KeyboardInterrupt:
+        _logger.info("KeyboardInterrupt, exiting...")
+    finally:
+        _logger.info("Release camera...")
         detector.apriltag_detect_end()
         detector.release_camera()
+        _logger.info("Done")
 
-    t = Thread(target=_display_tags, daemon=True)
-    t.start()
-    while cmd != QUIT:
-        cmd = click.prompt(
-            f"{Fore.YELLOW}Enter '{QUIT}' to quit {Fore.RESET}",
-            type=str,
-            default="",
-            prompt_suffix="",
-            show_choices=False,
-            show_default=False,
-        )
-    t.join()
+
+@main.command("breaker")
+@click.help_option("-h", "--help")
+@click.pass_obj
+@click.option(
+    "-r",
+    "--run-config-path",
+    show_default=True,
+    default=None,
+    help=f"config file path, also can receive env {Env.KAZU_RUN_CONFIG_PATH}",
+    type=click.Path(dir_okay=False, readable=True, path_type=Path),
+    envvar=Env.KAZU_RUN_CONFIG_PATH,
+)
+@click.option(
+    "-i",
+    "--interval",
+    type=click.FLOAT,
+    default=0.5,
+    show_default=True,
+    help="Set the interval of the refresh frequency",
+)
+def breaker_test(
+    conf: _InternalConfig,
+    run_config_path: Path,
+    interval: float,
+):
+    """
+    Use breaker detector to test breaker detection.
+    """
+    from kazu.config import load_run_config
+    from kazu.judgers import Breakers
+    from kazu.constant import EdgeCodeSign, SurroundingCodeSign, ScanCodesign, FenceCodeSign
+    from terminaltables import SingleTable
+
+    run_config = load_run_config(run_config_path)
+    config_pack = conf.app_config, run_config
+
+    def _make_display_pack(breaker: Callable[[], int], codesign_enum: Type[Enum]) -> Callable[[], Tuple[str, int]]:
+        def _display():
+            codesign = breaker()
+            [matched] = [x.name for x in codesign_enum if x.value == codesign]
+            return matched, codesign
+
+        return _display
+
+    data = []
+    table: SingleTable = SingleTable(data)
+
+    edge_breaker_display = _make_display_pack(Breakers.make_std_edge_full_breaker(*config_pack), EdgeCodeSign)
+
+    tag_group = TagGroup(team_color=conf.app_config.vision.team_color)
+
+    surr_breaker_maker = (
+        Breakers.make_cam_surr_breaker if conf.app_config.vision.use_camera else Breakers.make_nocam_surr_breaker
+    )
+
+    surr_breaker_display = _make_display_pack(
+        surr_breaker_maker(*config_pack, tag_group=tag_group), SurroundingCodeSign
+    )
+
+    scan_breaker_display = _make_display_pack(Breakers.make_std_scan_breaker(*config_pack), ScanCodesign)
+
+    fence_breaker_display = _make_display_pack(Breakers.make_std_fence_breaker(*config_pack), FenceCodeSign)
+
+    displays = [
+        ("Edge", edge_breaker_display),
+        ("Surr", surr_breaker_display),
+        ("Scan", scan_breaker_display),
+        ("Fence", fence_breaker_display),
+    ]
+
+    while 1:
+        data.clear()
+        for name, d in displays:
+            data.append([name, *d()])
+        click.clear()
+        secho(table.table, bold=True)
+        sleep(interval)
 
 
 @main.command("bench")
