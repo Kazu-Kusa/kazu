@@ -156,3 +156,38 @@ def set_res_multiplier_callback(conf: _InternalConfig, ctx, _, multiplier: Optio
     if multiplier is not None:
         conf.app_config.vision.camera_device_id = multiplier
         secho(f"Set camera resolution multiplier to {multiplier}", fg="blue", bold=True)
+
+
+def bench_sleep_precision(ctx, _, enable: bool):
+    """
+    Measure the precision of the sleep function by comparing intended sleep duration
+    with the actual elapsed time using a high-resolution timer.
+
+    Args:
+        ctx: Context object, potentially used for additional configuration or logging.
+        _: Placeholder argument, typically not used.
+        enable: A boolean flag to control whether the benchmark should run.
+
+    Returns:
+        None, but prints out the precision measurement if enabled.
+    """
+    if enable:
+        import time
+
+        intended_duration = 1.0  # Example sleep duration in seconds
+
+        start_time = time.perf_counter()
+        time.sleep(intended_duration)
+        end_time = time.perf_counter()
+
+        actual_duration = end_time - start_time
+        precision_offset = actual_duration - intended_duration
+
+        # Determine color based on precision
+        color = "green" if abs(precision_offset) < 0.001 else "red"
+
+        # Using secho to print the result with color
+        secho(
+            f"Sleep Precision: Intended {intended_duration:.6f}s, Actual {actual_duration:.6f}s, Offset {precision_offset:.6f}s",
+            fg=color,
+        )

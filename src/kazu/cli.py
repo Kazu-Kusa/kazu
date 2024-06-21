@@ -20,6 +20,7 @@ from kazu.callbacks import (
     set_camera_callback,
     log_level_callback,
     set_res_multiplier_callback,
+    bench_sleep_precision,
 )
 from kazu.config import (
     DEFAULT_APP_CONFIG_PATH,
@@ -917,6 +918,14 @@ def breaker_test(
 )
 @click.option(
     "-p", "--add-up-per-second", is_flag=True, default=False, callback=bench_aps, help="measure add-ups per second"
+)
+@click.option(
+    "-c",
+    "--sleep-precision",
+    is_flag=True,
+    default=False,
+    callback=bench_sleep_precision,
+    help="measure sleep precision",
 )
 def bench(**_):
     """
