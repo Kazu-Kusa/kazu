@@ -65,6 +65,7 @@ class EdgeConfig(BaseModel):
 
 
 class SurroundingConfig(BaseModel):
+    io_encounter_object_value: int = 0
 
     left_adc_lower_threshold: int = 1700
     right_adc_lower_threshold: int = 1700
@@ -110,7 +111,7 @@ class ScanConfig(BaseModel):
     left_max_tolerance: int = 300
     right_max_tolerance: int = 300
 
-    io_activated_value: int = 0
+    io_encounter_object_value: int = 0
 
     scan_speed: int = 1200
     scan_duration: float = 5.0
@@ -171,7 +172,7 @@ class fenceConfig(BaseModel):
     left_adc_lower_threshold: int = 1750
     right_adc_lower_threshold: int = 1750
 
-    io_activated_value: int = 0
+    io_encounter_fence_value: int = 0
     max_yaw_tolerance: float = 20.0
 
     stage_align_speed: int = 1000
@@ -202,6 +203,8 @@ class PerformanceConfig(BaseModel):
 
 
 class BootConfig(BaseModel):
+    button_io_activate_case_value: int = 0
+
     time_to_stabilize: float = 0.1
 
     max_holding_duration: float = 180.0
@@ -233,6 +236,7 @@ class BackStageConfig(BaseModel):
 
 class StageConfig(BaseModel):
     gray_adc_upper_threshold: int = 2850
+    gray_io_off_stage_case_value: int = 0
 
 
 class RunConfig(CounterHashable):
@@ -342,7 +346,6 @@ class SensorConfig(BaseModel):
 
     gray_adc_index: int = 8
     # ---------IO----------
-    io_activating_value: int = 0
 
     gray_io_left_index: int = 0
     gray_io_right_index: int = 1

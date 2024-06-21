@@ -27,7 +27,7 @@ class Breakers:
                     ],
                 )
             ],
-            judging_source=f"ret= ({lt_seq[1]}>s0 or s0<{ut_seq[1]}) or ({lt_seq[2]}>s1 or s1<{ut_seq[2]})",
+            judging_source=f"ret= {lt_seq[1]}>s0 or {lt_seq[2]}>s1",
             return_type=bool,
             return_raw=False,
             function_name="std_edge_rear_breaker",
@@ -52,10 +52,10 @@ class Breakers:
                     ],
                 ),
             ],
-            judging_source=f"ret=s0=={app_config.sensor.io_activating_value} "
-            f"or s1=={app_config.sensor.io_activating_value} "
-            f"or ({lt_seq[0]}>s2 or s2<{ut_seq[0]}) "
-            f"or ({lt_seq[-1]}>s3 or s3<{ut_seq[-1]})",
+            judging_source=f"ret=s0=={run_config.stage.gray_io_off_stage_case_value} "
+            f"or s1=={run_config.stage.gray_io_off_stage_case_value} "
+            f"or {lt_seq[0]}>s2 "
+            f"or {lt_seq[-1]}>s3",
             return_type=bool,
             return_raw=False,
             function_name="std_edge_front_breaker",
@@ -103,6 +103,7 @@ class Breakers:
     @staticmethod
     @lru_cache(maxsize=None)
     def make_std_turn_to_front_breaker(app_config: APPConfig, run_config: RunConfig):
+        activate = run_config.surrounding.io_encounter_object_value
         return menta.construct_inlined_function(
             usages=[
                 SamplerUsage(
@@ -119,7 +120,7 @@ class Breakers:
                     ],
                 ),
             ],
-            judging_source=f"ret=bool(s0 or s1 or s2>{run_config.surrounding.front_adc_lower_threshold})",
+            judging_source=f"ret=bool(s0=={activate} or s1=={activate} or s2>{run_config.surrounding.front_adc_lower_threshold})",
             return_type=bool,
             return_raw=False,
             function_name="std_turn_to_front_breaker",
@@ -128,6 +129,9 @@ class Breakers:
     @staticmethod
     @lru_cache(maxsize=None)
     def make_std_atk_breaker(app_config: APPConfig, run_config: RunConfig):
+        off_stage_activate = run_config.stage.gray_io_off_stage_case_value
+        surr_obj_activate = run_config.surrounding.io_encounter_object_value
+
         return menta.construct_inlined_function(
             usages=[
                 SamplerUsage(
@@ -144,8 +148,8 @@ class Breakers:
                     required_data_indexes=[app_config.sensor.front_adc_index],  # s4
                 ),
             ],
-            judging_source=f"ret=not s0 or not s1  "  # use gray scaler, indicating the edge is encountered
-            f"or not any( (s2 , s3 , s4>{run_config.surrounding.atk_break_front_lower_threshold}))",
+            judging_source=f"ret=bool(s0=={off_stage_activate} or s1=={off_stage_activate}  "  # use gray scaler, indicating the edge is encountered
+            f"or all( (s2!={surr_obj_activate} , s3!={surr_obj_activate} , s4<{run_config.surrounding.atk_break_front_lower_threshold})))",
             # indicating front is empty
             return_type=bool,
             return_raw=False,
@@ -155,6 +159,8 @@ class Breakers:
     @staticmethod
     @lru_cache(maxsize=None)
     def make_std_stage_align_breaker(app_config: APPConfig, run_config: RunConfig):
+        activate = run_config.fence.io_encounter_fence_value
+
         return menta.construct_inlined_function(
             usages=[
                 SamplerUsage(
@@ -167,7 +173,7 @@ class Breakers:
                     ],
                 ),
             ],
-            judging_source=f"ret=bool(s0 or s1 and not s2 and not s3)",
+            judging_source=f"ret=bool((s0=={activate} or s1=={activate}) and s2!={activate} and s3!={activate})",
             return_type=bool,
             return_raw=False,
             function_name="stage_align_breaker",
@@ -180,6 +186,7 @@ class Breakers:
             run_config.fence.max_yaw_tolerance,
             90 - run_config.fence.max_yaw_tolerance,
         )
+        activate = run_config.fence.io_encounter_fence_value
         return menta.construct_inlined_function(
             usages=[
                 SamplerUsage(
@@ -196,7 +203,7 @@ class Breakers:
                     ],
                 ),
             ],
-            judging_source=f"ret=bool(not ({invalid_lower_bound}<abs(s0)//90<{invalid_upper_bound}) and (s1 or s2))",
+            judging_source=f"ret=bool(not ({invalid_lower_bound}<abs(s0)//90<{invalid_upper_bound}) and (s1=={activate} or s2=={activate}))",
             return_type=bool,
             return_raw=False,
             function_name="stage_align_breaker_mpu",
@@ -222,7 +229,7 @@ class Breakers:
                     ],
                 ),
             ],
-            judging_source=f"ret={StageWeight.REBOOT}*(s0=={app_config.sensor.io_activating_value})"
+            judging_source=f"ret={StageWeight.REBOOT}*(s0=={run_config.boot.button_io_activate_case_value})"
             f"+{StageWeight.STAGE}*(s1<{run_config.perf.gray_adc_lower_threshold})",
             return_type=int,
             return_raw=False,
@@ -235,9 +242,10 @@ class Breakers:
         from kazu.constant import FenceWeights
 
         conf = run_config.fence
+        activate = conf.io_encounter_fence_value
         source = [
-            f"ret={FenceWeights.Front}*(s0>{conf.front_adc_lower_threshold} or s4 == {conf.io_activated_value} or s5 == {conf.io_activated_value})"
-            f"+{FenceWeights.Rear}*(s1>{conf.rear_adc_lower_threshold} or s6 == {conf.io_activated_value} or s7 == {conf.io_activated_value})"
+            f"ret={FenceWeights.Front}*(s0>{conf.front_adc_lower_threshold} or s4 == {activate} or s5 == {activate})"
+            f"+{FenceWeights.Rear}*(s1>{conf.rear_adc_lower_threshold} or s6 == {activate} or s7 == {activate})"
             f"+{FenceWeights.Left}*(s2>{conf.left_adc_lower_threshold})"
             f"+{FenceWeights.Rear}*(s3>{conf.right_adc_lower_threshold})"
         ]
@@ -304,8 +312,8 @@ class Breakers:
             f"rear=pack[{app_config.sensor.rb_adc_index}]",
             f"left=pack[{app_config.sensor.left_adc_index}]",
             f"right=pack[{app_config.sensor.right_adc_index}]",
-            f"ret={ScanWeights.Front}*(s0-front>{conf.front_max_tolerance} or s4 == {conf.io_activated_value} or s5 == {conf.io_activated_value})"
-            f"+{ScanWeights.Rear}*(s1-rear>{conf.rear_max_tolerance} or s6 == {conf.io_activated_value} or s7 == {conf.io_activated_value})"
+            f"ret={ScanWeights.Front}*(s0-front>{conf.front_max_tolerance} or s4 == {conf.io_encounter_object_value} or s5 == {conf.io_encounter_object_value})"
+            f"+{ScanWeights.Rear}*(s1-rear>{conf.rear_max_tolerance} or s6 == {conf.io_encounter_object_value} or s7 == {conf.io_encounter_object_value})"
             f"+{ScanWeights.Left}*(s2-left>{conf.left_max_tolerance})"
             f"+{ScanWeights.Rear}*(s3-right>{conf.right_max_tolerance})",
         ]
@@ -363,7 +371,7 @@ class Breakers:
                 ),
             ],
             judging_source=f"ret={StageWeight.STAGE}*(s0<{conf.gray_adc_upper_threshold})"
-            f"+{StageWeight.REBOOT}*(s1=={app_config.sensor.io_activating_value})",
+            f"+{StageWeight.REBOOT}*(s1=={run_config.boot.button_io_activate_case_value})",
             return_type=int,
             return_raw=False,
             function_name="std_stage_breaker",
@@ -390,7 +398,7 @@ class Breakers:
             ],
             judging_source=[  # true ret is reserved to emulate the performance consumption
                 f"true_ret={StageWeight.STAGE}*(s0<{conf.gray_adc_upper_threshold})"
-                f"+{StageWeight.REBOOT}*(s1=={app_config.sensor.io_activating_value})",
+                f"+{StageWeight.REBOOT}*(s1=={run_config.boot.button_io_activate_case_value})",
                 "ret=0",
             ],
             return_type=int,
@@ -420,7 +428,7 @@ class Breakers:
             judging_source=[
                 "temp_data=s0",
                 f"ret={StageWeight.STAGE}*(True)"
-                f"+{StageWeight.REBOOT}*(s1=={app_config.sensor.io_activating_value})",
+                f"+{StageWeight.REBOOT}*(s1=={run_config.boot.button_io_activate_case_value})",
             ],
             return_type=int,
             return_raw=False,
@@ -430,12 +438,13 @@ class Breakers:
     @staticmethod
     def make_cam_surr_breaker(app_config: APPConfig, run_config: RunConfig, tag_group: TagGroup):
         query_table = make_query_table(tag_group)
+        activate: int = run_config.surrounding.io_encounter_object_value
         source = [
             (
-                f"ret=q_tb.get((tag_d.tag_id, bool(s0 or s1 or s4>{run_config.surrounding.front_adc_lower_threshold})))"
+                f"ret=q_tb.get((tag_d.tag_id, bool(s0=={activate} or s1=={activate} or s4>{run_config.surrounding.front_adc_lower_threshold})))"
                 f"+(s5>{run_config.surrounding.left_adc_lower_threshold})*{SurroundingWeights.LEFT_OBJECT}"
                 f"+(s6>{run_config.surrounding.right_adc_lower_threshold})*{SurroundingWeights.RIGHT_OBJECT}"
-                f"+s2 or s3 or s7>{run_config.surrounding.right_adc_lower_threshold}*{SurroundingWeights.BEHIND_OBJECT}"
+                f"+s2=={activate} or s3=={activate} or s7>{run_config.surrounding.right_adc_lower_threshold}*{SurroundingWeights.BEHIND_OBJECT}"
             )
         ]
         ctx = {"tag_d": tag_detector, "q_tb": query_table}
@@ -475,12 +484,13 @@ class Breakers:
     @staticmethod
     def make_nocam_surr_breaker(app_config: APPConfig, run_config: RunConfig, tag_group: TagGroup):
         query_table = make_query_table(tag_group)
+        activate = run_config.surrounding.io_encounter_object_value
         source = [
             (
-                f"ret=q_tb.get(({tag_group.default_tag}, bool(s0 or s1 or s4>{run_config.surrounding.front_adc_lower_threshold})))"
+                f"ret=q_tb.get(({tag_group.default_tag}, bool(s0=={activate} or s1=={activate} or s4>{run_config.surrounding.front_adc_lower_threshold})))"
                 f"+(s5>{run_config.surrounding.left_adc_lower_threshold})*{SurroundingWeights.LEFT_OBJECT}"
                 f"+(s6>{run_config.surrounding.right_adc_lower_threshold})*{SurroundingWeights.RIGHT_OBJECT}"
-                f"+s2 or s3 or s7>{run_config.surrounding.right_adc_lower_threshold}*{SurroundingWeights.BEHIND_OBJECT}"
+                f"+s2=={activate} or s3=={activate} or s7>{run_config.surrounding.right_adc_lower_threshold}*{SurroundingWeights.BEHIND_OBJECT}"
             )
         ]
         ctx = {"q_tb": query_table}
