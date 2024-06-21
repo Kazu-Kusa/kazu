@@ -864,8 +864,8 @@ def breaker_test(
     from kazu.hardwares import sensors, controller
     from kazu.config import ContextVar
 
-    controller.context.update(ContextVar.export_context())
     sensors.adc_io_open().MPU6500_Open()
+    controller.context.update({ContextVar.recorded_pack.name: sensors.adc_all_channels()})
     run_config = load_run_config(run_config_path)
     config_pack = conf.app_config, run_config
 

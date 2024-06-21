@@ -1,19 +1,5 @@
 from typing import Callable, List, Tuple, Optional, TypeVar
 
-from kazu.config import APPConfig, RunConfig, ContextVar, TagGroup
-from kazu.constant import (
-    EdgeCodeSign,
-    SurroundingCodeSign,
-    FenceCodeSign,
-    ScanCodesign,
-    SearchCodesign,
-    StageCodeSign,
-)
-from kazu.hardwares import controller, tag_detector, menta, SamplerIndexes
-from kazu.judgers import Breakers
-from kazu.logger import _logger
-from kazu.signal_light import sig_light_registry, set_all_black
-from kazu.static import continues_state
 from mentabotix import (
     MovingChainComposer,
     CaseRegistry,
@@ -24,6 +10,21 @@ from mentabotix import (
     make_weighted_selector,
 )
 from pyuptech import Color
+
+from kazu.config import APPConfig, RunConfig, ContextVar, TagGroup
+from kazu.constant import (
+    EdgeCodeSign,
+    SurroundingCodeSign,
+    FenceCodeSign,
+    ScanCodesign,
+    SearchCodesign,
+    StageCodeSign,
+)
+from kazu.hardwares import controller, tag_detector, menta, SamplerIndexes, sensors
+from kazu.judgers import Breakers
+from kazu.logger import _logger
+from kazu.signal_light import sig_light_registry, set_all_black
+from kazu.static import continues_state
 
 botix = Botix(controller=controller)
 
@@ -776,6 +777,11 @@ def make_scan_handler(
 
     scan_state = MovingState.rand_dir_turn(controller, conf.scan_speed, conf.scan_turn_left_prob)
     scan_state.after_exiting.append(sig_light_registry.register_singles("Scan|Start Scanning", Color.RED, Color.GREEN))
+    scan_state.before_entering.append(
+        controller.register_context_executor(
+            sensors.adc_all_channels, output_keys=ContextVar.recorded_pack.name, function_name="update_recorded_pack"
+        )
+    )
     if app_config.logger.log_level == "DEBUG":
 
         def _log_state():
