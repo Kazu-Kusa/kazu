@@ -861,9 +861,8 @@ def breaker_test(
     from kazu.judgers import Breakers
     from kazu.constant import EdgeCodeSign, SurroundingCodeSign, ScanCodesign, FenceCodeSign
     from terminaltables import SingleTable
-    from kazu.hardwares import sensors
-    from config import ContextVar
-    from hardwares import controller
+    from kazu.hardwares import sensors, controller
+    from kazu.config import ContextVar
 
     controller.context.update(ContextVar.export_context())
     sensors.adc_io_open().MPU6500_Open()
