@@ -10,6 +10,7 @@ from kazu.compile import (
 )
 from kazu.config import APPConfig, RunConfig, make_tag_group
 from kazu.hardwares import tag_detector
+from kazu.signal_light import sig_light_registry
 
 
 def assembly_AFG_schema(app_config: APPConfig, run_config: RunConfig) -> List[MovingTransition]:
@@ -100,7 +101,8 @@ def assembly_FGS_schema(
     # Generates standard battle handling routines, potentially utilizing the created tag group
     stage_pack = make_std_battle_handler(app_config, run_config, tag_group=tag_group)
     # Generates reboot handling routines
-    states, boot_transition_pack = make_reboot_handler(app_config, run_config)
+    with sig_light_registry:
+        states, boot_transition_pack = make_reboot_handler(app_config, run_config)
     if app_config.vision.use_camera:
         states[0].before_entering.extend([tag_detector.halt_detection, tag_detector.apriltag_detect_start])
     # Returns the last moving transition effect for both reboot and standard battle scenes
