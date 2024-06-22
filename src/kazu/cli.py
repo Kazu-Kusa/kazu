@@ -68,6 +68,7 @@ def main(ctx: click.Context, app_config_path: Path, log_level: str):
 
 @main.command("config")
 @click.pass_obj
+@click.pass_context
 @click.help_option("-h", "--help")
 @click.option(
     "-r",
@@ -87,6 +88,7 @@ def main(ctx: click.Context, app_config_path: Path, log_level: str):
 )
 @click.argument("kv", type=(str, str), required=False, default=None)
 def configure(
+    ctx: click.Context,
     config: _InternalConfig,
     kv: Optional[Tuple[str, str]],
     **_,
@@ -110,6 +112,7 @@ def configure(
     finally:
         with open(config.app_config_file_path, "w") as fp:
             APPConfig.dump_config(fp, app_config)
+        ctx.exit(0)
 
 
 @main.command("run")
@@ -344,13 +347,14 @@ def test(conf: _InternalConfig, device: str, **_):
 @main.command("read")
 @click.help_option("-h", "--help")
 @click.pass_obj
+@click.pass_context
 @click.argument(
     "device",
     type=click.Choice(["adc", "io", "mpu", "all"]),
     nargs=-1,
 )
 @click.option("-i", "interval", type=click.FLOAT, default=0.5, show_default=True)
-def read_sensors(conf: _InternalConfig, interval: float, device: str):
+def read_sensors(ctx: click.Context, conf: _InternalConfig, interval: float, device: str):
     """
     Read sensors data and print to terminal
     """
@@ -421,6 +425,7 @@ def read_sensors(conf: _InternalConfig, interval: float, device: str):
         _logger.info("Closing sensors...")
         sensors.adc_io_close()
         _logger.info("Exit reading successfully.")
+        ctx.exit(0)
 
 
 @main.command("viz")
@@ -710,6 +715,7 @@ def list_ports(conf: _InternalConfig, check: bool, timeout: float):
 @main.command("msg")
 @click.help_option("-h", "--help")
 @click.pass_obj
+@click.pass_context
 @click.option(
     "-p",
     "--port",
@@ -719,7 +725,7 @@ def list_ports(conf: _InternalConfig, check: bool, timeout: float):
     show_default=True,
     callback=set_port_callback,
 )
-def stream_send_msg(conf: _InternalConfig, **_):
+def stream_send_msg(ctx: click.Context, conf: _InternalConfig, **_):
     """
     Sending msg in streaming input mode.
     """
@@ -755,6 +761,7 @@ def stream_send_msg(conf: _InternalConfig, **_):
     con.serial_client.stop_read_thread()
 
     secho("Quit streaming", fg="green", bold=True)
+    ctx.exit(0)
 
 
 @main.command("light")
@@ -782,6 +789,7 @@ def control_display(channel: Tuple[int, int, int]):
 @main.command("tag")
 @click.help_option("-h", "--help")
 @click.pass_obj
+@click.pass_context
 @click.option(
     "-c",
     "--camera-id",
@@ -803,7 +811,7 @@ def control_display(channel: Tuple[int, int, int]):
 @click.option(
     "-i", "--interval", type=click.FLOAT, default=0.5, show_default=True, help="Set the interval of the tag detector"
 )
-def tag_test(conf: _InternalConfig, interval: float, **_):
+def tag_test(ctx: click.Context, conf: _InternalConfig, interval: float, **_):
     """
     Use tag detector to test tag ID detection.
     """
@@ -827,12 +835,14 @@ def tag_test(conf: _InternalConfig, interval: float, **_):
         _logger.info("Release camera...")
         detector.apriltag_detect_end()
         detector.release_camera()
-        _logger.info("Done")
+        _logger.info("Released")
+        ctx.exit(0)
 
 
 @main.command("breaker")
 @click.help_option("-h", "--help")
 @click.pass_obj
+@click.pass_context
 @click.option(
     "-r",
     "--run-config-path",
@@ -851,6 +861,7 @@ def tag_test(conf: _InternalConfig, interval: float, **_):
     help="Set the interval of the refresh frequency",
 )
 def breaker_test(
+    ctx: click.Context,
     conf: _InternalConfig,
     run_config_path: Path,
     interval: float,
@@ -904,9 +915,14 @@ def breaker_test(
             click.clear()
             secho(table.table, bold=True)
             sleep(interval)
+    except KeyboardInterrupt:
+        _logger.info("KeyboardInterrupt, exiting...")
+
     finally:
+        _logger.info("Releasing resources.")
         sensors.adc_io_close()
-        secho("Exit breaker test.")
+        _logger.info("Released")
+        ctx.exit(0)
 
 
 @main.command("bench")
