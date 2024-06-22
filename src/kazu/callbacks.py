@@ -1,10 +1,12 @@
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
 
 import click
 from click import secho, echo
+from colorama import Fore
 
 from kazu.config import APPConfig, RunConfig, _InternalConfig
+from kazu.constant import QUIT
 
 
 def export_default_app_config(ctx: click.Context, _, path: Path):
@@ -191,3 +193,63 @@ def bench_sleep_precision(ctx, _, enable: bool):
             f"Sleep Precision: Intended {intended_duration:.6f}s, Actual {actual_duration:.6f}s, Offset {precision_offset:.6f}s",
             fg=color,
         )
+
+
+def led_light_shell_callback(ctx: click.Context, _, shell):
+    if not shell:
+        return
+    from kazu.hardwares import screen, sensors
+    from pyuptech import Color
+
+    def _validate_cmd(cmd_string: str) -> Tuple[int, int, int] | None:
+        cmd_tokens = cmd_string.split()
+        length = len(cmd_tokens)
+        if length != 1 or length != 3:
+            secho(f"Accept only 1 or 3 tokens, got {length}!", fg="red")
+
+        def _conv(n: str):
+            n = int(n)
+            if n < 0:
+                n = 0
+            elif n > 255:
+                n = 255
+            return n
+
+        try:
+            numbers = list(map(_conv, cmd_tokens))
+        except ValueError:
+            secho(f"Bad token(s), not accept!", fg="red")
+            return None
+
+        channels = (numbers[0],) * 3 if length == 1 else tuple(numbers)
+        return channels
+
+    sensors.adc_io_open()
+    screen.open(2)
+
+    while 1:
+        cmd = click.prompt(
+            f"{Fore.GREEN}>> ",
+            type=click.STRING,
+            show_default=False,
+            show_choices=False,
+            prompt_suffix=f"{Fore.MAGENTA}",
+        )
+        if cmd != QUIT:
+            break
+        channel = _validate_cmd(cmd)
+        if channel is None:
+            continue
+
+        c = Color.new_color(*channel)
+        (
+            screen.set_led_0(c)
+            .set_led_1(c)
+            .set_back_color(c)
+            .print(f"R:{channel[0]}\nG:{channel[1]}\nB:{channel[2]}")
+            .refresh()
+        )
+    screen.close()
+    screen.set_all_leds_same(Color.BLACK)
+    sensors.adc_io_close()
+    ctx.exit(0)

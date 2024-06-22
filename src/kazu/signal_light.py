@@ -1,3 +1,4 @@
+from types import MappingProxyType
 from typing import TypeAlias, Callable, Dict, Tuple, Optional, Self
 
 from colorama import Fore
@@ -40,21 +41,26 @@ class SigLightRegistry(object):
                 A dictionary mapping color pairs to their respective purposes.
         """
         self._registry = init_registry or {}
+        self._mapping = MappingProxyType(self._registry)
 
     @staticmethod
-    def _make_key(color: Tuple[Color, Color]) -> Tuple[int, int]:
+    def make_key(color: Tuple[Color, Color]) -> Tuple[int, int]:
         return color[0].value, color[1].value
 
     @staticmethod
-    def _get_key_color_enum(key: Tuple[int, int]) -> Tuple[Color, Color]:
+    def get_key_color_enum(key: Tuple[int, int]) -> Tuple[Color, Color]:
         return Color(key[0]), Color(key[1])
 
     @staticmethod
-    def _get_key_color_name(key: Tuple[int, int]) -> Tuple[str, str]:
+    def get_key_color_name(key: Tuple[int, int]) -> Tuple[str, str]:
         return Color(key[0]).name, Color(key[1]).name
 
     @staticmethod
-    def _get_enum_color_name(color: Tuple[Color, Color]) -> Tuple[str, str]:
+    def get_key_color_name_colorful(key: Tuple[int, int]) -> Tuple[str, str]:
+        return colorful_int(Color(key[0]).name, key[0]), colorful_int(Color(key[1]).name, key[1])
+
+    @staticmethod
+    def get_enum_color_name(color: Tuple[Color, Color]) -> Tuple[str, str]:
 
         return color[0].name, color[1].name
 
@@ -74,13 +80,13 @@ class SigLightRegistry(object):
         """
         if color == (Color.BLACK, Color.BLACK):
             raise ValueError(f"All black color is reserved to init the led, you can not register it as signal")
-        if (key := self._make_key(color)) in self._registry:
+        if (key := self.make_key(color)) in self._registry:
             raise ValueError(
-                f"{self._get_enum_color_name(color)} is already registered with the purpose of <{self._registry.get(key)}>! Can not register it with <{purpose}>!"
+                f"{self.get_enum_color_name(color)} is already registered with the purpose of <{self._registry.get(key)}>! Can not register it with <{purpose}>!"
             )
         if tuple(reversed(key)) in self._registry:
             raise ValueError(
-                f"You can't register {(name:=self._get_enum_color_name(color))} with <{purpose}>! Because a mirrored version of {name} is already registered."
+                f"You can't register {(name:=self.get_enum_color_name(color))} with <{purpose}>! Because a mirrored version of {name} is already registered."
             )
         _logger.debug(f"Register SigLight{color} for <{purpose}>" f"\n{self.usage_table}")
         self._registry[key] = purpose
@@ -141,7 +147,7 @@ class SigLightRegistry(object):
 
         trunk = []
         for k, v in self._registry.items():
-            name = self._get_key_color_name(k)
+            name = self.get_key_color_name(k)
             trunk.append((f"{colorful_int(name[0],k[0])}, {colorful_int(name[1],k[1])}", v))
 
         data = [["Color", "Purpose"]] + trunk
@@ -150,6 +156,11 @@ class SigLightRegistry(object):
         table.inner_column_border = False
         table.inner_heading_row_border = True
         return f"{Fore.RESET}{table.table}"
+
+    @property
+    def mapping(self) -> MappingProxyType[int, str]:
+        """The mapping of the usage registry"""
+        return self._mapping
 
     def clear(self) -> Self:
         """Clear the registry"""
@@ -161,7 +172,7 @@ class SigLightRegistry(object):
         return self.clear()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.clear()
+        pass
 
 
 sig_light_registry = SigLightRegistry()
