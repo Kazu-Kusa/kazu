@@ -249,6 +249,6 @@ def led_light_shell_callback(ctx: click.Context, _, shell):
             .print(f"R:{channel[0]}\nG:{channel[1]}\nB:{channel[2]}")
             .refresh()
         )
-    screen.close().fill_screen(Color.BLACK).refresh().set_all_leds_same(Color.BLACK)
+    screen.fill_screen(Color.BLACK).refresh().close().set_all_leds_same(Color.BLACK)
     sensors.adc_io_close()
     ctx.exit(0)
