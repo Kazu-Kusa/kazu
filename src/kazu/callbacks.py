@@ -204,7 +204,7 @@ def led_light_shell_callback(ctx: click.Context, _, shell):
     def _validate_cmd(cmd_string: str) -> Tuple[int, int, int] | None:
         cmd_tokens = cmd_string.split()
         length = len(cmd_tokens)
-        if length != 1 or length != 3:
+        if length != 1 and length != 3:
             secho(f"Accept only 1 or 3 tokens, got {length}!", fg="red")
 
         def _conv(n: str):
@@ -242,14 +242,7 @@ def led_light_shell_callback(ctx: click.Context, _, shell):
             continue
 
         c = Color.new_color(*channel)
-        (
-            screen.set_led_0(c)
-            .set_led_1(c)
-            .set_back_color(c)
-            .print(f"R:{channel[0]}\nG:{channel[1]}\nB:{channel[2]}")
-            .refresh()
-        )
-    screen.close()
-    screen.set_all_leds_same(Color.BLACK)
+        (screen.set_all_leds_same(c).print(f"R:{channel[0]}\nG:{channel[1]}\nB:{channel[2]}").refresh())
+    screen.close().set_all_leds_same(Color.BLACK).refresh().set_all_leds_same(Color.BLACK)
     sensors.adc_io_close()
     ctx.exit(0)
