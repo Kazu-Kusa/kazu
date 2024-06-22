@@ -1,6 +1,6 @@
 from enum import Enum, auto
 from pathlib import Path
-from typing import Tuple, List, Self, Literal, TextIO, Optional, Any, Dict
+from typing import Tuple, List, Self, Literal, TextIO, Any, Dict
 
 from click import secho
 from colorama import Fore
@@ -403,7 +403,6 @@ class APPConfig(CounterHashable):
 class _InternalConfig(BaseModel):
     app_config: APPConfig = APPConfig()
     app_config_file_path: Path = Path(DEFAULT_APP_CONFIG_PATH)
-    run_config: Optional[RunConfig] = None
 
 
 def load_run_config(run_config_path: Path | None) -> RunConfig:

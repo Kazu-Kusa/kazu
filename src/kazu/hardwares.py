@@ -13,6 +13,7 @@ from kazu.logger import _logger
 
 controller = CloseLoopController()
 screen = Screen()
+
 tag_detector = TagDetector()
 sensors = OnBoardSensors()
 menta = Menta(

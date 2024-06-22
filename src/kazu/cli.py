@@ -20,6 +20,7 @@ from kazu.callbacks import (
     log_level_callback,
     set_res_multiplier_callback,
     bench_sleep_precision,
+    led_light_shell_callback,
 )
 from kazu.config import (
     DEFAULT_APP_CONFIG_PATH,
@@ -766,24 +767,33 @@ def stream_send_msg(ctx: click.Context, conf: _InternalConfig, **_):
 
 @main.command("light")
 @click.help_option("-h", "--help")
+@click.pass_obj
+@click.option("-s", "--shell", is_flag=True, default=False, callback=led_light_shell_callback)
+@click.option("-g", "--sig-lights", is_flag=True, default=False)
 @click.argument("channel", type=click.IntRange(0, 255), nargs=3, required=True)
-def control_display(channel: Tuple[int, int, int]):
+def control_display(conf: _InternalConfig, sig_lights: bool, **_):
     """
     Control LED display.
     """
-    from kazu.hardwares import screen, sensors
-    from pyuptech import Color
+    if sig_lights:
 
-    sensors.adc_io_open()
-    c = Color.new_color(*channel)
-    (
-        screen.set_led_0(c)
-        .set_led_1(c)
-        .open(2)
-        .set_back_color(c)
-        .print(f"R:{channel[0]}\nG:{channel[1]}\nB:{channel[2]}")
-        .refresh()
-    )
+        from kazu.compile import make_std_battle_handler
+        from kazu.config import RunConfig
+        from kazu.signal_light import sig_light_registry
+        from hardwares import screen, sensors
+
+        sensors.adc_io_open()
+        screen.open(2)
+        with sig_light_registry:
+            _ = make_std_battle_handler(conf.app_config, RunConfig())
+
+        for color, purpose in sig_light_registry.mapping.items():
+            screen.set_all_leds_same(color).print(purpose).refresh()
+
+            color_names = sig_light_registry.get_key_color_name_colorful(color)
+            out_string = f"<{color_names[0]}, {color_names[1]}>"
+
+            click.prompt(f"Current{out_string}, Press 'Enter' to show next.", prompt_suffix="")
 
 
 @main.command("tag")
