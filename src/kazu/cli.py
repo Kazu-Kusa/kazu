@@ -244,14 +244,13 @@ def run(conf: _InternalConfig, run_config_path: Path | None, mode: str, **_):
                 boot_func = botix.compile()
                 while 1:
                     boot_func()
-    except KeyboardInterrupt:
-        _logger.info("KAZU stopped by keyboard interrupt.")
     finally:
+        _logger.info("KAZU stopped by keyboard interrupt.")
         _logger.info(f"Releasing hardware resources...")
-        set_all_black()
-        sensors.adc_io_close()
-        tag_detector.release_camera()
         con.send_cmd(CMD.FULL_STOP).send_cmd(CMD.RESET).stop_msg_sending()
+        tag_detector.release_camera()
+        sensors.adc_io_close()
+        set_all_black()
         _logger.info(f"KAZU stopped.")
 
 
