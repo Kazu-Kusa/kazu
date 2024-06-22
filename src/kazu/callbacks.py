@@ -173,26 +173,43 @@ def bench_sleep_precision(ctx, _, enable: bool):
     Returns:
         None, but prints out the precision measurement if enabled.
     """
-    if enable:
-        import time
+    if not enable:
+        return
+    from time import perf_counter, sleep
+    from terminaltables import SingleTable
 
-        intended_duration = 1.0  # Example sleep duration in seconds
+    # Ensure termcolor is installed, if not, install it using pip: `pip install termcolor`
 
-        start_time = time.perf_counter()
-        time.sleep(intended_duration)
-        end_time = time.perf_counter()
+    # Define the range of intervals and the step
+    start_interval = 0.001  # 1 ms
+    end_interval = 1.0  # 1 second
+    step_interval = 0.050  # 50 ms
+    data_trunk = []
+    with click.progressbar(
+        [i * step_interval for i in range(int((end_interval - start_interval) / step_interval) + 1)],
+        show_percent=True,
+        show_eta=True,
+        label="Measuring precision",
+        color=True,
+        fill_char=f"{Fore.GREEN}█{Fore.RESET}",
+        empty_char=f"{Fore.LIGHTWHITE_EX}█{Fore.RESET}",
+    ) as bar:
+        for intended_duration in bar:
+            start_time = perf_counter()
+            sleep(intended_duration)
+            end_time = perf_counter()
 
-        actual_duration = end_time - start_time
-        precision_offset = actual_duration - intended_duration
+            actual_duration = end_time - start_time
+            precision_offset = actual_duration - intended_duration
 
-        # Determine color based on precision
-        color = "green" if abs(precision_offset) < 0.001 else "red"
-
-        # Using secho to print the result with color
-        secho(
-            f"Sleep Precision: Intended {intended_duration:.6f}s, Actual {actual_duration:.6f}s, Offset {precision_offset:.6f}s",
-            fg=color,
-        )
+            data_trunk.append(
+                [f"{intended_duration*1000:.3f}", f"{actual_duration*1000:.3f}", f"{precision_offset*1000:.3f}"]
+            )
+    data = [["Intended", "Actual", "Offset"]] + data_trunk
+    table = SingleTable(data)
+    table.inner_column_border = False
+    table.inner_heading_row_border = True
+    secho(f"{table.table}", bold=True)
 
 
 def led_light_shell_callback(ctx: click.Context, _, shell):
