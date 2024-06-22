@@ -106,12 +106,11 @@ class SigLightRegistry(object):
         """
         self._register((color, color), purpose)
         value = color.value
+        func_name = f"set_all_leds_{color.name}"
+        source = f"def {func_name}()->None:\n    set_all({value})"
 
-        def _setter():
-            """Sets all lights to the specified color value."""
-            set_all(value)
-
-        return _setter
+        exec(source, {}, ctx := {"set_all": set_all})
+        return ctx.get(func_name)
 
     def register_singles(self, purpose: str, color_0: Color, color_1: Color) -> ColorSetter:
         """
@@ -129,12 +128,11 @@ class SigLightRegistry(object):
         self._register((color_0, color_1), purpose)
         value_0 = color_0.value
         value_1 = color_1.value
+        func_name = f"set_leds_{color_0.name}_{color_1.name}"
+        source = f"def {func_name}()->None:\n    set_all_single({value_0}, {value_1})"
 
-        def _setter():
-            """Sets lights to the specified individual color values."""
-            set_all_single(value_0, value_1)
-
-        return _setter
+        exec(source, {}, ctx := {"set_all_single": set_all_single})
+        return ctx.get(func_name)
 
     @property
     def usage_table(self) -> str:
