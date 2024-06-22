@@ -242,13 +242,15 @@ def run(conf: _InternalConfig, run_config_path: Path | None, mode: str, **_):
                 boot_func = botix.compile()
                 while 1:
                     boot_func()
-    finally:
+    except KeyboardInterrupt:
         _logger.info("KAZU stopped by keyboard interrupt.")
+    finally:
         _logger.info(f"Releasing hardware resources...")
         con.send_cmd(CMD.FULL_STOP).send_cmd(CMD.RESET).stop_msg_sending()
+        tag_detector.apriltag_detect_end()
         tag_detector.release_camera()
-        sensors.adc_io_close()
         set_all_black()
+        sensors.adc_io_close()
         _logger.info(f"KAZU stopped.")
 
 
@@ -473,7 +475,7 @@ def visualize(
     destination: Path,
     run_config: Optional[Path],
     render: bool,
-    packname: str = ("all",),
+    packname: Tuple[str, ...],
 ):
     """
     Visualize State-Transition Diagram of KAZU with PlantUML
@@ -495,6 +497,7 @@ def visualize(
     )
     from plantuml import PlantUML
 
+    packname = packname or ("all",)
     puml_d = PlantUML(url="http://www.plantuml.com/plantuml/svg/")
 
     destination.mkdir(parents=True, exist_ok=True)
