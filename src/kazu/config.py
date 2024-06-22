@@ -52,20 +52,20 @@ class EdgeConfig(BaseModel):
     lower_threshold: List[float] = [1400, 1500, 1500, 1400]
     upper_threshold: List[float] = [2100, 2200, 2200, 2100]
 
-    fallback_speed: int = 4000
-    fallback_duration: float = 0.3
+    fallback_speed: int = 2700
+    fallback_duration: float = 0.5
 
-    advance_speed: int = 4000
-    advance_duration: float = 0.3
+    advance_speed: int = 2700
+    advance_duration: float = 0.5
 
     turn_speed: int = 5000
     full_turn_duration: float = 0.45
     half_turn_duration: float = 0.225
 
-    turn_left_prob: float = 0.225
+    turn_left_prob: float = 0.5
 
     drift_speed: int = 6000
-    drift_duration: float = 0.3
+    drift_duration: float = 0.18
 
 
 class SurroundingConfig(BaseModel):
@@ -91,7 +91,7 @@ class SurroundingConfig(BaseModel):
     fallback_duration_edge: float = 0.2
 
     turn_speed: int = 5000
-    turn_left_prob: float = 0.225
+    turn_left_prob: float = 0.5
 
     rand_turn_speeds: List[int] = [3000, 5000]
     rand_turn_speed_weights: List[float] = [1, 3]
@@ -110,22 +110,22 @@ class GradientConfig(BaseModel):
 
 class ScanConfig(BaseModel):
 
-    front_max_tolerance: int = 300
-    rear_max_tolerance: int = 300
-    left_max_tolerance: int = 300
-    right_max_tolerance: int = 300
+    front_max_tolerance: int = 600
+    rear_max_tolerance: int = 700
+    left_max_tolerance: int = 600
+    right_max_tolerance: int = 600
 
     io_encounter_object_value: int = 0
 
-    scan_speed: int = 1200
-    scan_duration: float = 5.0
-    scan_turn_left_prob: float = 0.225
+    scan_speed: int = 500
+    scan_duration: float = 3.5
+    scan_turn_left_prob: float = 0.5
 
     fall_back_speed: int = 4000
     fall_back_duration: float = 0.5
 
     turn_speed: int = 5000
-    turn_left_prob: float = 0.225
+    turn_left_prob: float = 0.5
 
     full_turn_duration: float = 0.45
     half_turn_duration: float = 0.225
@@ -134,7 +134,7 @@ class ScanConfig(BaseModel):
 class RandTurn(BaseModel):
 
     turn_speed: int = 5000
-    turn_left_prob: float = 0.225
+    turn_left_prob: float = 0.5
     full_turn_duration: float = 0.45
     half_turn_duration: float = 0.225
 
@@ -142,7 +142,7 @@ class RandTurn(BaseModel):
 class SearchConfig(BaseModel):
 
     use_gradient_move: bool = True
-    gradient_move_weight: int = 1
+    gradient_move_weight: int = 4
     gradient_move: GradientConfig = GradientConfig()
 
     use_scan_move: bool = True
@@ -217,25 +217,25 @@ class BootConfig(BaseModel):
     right_threshold: int = 1100
 
     dash_speed: int = 6000
-    dash_duration: float = 0.3
+    dash_duration: float = 0.42
 
     turn_speed: int = 5000
     full_turn_duration: float = 0.45
-    turn_left_prob: float = 0.225
+    turn_left_prob: float = 0.5
 
 
 class BackStageConfig(BaseModel):
-    time_to_stabilize: float = 0.3
+    time_to_stabilize: float = 0.1
 
     small_advance_speed: int = 3000
-    small_advance_duration: float = 0.5
+    small_advance_duration: float = 0.3
 
-    dash_speed: int = 8000
-    dash_duration: float = 0.7
+    dash_speed: int = 6000
+    dash_duration: float = 0.42
 
     turn_speed: int = 5000
     full_turn_duration: float = 0.45
-    turn_left_prob: float = 0.225
+    turn_left_prob: float = 0.5
 
 
 class StageConfig(BaseModel):
@@ -359,8 +359,6 @@ class SensorConfig(BaseModel):
     rr_io_index: int = 5
 
     reboot_button_index: int = 7
-    ...
-    # TODO fill the configs that still remain
 
 
 class APPConfig(CounterHashable):
