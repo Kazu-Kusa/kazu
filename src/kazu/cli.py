@@ -780,19 +780,25 @@ def control_display(conf: _InternalConfig, sig_lights: bool, **_):
         from kazu.config import RunConfig
         from kazu.signal_light import sig_light_registry
         from kazu.hardwares import screen, sensors
+        from pyuptech import Color
 
         sensors.adc_io_open()
         screen.open(2)
         with sig_light_registry:
             _ = make_std_battle_handler(conf.app_config, RunConfig())
 
+        secho("Press 'Enter' to show next.", fg="yellow", bold=True)
         for color, purpose in sig_light_registry.mapping.items():
-            screen.set_all_leds_single(*color).print(purpose).refresh()
+            screen.fill_screen(Color.BLACK).print(purpose).refresh().set_all_leds_single(*color)
 
             color_names = sig_light_registry.get_key_color_name_colorful(color)
             out_string = f"<{color_names[0]}, {color_names[1]}>"
 
-            click.prompt(f"Current{out_string}, Press 'Enter' to show next.", prompt_suffix="")
+            click.prompt(f"{out_string}|{purpose} ", prompt_suffix="", default="next", show_default=False)
+
+        _logger.info("All displayed")
+        screen.fill_screen(Color.BLACK).refresh().close().set_all_leds_same(Color.BLACK)
+        sensors.adc_io_close()
 
 
 @main.command("tag")
