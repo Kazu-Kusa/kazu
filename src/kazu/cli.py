@@ -249,6 +249,8 @@ def run(ctx: click.Context, conf: _InternalConfig, run_config_path: Path | None,
                     boot_func()
     except KeyboardInterrupt:
         _logger.info("KAZU stopped by keyboard interrupt.")
+    except Exception as e:
+        _logger.critical(e)
     finally:
         _logger.info(f"Releasing hardware resources...")
         set_all_black()
