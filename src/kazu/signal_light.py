@@ -158,7 +158,7 @@ class SigLightRegistry(object):
         return f"{Fore.RESET}{table.table}"
 
     @property
-    def mapping(self) -> MappingProxyType[int, str]:
+    def mapping(self) -> MappingProxyType[Tuple[int, int], str]:
         """The mapping of the usage registry"""
         return self._mapping
 

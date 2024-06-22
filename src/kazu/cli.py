@@ -787,7 +787,7 @@ def control_display(conf: _InternalConfig, sig_lights: bool, **_):
             _ = make_std_battle_handler(conf.app_config, RunConfig())
 
         for color, purpose in sig_light_registry.mapping.items():
-            screen.set_all_leds_same(color).print(purpose).refresh()
+            screen.set_all_leds_single(*color).print(purpose).refresh()
 
             color_names = sig_light_registry.get_key_color_name_colorful(color)
             out_string = f"<{color_names[0]}, {color_names[1]}>"
