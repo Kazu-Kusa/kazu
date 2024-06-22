@@ -113,8 +113,8 @@ def configure(
 
 
 @main.command("run")
-@click.pass_context
 @click.pass_obj
+@click.pass_context
 @click.help_option("-h", "--help")
 @click.option(
     "-d",
