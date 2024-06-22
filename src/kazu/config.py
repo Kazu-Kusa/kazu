@@ -52,11 +52,11 @@ class EdgeConfig(BaseModel):
     lower_threshold: List[float] = [1400, 1500, 1500, 1400]
     upper_threshold: List[float] = [2100, 2200, 2200, 2100]
 
-    fallback_speed: int = 2700
-    fallback_duration: float = 0.5
+    fallback_speed: int = 2100
+    fallback_duration: float = 0.7
 
-    advance_speed: int = 2700
-    advance_duration: float = 0.5
+    advance_speed: int = 2100
+    advance_duration: float = 0.7
 
     turn_speed: int = 5000
     full_turn_duration: float = 0.45
@@ -103,26 +103,26 @@ class SurroundingConfig(BaseModel):
 class GradientConfig(BaseModel):
 
     max_speed: int = 3000
-    min_speed: int = 1400
+    min_speed: int = 500
     lower_bound: int = 2800
     upper_bound: int = 3700
 
 
 class ScanConfig(BaseModel):
 
-    front_max_tolerance: int = 600
-    rear_max_tolerance: int = 700
-    left_max_tolerance: int = 600
-    right_max_tolerance: int = 600
+    front_max_tolerance: int = 1000
+    rear_max_tolerance: int = 1300
+    left_max_tolerance: int = 1000
+    right_max_tolerance: int = 1000
 
     io_encounter_object_value: int = 0
 
-    scan_speed: int = 500
+    scan_speed: int = 300
     scan_duration: float = 3.5
     scan_turn_left_prob: float = 0.5
 
-    fall_back_speed: int = 4000
-    fall_back_duration: float = 0.5
+    fall_back_speed: int = 1500
+    fall_back_duration: float = 0.2
 
     turn_speed: int = 5000
     turn_left_prob: float = 0.5
@@ -142,7 +142,7 @@ class RandTurn(BaseModel):
 class SearchConfig(BaseModel):
 
     use_gradient_move: bool = True
-    gradient_move_weight: int = 4
+    gradient_move_weight: int = 8
     gradient_move: GradientConfig = GradientConfig()
 
     use_scan_move: bool = True
@@ -150,7 +150,7 @@ class SearchConfig(BaseModel):
     scan_move: ScanConfig = ScanConfig()
 
     use_rand_turn: bool = True
-    rand_turn_weight: int = 1
+    rand_turn_weight: int = 0.5
     rand_turn: RandTurn = RandTurn()
 
 
@@ -217,7 +217,7 @@ class BootConfig(BaseModel):
     right_threshold: int = 1100
 
     dash_speed: int = 6000
-    dash_duration: float = 0.42
+    dash_duration: float = 0.6
 
     turn_speed: int = 5000
     full_turn_duration: float = 0.45
@@ -231,7 +231,7 @@ class BackStageConfig(BaseModel):
     small_advance_duration: float = 0.3
 
     dash_speed: int = 6000
-    dash_duration: float = 0.42
+    dash_duration: float = 0.6
 
     turn_speed: int = 5000
     full_turn_duration: float = 0.45
