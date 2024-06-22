@@ -246,10 +246,10 @@ def run(conf: _InternalConfig, run_config_path: Path | None, mode: str, **_):
         _logger.info("KAZU stopped by keyboard interrupt.")
     finally:
         _logger.info(f"Releasing hardware resources...")
+        set_all_black()
         con.send_cmd(CMD.FULL_STOP).send_cmd(CMD.RESET).stop_msg_sending()
         tag_detector.apriltag_detect_end()
         tag_detector.release_camera()
-        set_all_black()
         sensors.adc_io_close()
         _logger.info(f"KAZU stopped.")
 
