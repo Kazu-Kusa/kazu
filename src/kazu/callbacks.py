@@ -206,6 +206,7 @@ def led_light_shell_callback(ctx: click.Context, _, shell):
         length = len(cmd_tokens)
         if length != 1 and length != 3:
             secho(f"Accept only 1 or 3 tokens, got {length}!", fg="red")
+            return None
 
         def _conv(n: str):
             n = int(n)
