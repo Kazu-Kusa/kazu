@@ -252,6 +252,7 @@ def run(conf: _InternalConfig, run_config_path: Path | None, mode: str, **_):
         tag_detector.release_camera()
         sensors.adc_io_close()
         _logger.info(f"KAZU stopped.")
+        return
 
 
 @main.command("check")
