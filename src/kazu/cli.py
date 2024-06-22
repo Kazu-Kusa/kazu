@@ -113,6 +113,7 @@ def configure(
 
 
 @main.command("run")
+@click.pass_context
 @click.pass_obj
 @click.help_option("-h", "--help")
 @click.option(
@@ -177,7 +178,7 @@ def configure(
     help=f"run mode, also can receive env {Env.KAZU_RUN_MODE}",
     envvar=Env.KAZU_RUN_MODE,
 )
-def run(conf: _InternalConfig, run_config_path: Path | None, mode: str, **_):
+def run(ctx: click.Context, conf: _InternalConfig, run_config_path: Path | None, mode: str, **_):
     """
     Run command for the main group.
     """
@@ -252,7 +253,7 @@ def run(conf: _InternalConfig, run_config_path: Path | None, mode: str, **_):
         tag_detector.release_camera()
         sensors.adc_io_close()
         _logger.info(f"KAZU stopped.")
-        return
+        ctx.exit(0)
 
 
 @main.command("check")
