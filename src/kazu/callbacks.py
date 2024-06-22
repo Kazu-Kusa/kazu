@@ -235,7 +235,7 @@ def led_light_shell_callback(ctx: click.Context, _, shell):
             show_choices=False,
             prompt_suffix=f"{Fore.MAGENTA}",
         )
-        if cmd != QUIT:
+        if cmd == QUIT:
             break
         channel = _validate_cmd(cmd)
         if channel is None:
