@@ -1,5 +1,4 @@
 from enum import Enum
-from functools import partial
 from pathlib import Path
 from time import sleep
 from typing import Callable, Optional, Tuple, List, Type
@@ -27,7 +26,6 @@ from kazu.config import (
     APPConfig,
     _InternalConfig,
     ContextVar,
-    TagGroup,
     load_run_config,
     load_app_config,
 )
@@ -504,19 +502,18 @@ def visualize(
     app_config = conf.app_config
     run_config = load_run_config(run_config)
 
-    tag_group = TagGroup(team_color=app_config.vision.team_color)
     handlers = {
         "edge": make_edge_handler,
         "boot": make_reboot_handler,
         "bkstage": make_back_to_stage_handler,
-        "surr": partial(make_surrounding_handler, tag_group=tag_group),
+        "surr": make_surrounding_handler,
         "scan": make_scan_handler,
         "search": make_search_handler,
         "fence": make_fence_handler,
         "rdwalk": make_rand_walk_handler,
-        "stdbat": partial(make_std_battle_handler, tag_group=tag_group),
-        "onstage": partial(make_always_on_stage_battle_handler, tag_group=tag_group),
-        "angbat": partial(make_always_on_stage_battle_handler, tag_group=tag_group),
+        "stdbat": make_std_battle_handler,
+        "onstage": make_always_on_stage_battle_handler,
+        "angbat": make_always_on_stage_battle_handler,
         "afgbat": make_always_off_stage_battle_handler,
     }
 
@@ -681,7 +678,7 @@ def list_ports(conf: _InternalConfig, check: bool, timeout: float):
     def is_port_open(port_to_check):
         """检查端口是否开放（未被占用）"""
         try:
-            with serial.Serial(port_to_check, timeout=timeout) as ser:
+            with serial.Serial(port_to_check, timeout=timeout):
                 return True, "Available."
         except (OSError, serial.SerialException):
             return False, "Not available or Busy."
@@ -881,15 +878,7 @@ def breaker_test(
 
     edge_breaker_display = _make_display_pack(Breakers.make_std_edge_full_breaker(*config_pack), EdgeCodeSign)
 
-    tag_group = TagGroup(team_color=conf.app_config.vision.team_color)
-
-    surr_breaker_maker = (
-        Breakers.make_cam_surr_breaker if conf.app_config.vision.use_camera else Breakers.make_nocam_surr_breaker
-    )
-
-    surr_breaker_display = _make_display_pack(
-        surr_breaker_maker(*config_pack, tag_group=tag_group), SurroundingCodeSign
-    )
+    surr_breaker_display = _make_display_pack(Breakers.make_surr_breaker(*config_pack), SurroundingCodeSign)
 
     scan_breaker_display = _make_display_pack(Breakers.make_std_scan_breaker(*config_pack), ScanCodesign)
 

@@ -426,7 +426,7 @@ class Breakers:
                 ),
             ],
             judging_source=[
-                "temp_data=s0",
+                "temp_data=s0",  # reserved to simulate the performance consumption
                 f"ret={StageWeight.STAGE}*(True)"
                 f"+{StageWeight.REBOOT}*(s1=={run_config.boot.button_io_activate_case_value})",
             ],
@@ -436,18 +436,26 @@ class Breakers:
         )
 
     @staticmethod
-    def make_cam_surr_breaker(app_config: APPConfig, run_config: RunConfig, tag_group: TagGroup):
+    def make_surr_breaker(app_config: APPConfig, run_config: RunConfig):
+        tag_group: TagGroup = TagGroup(team_color=app_config.vision.team_color)
         query_table = make_query_table(tag_group)
-        activate: int = run_config.surrounding.io_encounter_object_value
+        conf = run_config.surrounding
+        activate: int = conf.io_encounter_object_value
+        if app_config.vision.use_camera:
+            get_id_source: str = "tag_d.tag_id"
+            ctx = {"tag_d": tag_detector, "q_tb": query_table}
+        else:
+            get_id_source: str = f"{tag_group.default_tag}"
+            ctx = {"q_tb": query_table}
+
         source = [
             (
-                f"ret=q_tb.get((tag_d.tag_id, bool(s0=={activate} or s1=={activate} or s4>{run_config.surrounding.front_adc_lower_threshold})))"
-                f"+(s5>{run_config.surrounding.left_adc_lower_threshold})*{SurroundingWeights.LEFT_OBJECT}"
-                f"+(s6>{run_config.surrounding.right_adc_lower_threshold})*{SurroundingWeights.RIGHT_OBJECT}"
-                f"+s2=={activate} or s3=={activate} or s7>{run_config.surrounding.right_adc_lower_threshold}*{SurroundingWeights.BEHIND_OBJECT}"
+                f"ret=q_tb.get(({get_id_source}, bool(s0=={activate} or s1=={activate} or s4>{conf.front_adc_lower_threshold})))"
+                f"+(s5>{conf.left_adc_lower_threshold})*{SurroundingWeights.LEFT_OBJECT}"
+                f"+(s6>{conf.right_adc_lower_threshold})*{SurroundingWeights.RIGHT_OBJECT}"
+                f"+(s2=={activate} or s3=={activate} or s7>{conf.right_adc_lower_threshold})*{SurroundingWeights.BEHIND_OBJECT}"
             )
         ]
-        ctx = {"tag_d": tag_detector, "q_tb": query_table}
         if app_config.logger.log_level == "DEBUG":
             source.append('_logger.debug(f"Surrounding Code: {ret}")')
             ctx["_logger"] = _logger
@@ -478,51 +486,5 @@ class Breakers:
             extra_context=ctx,
             return_raw=False,
             function_name="surrounding_breaker_with_cam",
-        )
-        return surr_full_breaker
-
-    @staticmethod
-    def make_nocam_surr_breaker(app_config: APPConfig, run_config: RunConfig, tag_group: TagGroup):
-        query_table = make_query_table(tag_group)
-        activate = run_config.surrounding.io_encounter_object_value
-        source = [
-            (
-                f"ret=q_tb.get(({tag_group.default_tag}, bool(s0=={activate} or s1=={activate} or s4>{run_config.surrounding.front_adc_lower_threshold})))"
-                f"+(s5>{run_config.surrounding.left_adc_lower_threshold})*{SurroundingWeights.LEFT_OBJECT}"
-                f"+(s6>{run_config.surrounding.right_adc_lower_threshold})*{SurroundingWeights.RIGHT_OBJECT}"
-                f"+s2=={activate} or s3=={activate} or s7>{run_config.surrounding.right_adc_lower_threshold}*{SurroundingWeights.BEHIND_OBJECT}"
-            )
-        ]
-        ctx = {"q_tb": query_table}
-
-        if app_config.logger.log_level == "DEBUG":
-            source.append('_logger.debug(f"Surrounding Code: {ret}")')
-            ctx["_logger"] = _logger
-        surr_full_breaker = menta.construct_inlined_function(
-            usages=[
-                SamplerUsage(
-                    used_sampler_index=SamplerIndexes.io_all,
-                    required_data_indexes=[
-                        app_config.sensor.fl_io_index,  # s0
-                        app_config.sensor.fr_io_index,  # s1
-                        app_config.sensor.rl_io_index,  # s2
-                        app_config.sensor.rr_io_index,  # s3
-                    ],
-                ),
-                SamplerUsage(
-                    used_sampler_index=SamplerIndexes.adc_all,
-                    required_data_indexes=[
-                        app_config.sensor.front_adc_index,  # s4
-                        app_config.sensor.left_adc_index,  # s5
-                        app_config.sensor.right_adc_index,  # s6
-                        app_config.sensor.rb_adc_index,  # s7
-                    ],
-                ),
-            ],
-            judging_source=source,
-            return_type=int,
-            extra_context=ctx,
-            return_raw=False,
-            function_name="surrounding_breaker_without_cam",
         )
         return surr_full_breaker

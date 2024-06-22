@@ -2,7 +2,7 @@ from typing import Dict, Tuple
 
 from mentabotix import MovingState
 
-from kazu.config import ContextVar
+from kazu.config import ContextVar, TagGroup
 from kazu.constant import SurroundingWeights
 
 name = ContextVar.prev_salvo_speed.name
@@ -12,7 +12,7 @@ continues_state = MovingState(
 )
 
 
-def make_query_table(tag_group) -> Dict[Tuple[int, bool], int]:
+def make_query_table(tag_group: TagGroup) -> Dict[Tuple[int, bool], int]:
     """
 
 

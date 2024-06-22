@@ -11,7 +11,7 @@ from mentabotix import (
 )
 from pyuptech import Color
 
-from kazu.config import APPConfig, RunConfig, ContextVar, TagGroup
+from kazu.config import APPConfig, RunConfig, ContextVar
 from kazu.constant import (
     EdgeCodeSign,
     SurroundingCodeSign,
@@ -374,7 +374,6 @@ def make_edge_handler(
 def make_surrounding_handler(
     app_config: APPConfig,
     run_config: RunConfig,
-    tag_group: Optional[TagGroup] = None,
     start_state: MovingState = continues_state.clone(),
     normal_exit: MovingState = continues_state.clone(),
     abnormal_exit: MovingState = MovingState.halt(),
@@ -385,7 +384,6 @@ def make_surrounding_handler(
     Args:
         app_config: APPConfig, 应用配置对象，包含传感器和行为配置。
         run_config: RunConfig, 运行时配置对象，包含执行环境和策略细节。
-        tag_group: TagGroup, 标签组对象，用于识别不同物体标签，默认为None。
         start_state: MovingState, 开始状态，默认为None。
         normal_exit: MovingState, 正常退出状态，默认为None。
         abnormal_exit: MovingState, 异常退出状态，默认为None。
@@ -404,20 +402,7 @@ def make_surrounding_handler(
 
     # <editor-fold desc="Breakers">
 
-    if app_config.vision.use_camera:
-
-        surr_full_breaker = Breakers.make_cam_surr_breaker(
-            app_config,
-            run_config,
-            tag_group,
-        )
-
-    else:
-        surr_full_breaker = Breakers.make_nocam_surr_breaker(
-            app_config,
-            run_config,
-            tag_group,
-        )
+    surr_full_breaker = Breakers.make_surr_breaker(app_config, run_config)
 
     atk_breaker = Breakers.make_std_atk_breaker(app_config, run_config)
 
@@ -1357,7 +1342,6 @@ def make_rand_walk_handler(
 def make_std_battle_handler(
     app_config: APPConfig,
     run_config: RunConfig,
-    tag_group: Optional[TagGroup] = None,
 ) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
     """
     Generates a standard battle handler for a given app configuration, run configuration, and optional tag group.
@@ -1365,7 +1349,6 @@ def make_std_battle_handler(
     Args:
         app_config (APPConfig): The application configuration.
         run_config (RunConfig): The run configuration.
-        tag_group (Optional[TagGroup], optional): The tag group. Defaults to None.
 
     Returns:
         Tuple[MovingState, MovingState, List[MovingTransition]]: A tuple containing the start state, end state, and transition pool.
@@ -1382,7 +1365,9 @@ def make_std_battle_handler(
     [reboot_start_state, *_] = reboot_states_pack
     fence_start_state, _, fence_pack = make_fence_handler(app_config, run_config, stop_state=end_state)
     on_stage_start_state, _, stage_pack = make_on_stage_handler(
-        app_config, run_config, abnormal_exit=end_state, tag_group=tag_group
+        app_config,
+        run_config,
+        abnormal_exit=end_state,
     )
     if app_config.vision.use_camera:
         fence_start_state.before_entering.append(tag_detector.halt_detection)
@@ -1413,7 +1398,6 @@ def make_on_stage_handler(
     run_config: RunConfig,
     start_state: MovingState = continues_state.clone(),
     abnormal_exit: MovingState = MovingState.halt(),
-    tag_group: Optional[TagGroup] = None,
 ) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
     """
     创建一个舞台处理程序，用于管理机器人的移动状态和过渡。
@@ -1423,7 +1407,6 @@ def make_on_stage_handler(
         run_config: 运行配置对象，包含与运行时相关的配置信息。
         start_state: 移动状态的初始状态，默认为继续状态的克隆。
         abnormal_exit: 移动状态的异常退出状态，默认为停止状态。
-        tag_group: 标签组对象，用于指定特定的标签，可选。
 
     Returns:
         边缘处理状态；
@@ -1431,9 +1414,7 @@ def make_on_stage_handler(
         包含所有边缘、环绕和搜索处理状态转换的列表。
     """
     edge_pack = make_edge_handler(app_config, run_config, start_state=start_state, abnormal_exit=abnormal_exit)
-    surr_pack = make_surrounding_handler(
-        app_config, run_config, tag_group, start_state=edge_pack[1], abnormal_exit=abnormal_exit
-    )
+    surr_pack = make_surrounding_handler(app_config, run_config, start_state=edge_pack[1], abnormal_exit=abnormal_exit)
     if app_config.vision.use_camera:
         edge_pack[1].before_entering.append(tag_detector.resume_detection)
     search_pack = make_search_handler(app_config, run_config, start_state=surr_pack[1], stop_state=abnormal_exit)
@@ -1443,7 +1424,6 @@ def make_on_stage_handler(
 def make_always_on_stage_battle_handler(
     app_config: APPConfig,
     run_config: RunConfig,
-    tag_group: Optional[TagGroup] = None,
 ) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
     """
     Generates a handler for an always-on stage battle.
@@ -1451,7 +1431,6 @@ def make_always_on_stage_battle_handler(
     Args:
         app_config (APPConfig): The application configuration.
         run_config (RunConfig): The run configuration.
-        tag_group (Optional[TagGroup], optional): The tag group. Defaults to None.
 
     Returns:
         Tuple[MovingState, MovingState, List[MovingTransition]]: A tuple containing the start state, end state, and transition pool.
@@ -1461,9 +1440,7 @@ def make_always_on_stage_battle_handler(
 
     stage_breaker = Breakers.make_always_on_stage_breaker(app_config, run_config)
 
-    on_stage_start_state, _, stage_pack = make_on_stage_handler(
-        app_config, run_config, abnormal_exit=end_state, tag_group=tag_group
-    )
+    on_stage_start_state, _, stage_pack = make_on_stage_handler(app_config, run_config, abnormal_exit=end_state)
 
     transition_pool = stage_pack
 

@@ -1,9 +1,10 @@
 from typing import TypeAlias, Callable, Dict, Tuple, Optional, Self
 
 from colorama import Fore
-from kazu.hardwares import screen
 from pyuptech import Color
 from terminaltables import SingleTable
+
+from kazu.hardwares import screen
 
 set_all = screen.set_all_leds_same
 set_all_single = screen.set_all_leds_single
@@ -40,16 +41,20 @@ class SigLightRegistry(object):
         """
         self._registry = init_registry or {}
 
-    def _make_key(self, color: Tuple[Color, Color]) -> Tuple[int, int]:
+    @staticmethod
+    def _make_key(color: Tuple[Color, Color]) -> Tuple[int, int]:
         return color[0].value, color[1].value
 
-    def _get_key_color_enum(self, key: Tuple[int, int]) -> Tuple[Color, Color]:
+    @staticmethod
+    def _get_key_color_enum(key: Tuple[int, int]) -> Tuple[Color, Color]:
         return Color(key[0]), Color(key[1])
 
-    def _get_key_color_name(self, key: Tuple[int, int]) -> Tuple[str, str]:
+    @staticmethod
+    def _get_key_color_name(key: Tuple[int, int]) -> Tuple[str, str]:
         return Color(key[0]).name, Color(key[1]).name
 
-    def _get_enum_color_name(self, color: Tuple[Color, Color]) -> Tuple[str, str]:
+    @staticmethod
+    def _get_enum_color_name(color: Tuple[Color, Color]) -> Tuple[str, str]:
 
         return color[0].name, color[1].name
 

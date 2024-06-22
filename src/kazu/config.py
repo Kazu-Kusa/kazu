@@ -3,9 +3,12 @@ from pathlib import Path
 from typing import Tuple, List, Self, Literal, TextIO, Optional, Any, Dict
 
 from click import secho
+from colorama import Fore
 from pydantic import BaseModel
 from toml import load, dump
 from upic import TagDetector
+
+from kazu.logger import _logger
 
 DEFAULT_APP_CONFIG_PATH = f"{Path.home().as_posix()}/.kazu/config.toml"
 
@@ -42,6 +45,7 @@ class TagGroup(BaseModel):
                 self.allay_tag = 1
             case _:
                 raise ValueError(f"Invalid team_color, got {self.team_color}")
+        _logger.debug(f"{Fore.MAGENTA}Team color: {self.team_color}{Fore.RESET}")
 
 
 class EdgeConfig(BaseModel):
@@ -411,16 +415,6 @@ def load_run_config(run_config_path: Path | None) -> RunConfig:
         secho(f"Loading DEFAULT run config", fg="yellow", bold=True)
         run_config_path = RunConfig()
     return run_config_path
-
-
-def make_tag_group(app_config) -> TagGroup:
-    tag_group = TagGroup(team_color=app_config.vision.team_color)
-    secho(f"Team color: {tag_group.team_color}", fg=tag_group.team_color, bold=True)
-    secho(f"Enemy tag: {tag_group.enemy_tag}", fg="red", bold=True)
-    secho(f"Allay tag: {tag_group.allay_tag}", fg="green", bold=True)
-    secho(f"Neutral tag: {tag_group.neutral_tag}", fg="cyan", bold=True)
-
-    return tag_group
 
 
 def load_app_config(app_config_path) -> APPConfig:
