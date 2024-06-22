@@ -770,7 +770,6 @@ def stream_send_msg(ctx: click.Context, conf: _InternalConfig, **_):
 @click.pass_obj
 @click.option("-s", "--shell", is_flag=True, default=False, callback=led_light_shell_callback)
 @click.option("-g", "--sig-lights", is_flag=True, default=False)
-@click.argument("channel", type=click.IntRange(0, 255), nargs=3, required=True)
 def control_display(conf: _InternalConfig, sig_lights: bool, **_):
     """
     Control LED display.
@@ -780,7 +779,7 @@ def control_display(conf: _InternalConfig, sig_lights: bool, **_):
         from kazu.compile import make_std_battle_handler
         from kazu.config import RunConfig
         from kazu.signal_light import sig_light_registry
-        from hardwares import screen, sensors
+        from kazu.hardwares import screen, sensors
 
         sensors.adc_io_open()
         screen.open(2)
