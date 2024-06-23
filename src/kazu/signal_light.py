@@ -6,6 +6,7 @@ from pyuptech import Color
 from terminaltables import SingleTable
 
 from kazu.hardwares import screen
+from kazu.logger import _logger, colorful_int
 
 set_all = screen.set_all_leds_same
 set_all_single = screen.set_all_leds_single
@@ -13,7 +14,6 @@ set_0 = screen.set_led_0
 set_1 = screen.set_led_1
 
 ColorSetter: TypeAlias = Callable[[], None]
-from kazu.logger import _logger, colorful_int
 
 __black__ = Color.BLACK.value
 
@@ -109,7 +109,7 @@ class SigLightRegistry(object):
         func_name = f"set_all_leds_{color.name}"
         source = f"def {func_name}()->None:\n    set_all({value})"
 
-        exec(source, {}, ctx := {"set_all": set_all})
+        exec(source, ctx := {"set_all": set_all})
         return ctx.get(func_name)
 
     def register_singles(self, purpose: str, color_0: Color, color_1: Color) -> ColorSetter:
@@ -131,7 +131,7 @@ class SigLightRegistry(object):
         func_name = f"set_leds_{color_0.name}_{color_1.name}"
         source = f"def {func_name}()->None:\n    set_all_single({value_0}, {value_1})"
 
-        exec(source, {}, ctx := {"set_all_single": set_all_single})
+        exec(source, ctx := {"set_all_single": set_all_single})
         return ctx.get(func_name)
 
     @property

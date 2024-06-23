@@ -321,11 +321,12 @@ def bench_siglight_switch_freq(ctx: click.Context, _, enable):
         return
 
     from kazu.signal_light import sig_light_registry
-    from pyuptech import Color
     from time import perf_counter
-    from kazu.hardwares import sensors
+    from kazu.hardwares import sensors, screen
+    from pyuptech import Color
 
     sensors.adc_io_open()
+    screen.set_all_leds_same(Color.BLACK)
     setter_a = sig_light_registry.register_singles("bench", Color.RED, Color.GREEN)
     setter_b = sig_light_registry.register_singles("bench", Color.BLUE, Color.RED)
 
@@ -339,4 +340,6 @@ def bench_siglight_switch_freq(ctx: click.Context, _, enable):
 
     freq = counter / DURATION
     secho(f"Signal light switch freq: {freq}")
+    screen.set_all_leds_same(Color.BLACK)
+
     sensors.adc_io_close()
