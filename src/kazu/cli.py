@@ -1019,7 +1019,24 @@ def bench(**_):
     help=f"How many salvo to run.",
     type=click.INT,
 )
-def trace(conf: _InternalConfig, run_config_path: Path, output_path: Path, salvo, **_):
+@click.option(
+    "-d",
+    "--disable-view-profile",
+    is_flag=True,
+    default=False,
+    help=f"Disable view profile using vizviewer.",
+)
+@click.option(
+    "-p",
+    "--port",
+    type=click.INT,
+    help="Set the port of the render server",
+    default=2024,
+    show_default=True,
+)
+def trace(
+    conf: _InternalConfig, run_config_path: Path, output_path: Path, salvo, disable_view_profile: bool, port: int, **_
+):
     """
     Trace the std battle using viztracer
     """
@@ -1058,3 +1075,28 @@ def trace(conf: _InternalConfig, run_config_path: Path, output_path: Path, salvo
     con.send_cmd(CMD.RESET).stop_msg_sending()
     sensors.adc_io_close()
     traver.save(output_path.as_posix())
+
+    if not disable_view_profile:
+        from kazu.static import get_local_ip
+        from subprocess import run
+        from threading import Thread
+
+        local_ip = get_local_ip()
+        if local_ip is None:
+            secho("Cannot get local ip, vizviewer will not be opened", fg="red", bold=True)
+            return
+        url = f"http://{local_ip}:{port}"
+        from io import StringIO
+
+        def _server_thread():
+
+            run(["vizviewer", "--server_only", "--port", str(port)], stdout=StringIO())
+
+        server = Thread(target=_server_thread, daemon=True)
+        server.start()
+        secho(f"View profile at {url}", fg="green", bold=True)
+
+        while 1:
+            cmd = click.prompt(f"Enter '{QUIT}' to quit")
+            if cmd == QUIT:
+                break

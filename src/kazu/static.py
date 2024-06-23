@@ -1,3 +1,4 @@
+from socket import socket, AF_INET, SOCK_DGRAM
 from typing import Dict, Tuple
 
 from mentabotix import MovingState
@@ -33,3 +34,24 @@ def make_query_table(tag_group: TagGroup) -> Dict[Tuple[int, bool], int]:
         (tag_group.enemy_tag, False): SurroundingWeights.FRONT_ENEMY_BOX,
     }
     return query_table
+
+
+def get_local_ip() -> str | None:
+    """
+
+    Returns:
+        str|None : the local ip
+
+    """
+    s = socket(AF_INET, SOCK_DGRAM)
+    try:
+        # 尝试连接到一个有效的外部IP地址和端口，这里使用Google的DNS服务器
+        s.connect(("8.8.8.8", 80))
+        # 获取本地IP地址
+        local_ip = s.getsockname()[0]
+    except Exception as e:
+        print(e)
+        return None
+    finally:
+        s.close()
+    return local_ip
