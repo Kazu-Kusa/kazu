@@ -372,7 +372,7 @@ def read_sensors(ctx: click.Context, conf: _InternalConfig, interval: float, dev
     """
     Read sensors data and print to terminal
     """
-    from pyuptech import make_mpu_table, make_io_table, make_adc_table, adc_io_display_on_lcd
+    from pyuptech import make_mpu_table, make_io_table, make_adc_table, adc_io_display_on_lcd, Color
     from kazu.hardwares import sensors, screen
 
     app_config: APPConfig = conf.app_config
@@ -409,8 +409,8 @@ def read_sensors(ctx: click.Context, conf: _InternalConfig, interval: float, dev
         sensor_config.rl_io_index: "RL",
         sensor_config.rr_io_index: "RR",
         sensor_config.reboot_button_index: "REBOOT",
-        sensor_config.gray_io_left_index: "GRAY-LEFT",
-        sensor_config.gray_io_right_index: "GRAY-RIGHT",
+        sensor_config.gray_io_left_index: "GRAY-L",
+        sensor_config.gray_io_right_index: "GRAY-R",
     }
     for dev in device:
         match dev:
@@ -438,6 +438,8 @@ def read_sensors(ctx: click.Context, conf: _InternalConfig, interval: float, dev
     finally:
         _logger.info("Closing sensors...")
         sensors.adc_io_close()
+        if use_screen:
+            screen.fill_screen(Color.BLACK).refresh().close()
         _logger.info("Exit reading successfully.")
         ctx.exit(0)
 
