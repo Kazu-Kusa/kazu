@@ -1,10 +1,12 @@
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
 
 import click
 from click import secho, echo
+from colorama import Fore
 
 from kazu.config import APPConfig, RunConfig, _InternalConfig
+from kazu.constant import QUIT
 
 
 def export_default_app_config(ctx: click.Context, _, path: Path):
@@ -58,6 +60,17 @@ def disable_cam_callback(conf: _InternalConfig, ctx: click.Context, _, value: st
         conf.app_config.vision.use_camera = False
 
 
+@click.pass_obj
+def disable_siglight_callback(conf: _InternalConfig, ctx: click.Context, _, value: str):
+    """
+    Disable the siglight.
+    """
+    if value:
+
+        secho("Disable siglight", fg="red", bold=True)
+        conf.app_config.debug.use_siglight = False
+
+
 def _set_all_log_level(level: int | str):
     import pyuptech
     import bdmc
@@ -78,7 +91,7 @@ def log_level_callback(conf: _InternalConfig, ctx: click.Context, _, value: str)
     if value:
 
         secho(f"Change log level to {value}", fg="magenta", bold=True)
-        conf.app_config.logger.log_level = value
+        conf.app_config.debug.log_level = value
         _set_all_log_level(value)
 
 
@@ -156,3 +169,177 @@ def set_res_multiplier_callback(conf: _InternalConfig, ctx, _, multiplier: Optio
     if multiplier is not None:
         conf.app_config.vision.camera_device_id = multiplier
         secho(f"Set camera resolution multiplier to {multiplier}", fg="blue", bold=True)
+
+
+def bench_sleep_precision(ctx, _, enable: bool):
+    """
+    Measure the precision of the sleep function by comparing intended sleep duration
+    with the actual elapsed time using a high-resolution timer.
+
+    Args:
+        ctx: Context object, potentially used for additional configuration or logging.
+        _: Placeholder argument, typically not used.
+        enable: A boolean flag to control whether the benchmark should run.
+
+    Returns:
+        None, but prints out the precision measurement if enabled.
+    """
+    if not enable:
+        return
+    from time import perf_counter, sleep
+    from terminaltables import SingleTable
+
+    # Ensure termcolor is installed, if not, install it using pip: `pip install termcolor`
+
+    # Define the range of intervals and the step
+    start_interval = 0.001  # 1 ms
+    end_interval = 1.0  # 1 second
+    step_interval = 0.050  # 50 ms
+    data_trunk = []
+    with click.progressbar(
+        [i * step_interval for i in range(int((end_interval - start_interval) / step_interval) + 1)],
+        show_percent=True,
+        show_eta=True,
+        label="Measuring precision",
+        color=True,
+        fill_char=f"{Fore.GREEN}█{Fore.RESET}",
+        empty_char=f"{Fore.LIGHTWHITE_EX}█{Fore.RESET}",
+    ) as bar:
+        for intended_duration in bar:
+            start_time = perf_counter()
+            sleep(intended_duration)
+            end_time = perf_counter()
+
+            actual_duration = end_time - start_time
+            precision_offset = actual_duration - intended_duration
+
+            data_trunk.append(
+                [f"{intended_duration*1000:.3f}", f"{actual_duration*1000:.3f}", f"{precision_offset*1000:.3f}"]
+            )
+    data = [["Intended", "Actual", "Offset"]] + data_trunk
+    table = SingleTable(data)
+    table.inner_column_border = False
+    table.inner_heading_row_border = True
+    secho(f"{table.table}", bold=True)
+
+
+def led_light_shell_callback(ctx: click.Context, _, shell):
+    """
+    Callback function for the LED light shell.
+
+    Args:
+        ctx (click.Context): The click context.
+        _ (Any): Unused parameter.
+        shell (bool): Flag indicating whether the shell is enabled.
+
+    Returns:
+        None: If the shell is not enabled.
+
+    Raises:
+        None.
+
+    Description:
+        This function is a callback for the LED light shell. It initializes the necessary hardware
+        modules and enters a loop to prompt the user for commands. The valid commands are either a
+        single number or three numbers separated by spaces. The function validates the input and
+        sets the LED lights to the specified color. The loop continues until the user enters the
+        "QUIT" command.
+
+        The function also handles the cleanup of the hardware modules and exits the context.
+
+    """
+    if not shell:
+        return
+    from kazu.hardwares import screen, sensors
+    from pyuptech import Color
+
+    def _validate_cmd(cmd_string: str) -> Tuple[int, int, int] | None:
+        cmd_tokens = cmd_string.split()
+        length = len(cmd_tokens)
+        if length != 1 and length != 3:
+            secho(f"Accept only 1 or 3 tokens, got {length}!", fg="red")
+            return None
+
+        def _conv(n: str):
+            n = int(n)
+            if n < 0:
+                n = 0
+            elif n > 255:
+                n = 255
+            return n
+
+        try:
+            numbers = list(map(_conv, cmd_tokens))
+        except ValueError:
+            secho(f"Bad token(s), not accept!", fg="red")
+            return None
+
+        channels = (numbers[0],) * 3 if length == 1 else tuple(numbers)
+        return channels
+
+    sensors.adc_io_open()
+    screen.open(2)
+
+    while 1:
+        cmd = click.prompt(
+            f"{Fore.GREEN}>> ",
+            type=click.STRING,
+            show_default=False,
+            show_choices=False,
+            prompt_suffix=f"{Fore.MAGENTA}",
+        )
+        if cmd == QUIT:
+            break
+        channel = _validate_cmd(cmd)
+        if channel is None:
+            continue
+
+        c = Color.new_color(*channel)
+        (
+            screen.fill_screen(Color.BLACK)
+            .set_all_leds_same(c)
+            .print(f"R:{channel[0]}\nG:{channel[1]}\nB:{channel[2]}")
+            .refresh()
+        )
+    screen.fill_screen(Color.BLACK).refresh().close().set_all_leds_same(Color.BLACK)
+    sensors.adc_io_close()
+    ctx.exit(0)
+
+
+def bench_siglight_switch_freq(ctx: click.Context, _, enable):
+    """
+    Callback function for the bench_siglight_switch_freq shell. Will test to acquire the signal light switch freq per second
+    Args:
+        ctx:
+        _:
+        enable:
+
+    Returns:
+
+    """
+    if not enable:
+        return
+
+    from kazu.signal_light import sig_light_registry
+    from time import perf_counter
+    from kazu.hardwares import sensors, screen
+    from pyuptech import Color
+
+    sensors.adc_io_open()
+    screen.set_all_leds_same(Color.BLACK)
+    setter_a = sig_light_registry.register_singles("bench", Color.RED, Color.GREEN)
+    setter_b = sig_light_registry.register_singles("bench", Color.BLUE, Color.RED)
+
+    DURATION = 10
+    counter = 0
+    end_time = perf_counter() + DURATION
+    while perf_counter() < end_time:
+        setter_a()
+        setter_b()
+        counter += 1
+
+    freq = counter / DURATION
+    secho(f"Signal light switch freq: {freq}")
+    screen.set_all_leds_same(Color.BLACK)
+
+    sensors.adc_io_close()

@@ -1,4 +1,4 @@
-from typing import Callable, List, Tuple, Dict, Optional, TypeVar
+from typing import Callable, List, Tuple, Optional, TypeVar
 
 from mentabotix import (
     MovingChainComposer,
@@ -9,36 +9,21 @@ from mentabotix import (
     SamplerUsage,
     make_weighted_selector,
 )
+from pyuptech import Color
 
-from kazu.config import APPConfig, RunConfig, ContextVar, TagGroup
+from kazu.config import APPConfig, RunConfig, ContextVar
 from kazu.constant import (
     EdgeCodeSign,
-    SurroundingWeights,
     SurroundingCodeSign,
     FenceCodeSign,
     ScanCodesign,
     SearchCodesign,
     StageCodeSign,
 )
-from kazu.hardwares import controller, tag_detector, menta, SamplerIndexes
+from kazu.hardwares import controller, tag_detector, menta, SamplerIndexes, sensors
 from kazu.judgers import Breakers
-from kazu.signal_light import (
-    set_red_green,
-    set_blue_yellow,
-    set_all_black,
-    set_all_orange,
-    set_all_blue,
-    set_all_yellow,
-    set_all_red,
-    set_all_white,
-    set_all_green,
-    set_all_purple,
-    set_purple_red,
-    set_purple_yellow,
-    set_purple_white,
-    set_purple_green,
-    set_all_cyan,
-)
+from kazu.logger import _logger
+from kazu.signal_light import sig_light_registry, set_all_black
 from kazu.static import continues_state
 
 botix = Botix(controller=controller)
@@ -71,7 +56,12 @@ def make_edge_handler(
         abnormal_exit: 异常退出的移动状态。
         transitions_pool: 状态转换列表。
     """
+    if app_config.debug.log_level == "DEBUG":
 
+        def _log_state():
+            _logger.debug("Entering Edge State")
+
+        start_state.after_exiting.append(_log_state)
     # <editor-fold desc="Breakers">
     # 创建不同类型的边缘中断器（breaker），用于处理边缘检测逻辑
     # 边缘全中断器：用于实施分支逻辑
@@ -119,7 +109,11 @@ def make_edge_handler(
 
     # <editor-fold desc="Initialize Containers">
     transitions_pool: List[MovingTransition] = []
-    abnormal_exit.after_exiting.append(set_all_purple)
+    (
+        abnormal_exit.after_exiting.append(sig_light_registry.register_all("Edge|Abnormal Exit", Color.PURPLE))
+        if app_config.debug.use_siglight
+        else None
+    )
     (case_reg := CaseRegistry(EdgeCodeSign)).register(EdgeCodeSign.O_O_O_O, normal_exit)
     # </editor-fold>
 
@@ -384,7 +378,6 @@ def make_edge_handler(
 def make_surrounding_handler(
     app_config: APPConfig,
     run_config: RunConfig,
-    tag_group: Optional[TagGroup] = None,
     start_state: MovingState = continues_state.clone(),
     normal_exit: MovingState = continues_state.clone(),
     abnormal_exit: MovingState = MovingState.halt(),
@@ -395,7 +388,6 @@ def make_surrounding_handler(
     Args:
         app_config: APPConfig, 应用配置对象，包含传感器和行为配置。
         run_config: RunConfig, 运行时配置对象，包含执行环境和策略细节。
-        tag_group: TagGroup, 标签组对象，用于识别不同物体标签，默认为None。
         start_state: MovingState, 开始状态，默认为None。
         normal_exit: MovingState, 正常退出状态，默认为None。
         abnormal_exit: MovingState, 异常退出状态，默认为None。
@@ -405,87 +397,23 @@ def make_surrounding_handler(
       一个四元组，包含开始状态、正常退出状态、异常退出状态和一系列可能的状态转换。
     """
 
+    if app_config.debug.log_level == "DEBUG":
+
+        def _log_state():
+            _logger.debug("Entering Surr State")
+
+        start_state.after_exiting.append(_log_state)
+
+    surr_conf = run_config.surrounding
     # <editor-fold desc="Breakers">
-    query_table: Dict[Tuple[int, bool], int] = {
-        (tag_group.default_tag, True): SurroundingWeights.FRONT_ENEMY_CAR,
-        (tag_group.default_tag, False): SurroundingWeights.NOTHING,
-        (tag_group.allay_tag, True): SurroundingWeights.FRONT_ALLY_BOX,
-        (tag_group.allay_tag, False): SurroundingWeights.FRONT_ALLY_BOX,
-        (tag_group.neutral_tag, True): SurroundingWeights.FRONT_NEUTRAL_BOX,
-        (tag_group.neutral_tag, False): SurroundingWeights.NOTHING,
-        (tag_group.enemy_tag, True): SurroundingWeights.FRONT_ENEMY_BOX,
-        (tag_group.enemy_tag, False): SurroundingWeights.FRONT_ENEMY_BOX,
-    }
-    if app_config.vision.use_camera:
 
-        surr_full_breaker = menta.construct_inlined_function(
-            usages=[
-                SamplerUsage(
-                    used_sampler_index=SamplerIndexes.io_all,
-                    required_data_indexes=[
-                        app_config.sensor.fl_io_index,  # s0
-                        app_config.sensor.fr_io_index,  # s1
-                        app_config.sensor.rl_io_index,  # s2
-                        app_config.sensor.rr_io_index,  # s3
-                    ],
-                ),
-                SamplerUsage(
-                    used_sampler_index=SamplerIndexes.adc_all,
-                    required_data_indexes=[
-                        app_config.sensor.front_adc_index,  # s4
-                        app_config.sensor.left_adc_index,  # s5
-                        app_config.sensor.right_adc_index,  # s6
-                        app_config.sensor.rb_adc_index,  # s7
-                    ],
-                ),
-            ],
-            judging_source=(
-                f"ret=q_tb.get((tag_d.tag_id, bool(s0 or s1 or s4>{run_config.surrounding.front_adc_lower_threshold})))"
-                f"+(s5>{run_config.surrounding.left_adc_lower_threshold})*{SurroundingWeights.LEFT_OBJECT}"
-                f"+(s6>{run_config.surrounding.right_adc_lower_threshold})*{SurroundingWeights.RIGHT_OBJECT}"
-                f"+s2 or s3 or s7>{run_config.surrounding.right_adc_lower_threshold}*{SurroundingWeights.BEHIND_OBJECT}"
-            ),
-            return_type=int,
-            extra_context={"tag_d": tag_detector, "q_tb": query_table},
-            return_raw=False,
-            function_name="surrounding_breaker_with_cam",
-        )
+    surr_full_breaker = Breakers.make_surr_breaker(app_config, run_config)
 
-    else:
-        surr_full_breaker = menta.construct_inlined_function(
-            usages=[
-                SamplerUsage(
-                    used_sampler_index=SamplerIndexes.io_all,
-                    required_data_indexes=[
-                        app_config.sensor.fl_io_index,  # s0
-                        app_config.sensor.fr_io_index,  # s1
-                        app_config.sensor.rl_io_index,  # s2
-                        app_config.sensor.rr_io_index,  # s3
-                    ],
-                ),
-                SamplerUsage(
-                    used_sampler_index=SamplerIndexes.adc_all,
-                    required_data_indexes=[
-                        app_config.sensor.front_adc_index,  # s4
-                        app_config.sensor.left_adc_index,  # s5
-                        app_config.sensor.right_adc_index,  # s6
-                        app_config.sensor.rb_adc_index,  # s7
-                    ],
-                ),
-            ],
-            judging_source=(
-                f"ret=q_tb.get(({tag_group.default_tag}, bool(s0 or s1 or s4>{run_config.surrounding.front_adc_lower_threshold})))"
-                f"+(s5>{run_config.surrounding.left_adc_lower_threshold})*{SurroundingWeights.LEFT_OBJECT}"
-                f"+(s6>{run_config.surrounding.right_adc_lower_threshold})*{SurroundingWeights.RIGHT_OBJECT}"
-                f"+s2 or s3 or s7>{run_config.surrounding.right_adc_lower_threshold}*{SurroundingWeights.BEHIND_OBJECT}"
-            ),
-            return_type=int,
-            extra_context={"q_tb": query_table},
-            return_raw=False,
-            function_name="surrounding_breaker_without_cam",
-        )
-
-    atk_breaker = Breakers.make_std_atk_breaker(app_config, run_config)
+    atk_breaker = (
+        Breakers.make_atk_breaker_with_edge_sensors(app_config, run_config)
+        if surr_conf.atk_break_use_edge_sensors
+        else Breakers.make_std_atk_breaker(app_config, run_config)
+    )
 
     edge_rear_breaker = Breakers.make_std_edge_rear_breaker(app_config, run_config)
 
@@ -494,46 +422,54 @@ def make_surrounding_handler(
 
     # <editor-fold desc="Templates">
 
-    atk_enemy_car_state = MovingState.straight(run_config.surrounding.atk_speed_enemy_car)
-    atk_enemy_car_state.after_exiting.append(set_purple_red)
-    atk_enemy_box_state = MovingState.straight(run_config.surrounding.atk_speed_enemy_box)
-    atk_enemy_box_state.after_exiting.append(set_purple_yellow)
-    atk_neutral_box_state = MovingState.straight(run_config.surrounding.atk_speed_neutral_box)
-    atk_neutral_box_state.after_exiting.append(set_purple_white)
-    allay_fallback_state = MovingState.straight(-run_config.surrounding.fallback_speed_ally_box)
-    allay_fallback_state.after_exiting.append(set_purple_green)
-    edge_fallback_state = MovingState.straight(-run_config.surrounding.fallback_speed_edge)
-    edge_fallback_state.after_exiting.append(set_all_cyan)
-    atk_enemy_car_transition = MovingTransition(run_config.surrounding.atk_speed_enemy_car, breaker=atk_breaker)
-    atk_enemy_box_transition = MovingTransition(run_config.surrounding.atk_speed_enemy_box, breaker=atk_breaker)
-    atk_neutral_box_transition = MovingTransition(run_config.surrounding.atk_neutral_box_duration, breaker=atk_breaker)
-    allay_fallback_transition = MovingTransition(
-        run_config.surrounding.fallback_duration_ally_box, breaker=edge_rear_breaker
-    )
-    edge_fallback_transition = MovingTransition(
-        run_config.surrounding.fallback_duration_edge, breaker=edge_rear_breaker
-    )
+    atk_enemy_car_state = MovingState.straight(surr_conf.atk_speed_enemy_car)
+    atk_enemy_box_state = MovingState.straight(surr_conf.atk_speed_enemy_box)
+    atk_neutral_box_state = MovingState.straight(surr_conf.atk_speed_neutral_box)
+    allay_fallback_state = MovingState.straight(-surr_conf.fallback_speed_ally_box)
+    edge_fallback_state = MovingState.straight(-surr_conf.fallback_speed_edge)
+    if app_config.debug.use_siglight:
+        atk_enemy_car_state.after_exiting.append(
+            sig_light_registry.register_singles("Surr|Attack enemy car", Color.PURPLE, Color.RED)
+        )
+        atk_enemy_box_state.after_exiting.append(
+            sig_light_registry.register_singles("Surr|Attack enemy box", Color.PURPLE, Color.YELLOW)
+        )
+
+        atk_neutral_box_state.after_exiting.append(
+            sig_light_registry.register_singles("Surr|Attack neutral box", Color.PURPLE, Color.WHITE)
+        )
+
+        allay_fallback_state.after_exiting.append(
+            sig_light_registry.register_singles("Surr|Ally fallback", Color.PURPLE, Color.GREEN)
+        )
+
+        edge_fallback_state.after_exiting.append(sig_light_registry.register_all("Surr|Edge fallback", Color.CYAN))
+    atk_enemy_car_transition = MovingTransition(surr_conf.atk_speed_enemy_car, breaker=atk_breaker)
+    atk_enemy_box_transition = MovingTransition(surr_conf.atk_speed_enemy_box, breaker=atk_breaker)
+    atk_neutral_box_transition = MovingTransition(surr_conf.atk_neutral_box_duration, breaker=atk_breaker)
+    allay_fallback_transition = MovingTransition(surr_conf.fallback_duration_ally_box, breaker=edge_rear_breaker)
+    edge_fallback_transition = MovingTransition(surr_conf.fallback_duration_edge, breaker=edge_rear_breaker)
 
     rand_turn_state = MovingState.rand_dir_turn(
-        controller, run_config.surrounding.turn_speed, turn_left_prob=run_config.surrounding.turn_left_prob
+        controller, surr_conf.turn_speed, turn_left_prob=surr_conf.turn_left_prob
     )
-    left_turn_state = MovingState.turn("l", run_config.surrounding.turn_speed)
-    right_turn_state = MovingState.turn("r", run_config.surrounding.turn_speed)
+    left_turn_state = MovingState.turn("l", surr_conf.turn_speed)
+    right_turn_state = MovingState.turn("r", surr_conf.turn_speed)
     rand_spd_turn_left_state = MovingState.rand_spd_turn(
         controller,
         "l",
-        run_config.surrounding.rand_turn_speeds,
-        weights=run_config.surrounding.rand_turn_speed_weights,
+        surr_conf.rand_turn_speeds,
+        weights=surr_conf.rand_turn_speed_weights,
     )
     rand_spd_turn_right_state = MovingState.rand_spd_turn(
         controller,
         "r",
-        run_config.surrounding.rand_turn_speeds,
-        weights=run_config.surrounding.rand_turn_speed_weights,
+        surr_conf.rand_turn_speeds,
+        weights=surr_conf.rand_turn_speed_weights,
     )
 
-    full_turn_transition = MovingTransition(run_config.surrounding.full_turn_duration, breaker=turn_to_front_breaker)
-    half_turn_transition = MovingTransition(run_config.surrounding.half_turn_duration, breaker=turn_to_front_breaker)
+    full_turn_transition = MovingTransition(surr_conf.full_turn_duration, breaker=turn_to_front_breaker)
+    half_turn_transition = MovingTransition(surr_conf.half_turn_duration, breaker=turn_to_front_breaker)
     # </editor-fold>
 
     # <editor-fold desc="Init Container">
@@ -830,7 +766,25 @@ def make_scan_handler(
     case_reg = CaseRegistry(to_cover=ScanCodesign)
 
     scan_state = MovingState.rand_dir_turn(controller, conf.scan_speed, conf.scan_turn_left_prob)
-    scan_state.after_exiting.append(set_red_green)
+    (
+        scan_state.after_exiting.append(
+            sig_light_registry.register_singles("Scan|Start Scanning", Color.RED, Color.GREEN)
+        )
+        if app_config.debug.use_siglight
+        else None
+    )
+    scan_state.before_entering.append(
+        controller.register_context_executor(
+            sensors.adc_all_channels, output_keys=ContextVar.recorded_pack.name, function_name="update_recorded_pack"
+        )
+    )
+    if app_config.debug.log_level == "DEBUG":
+
+        def _log_state():
+            _logger.debug("Entering Scan State")
+
+        scan_state.after_exiting.append(_log_state)
+
     rand_turn_state = MovingState.rand_dir_turn(controller, conf.turn_speed, conf.turn_left_prob)
 
     turn_left_state = MovingState.turn("l", conf.turn_speed)
@@ -842,7 +796,11 @@ def make_scan_handler(
     fall_back_state = MovingState.straight(-conf.fall_back_speed)
     fall_back_transition = MovingTransition(conf.fall_back_duration, breaker=rear_edge_breaker)
 
-    end_state.after_exiting.append(set_all_red)
+    (
+        end_state.after_exiting.append(sig_light_registry.register_all("Scan|End Scanning", Color.RED))
+        if app_config.debug.use_siglight
+        else None
+    )
     transitions_pool: List[MovingTransition] = []
     # ---------------------------------------------------------------------
     [head_state, *_], transitions = composer.init_container().add(end_state).export_structure()
@@ -962,7 +920,11 @@ def make_rand_turn_handler(
     conf = run_config.search.rand_turn
 
     rand_lr_turn_state = MovingState.rand_dir_turn(controller, conf.turn_speed, turn_left_prob=conf.turn_left_prob)
-    rand_lr_turn_state.after_exiting.append(set_all_yellow)
+    (
+        rand_lr_turn_state.after_exiting.append(sig_light_registry.register_all("Rturn|Start Rturn", Color.YELLOW))
+        if app_config.debug.use_siglight
+        else None
+    )
     half_turn_transition = MovingTransition(conf.half_turn_duration)
 
     states, transitions = composer.add(rand_lr_turn_state).add(half_turn_transition).add(end_state).export_structure()
@@ -1018,7 +980,11 @@ def make_gradient_move(app_config: APPConfig, run_config: RunConfig, is_salvo_en
         speed_expressions=ContextVar.gradient_speed.name,
         used_context_variables=[ContextVar.gradient_speed.name],
         before_entering=updaters,
-        after_exiting=[set_all_blue],
+        after_exiting=(
+            [sig_light_registry.register_all("GMove|Start gradient move", Color.BLUE)]
+            if app_config.debug.use_siglight
+            else []
+        ),
     )
 
 
@@ -1075,7 +1041,7 @@ def make_search_handler(
 def make_fence_handler(
     app_config: APPConfig,
     run_config: RunConfig,
-    start_state: Optional[MovingState] = None,
+    start_state: MovingState = continues_state.clone(),
     stop_state: MovingState = MovingState.halt(),
 ) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
     """
@@ -1090,18 +1056,22 @@ def make_fence_handler(
     Returns:
         Tuple[MovingState, MovingState, List[MovingTransition]]: A tuple containing the start state, stop state, and list of transitions.
     """
+    if app_config.debug.log_level == "DEBUG":
+
+        def _log_state():
+            _logger.debug("Entering Fence State")
+
+        start_state.after_exiting.append(_log_state)
     fence_breaker = Breakers.make_std_fence_breaker(app_config, run_config)
 
     align_stage_breaker = Breakers.make_stage_align_breaker_mpu(app_config, run_config)
 
-    back_stage_pack = make_back_to_stage_handler(run_config, stop_state)
-    rand_move_pack = make_rand_walk_handler(run_config, stop_state)
+    back_stage_pack = make_back_to_stage_handler(app_config, run_config, stop_state)
+    rand_move_pack = make_rand_walk_handler(app_config, run_config, stop_state)
 
     align_direction_pack = make_align_direction_handler(app_config, run_config, rand_move_pack[0][0])
 
     conf = run_config.fence
-
-    start_state = start_state or continues_state.clone()
 
     rear_exit_corner_state = MovingState.straight(-conf.exit_corner_speed)
     front_exit_corner_state = MovingState.straight(conf.exit_corner_speed)
@@ -1183,7 +1153,11 @@ def make_fence_handler(
     case_reg.batch_register([FenceCodeSign.O_O_O_O, FenceCodeSign.X_X_X_X], head_state)
     # ---------------------------------------------------------------------
 
-    start_state.after_exiting.append(set_all_orange)
+    (
+        start_state.after_exiting.append(sig_light_registry.register_all("Fence|Starting Fence finding", Color.ORANGE))
+        if app_config.debug.use_siglight
+        else None
+    )
     # <editor-fold desc="Assembly">
     _, head_trans = (
         composer.init_container()
@@ -1243,12 +1217,13 @@ def make_align_direction_handler(
 
 
 def make_back_to_stage_handler(
-    run_config: RunConfig, end_state: Optional[MovingState] = MovingState.halt(), **_
+    app_config: APPConfig, run_config: RunConfig, end_state: Optional[MovingState] = MovingState.halt(), **_
 ) -> Tuple[List[MovingState], List[MovingTransition]]:
     """
     Creates a state machine handler for moving back to the stage.
 
     Args:
+        app_config (APPConfig): The configuration object for the application.
         run_config (RunConfig): Runtime configuration object with parameters for movement actions.
         end_state (Optional[MovingState], optional): The final state of the state machine. Defaults to MovingState.halt().
 
@@ -1259,7 +1234,11 @@ def make_back_to_stage_handler(
     small_advance_transition = MovingTransition(run_config.backstage.small_advance_duration)
     stab_trans = MovingTransition(run_config.backstage.time_to_stabilize)
     # waiting for a booting signal, and dash on to the stage once received
-    small_advance.after_exiting.append(set_all_green)
+    (
+        small_advance.after_exiting.append(sig_light_registry.register_all("BStage|Small move", Color.GREEN))
+        if app_config.debug.use_siglight
+        else None
+    )
     states, transitions = (
         composer.init_container()
         .add(small_advance)
@@ -1314,9 +1293,27 @@ def make_reboot_handler(
     # waiting for a booting signal, and dash on to the stage once received
     states, transitions = (
         composer.init_container()
-        .add(MovingState(0, before_entering=[set_red_green]))
+        .add(
+            MovingState(
+                0,
+                before_entering=(
+                    [sig_light_registry.register_singles("Reboot|Start rebooting", Color.G_RED, Color.R_GREEN)]
+                    if app_config.debug.use_siglight
+                    else []
+                ),
+            )
+        )
         .add(holding_transition)
-        .add(MovingState(-run_config.boot.dash_speed, after_exiting=[set_blue_yellow]))
+        .add(
+            MovingState(
+                -run_config.boot.dash_speed,
+                after_exiting=(
+                    [sig_light_registry.register_singles("Reboot|In rebooting", Color.DARKBLUE, Color.DARKGREEN)]
+                    if app_config.debug.use_siglight
+                    else []
+                ),
+            )
+        )
         .add(MovingTransition(run_config.boot.dash_duration))
         .add(MovingState.halt())
         .add(MovingTransition(run_config.boot.time_to_stabilize))
@@ -1334,12 +1331,13 @@ def make_reboot_handler(
 
 
 def make_rand_walk_handler(
-    run_config: RunConfig, end_state: MovingState = MovingState.halt(), **_
+    app_config: APPConfig, run_config: RunConfig, end_state: MovingState = MovingState.halt(), **_
 ) -> Tuple[List[MovingState], List[MovingTransition]]:
     """
     Generates a random walk handler for the given run configuration and end state.
 
     Args:
+        app_config (APPConfig): The application configuration containing the sensor details.
         run_config (RunConfig): The run configuration containing the fence settings.
         end_state (MovingState, optional): The end state to transition to after the random walk. Defaults to MovingState.halt().
         **_: Additional keyword arguments.
@@ -1372,7 +1370,12 @@ def make_rand_walk_handler(
             weights.append(w * conf.straight_weight)
 
     rand_move_state = MovingState.rand_move(controller, moves_seq, weights)
-    rand_move_state.after_exiting.append(set_all_white)
+    (
+        rand_move_state.after_exiting.append(sig_light_registry.register_all("Rwalk|Start rand walking", Color.WHITE))
+        if app_config.debug.use_siglight
+        else None
+    )
+
     move_transition = MovingTransition(conf.walk_duration)
     return composer.init_container().add(rand_move_state).add(move_transition).add(end_state).export_structure()
 
@@ -1380,7 +1383,6 @@ def make_rand_walk_handler(
 def make_std_battle_handler(
     app_config: APPConfig,
     run_config: RunConfig,
-    tag_group: Optional[TagGroup] = None,
 ) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
     """
     Generates a standard battle handler for a given app configuration, run configuration, and optional tag group.
@@ -1388,7 +1390,6 @@ def make_std_battle_handler(
     Args:
         app_config (APPConfig): The application configuration.
         run_config (RunConfig): The run configuration.
-        tag_group (Optional[TagGroup], optional): The tag group. Defaults to None.
 
     Returns:
         Tuple[MovingState, MovingState, List[MovingTransition]]: A tuple containing the start state, end state, and transition pool.
@@ -1401,22 +1402,27 @@ def make_std_battle_handler(
 
     stage_breaker = Breakers.make_std_stage_breaker(app_config, run_config)
 
-    reboot_pack = make_reboot_handler(app_config, run_config, end_state=end_state)
-    fence_pack = make_fence_handler(app_config, run_config, stop_state=end_state)
+    reboot_states_pack, reboot_transitions_pack = make_reboot_handler(app_config, run_config, end_state=end_state)
+    [reboot_start_state, *_] = reboot_states_pack
+    fence_start_state, _, fence_pack = make_fence_handler(app_config, run_config, stop_state=end_state)
     on_stage_start_state, _, stage_pack = make_on_stage_handler(
-        app_config, run_config, abnormal_exit=end_state, tag_group=tag_group
+        app_config,
+        run_config,
+        abnormal_exit=end_state,
     )
-
+    if app_config.vision.use_camera:
+        fence_start_state.before_entering.append(tag_detector.halt_detection)
+        reboot_start_state.after_exiting.append(tag_detector.halt_detection)
     case_reg = CaseRegistry(StageCodeSign)
-    transition_pool = [*reboot_pack[-1], *fence_pack[-1], *stage_pack]
+    transition_pool = [*reboot_transitions_pack, *fence_pack, *stage_pack]
 
     (
         case_reg.batch_register(
             [StageCodeSign.ON_STAGE_REBOOT, StageCodeSign.OFF_STAGE_REBOOT],
-            reboot_pack[0][0],
+            reboot_start_state,
         )
         .register(StageCodeSign.ON_STAGE, on_stage_start_state)
-        .register(StageCodeSign.OFF_STAGE, fence_pack[0])
+        .register(StageCodeSign.OFF_STAGE, fence_start_state)
     )
 
     check_trans = MovingTransition(
@@ -1433,7 +1439,6 @@ def make_on_stage_handler(
     run_config: RunConfig,
     start_state: MovingState = continues_state.clone(),
     abnormal_exit: MovingState = MovingState.halt(),
-    tag_group: Optional[TagGroup] = None,
 ) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
     """
     创建一个舞台处理程序，用于管理机器人的移动状态和过渡。
@@ -1443,7 +1448,6 @@ def make_on_stage_handler(
         run_config: 运行配置对象，包含与运行时相关的配置信息。
         start_state: 移动状态的初始状态，默认为继续状态的克隆。
         abnormal_exit: 移动状态的异常退出状态，默认为停止状态。
-        tag_group: 标签组对象，用于指定特定的标签，可选。
 
     Returns:
         边缘处理状态；
@@ -1451,9 +1455,9 @@ def make_on_stage_handler(
         包含所有边缘、环绕和搜索处理状态转换的列表。
     """
     edge_pack = make_edge_handler(app_config, run_config, start_state=start_state, abnormal_exit=abnormal_exit)
-    surr_pack = make_surrounding_handler(
-        app_config, run_config, tag_group, start_state=edge_pack[1], abnormal_exit=abnormal_exit
-    )
+    surr_pack = make_surrounding_handler(app_config, run_config, start_state=edge_pack[1], abnormal_exit=abnormal_exit)
+    if app_config.vision.use_camera:
+        edge_pack[1].before_entering.append(tag_detector.resume_detection)
     search_pack = make_search_handler(app_config, run_config, start_state=surr_pack[1], stop_state=abnormal_exit)
     return edge_pack[0], abnormal_exit, [*edge_pack[-1], *surr_pack[-1], *search_pack[-1]]
 
@@ -1461,7 +1465,6 @@ def make_on_stage_handler(
 def make_always_on_stage_battle_handler(
     app_config: APPConfig,
     run_config: RunConfig,
-    tag_group: Optional[TagGroup] = None,
 ) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
     """
     Generates a handler for an always-on stage battle.
@@ -1469,7 +1472,6 @@ def make_always_on_stage_battle_handler(
     Args:
         app_config (APPConfig): The application configuration.
         run_config (RunConfig): The run configuration.
-        tag_group (Optional[TagGroup], optional): The tag group. Defaults to None.
 
     Returns:
         Tuple[MovingState, MovingState, List[MovingTransition]]: A tuple containing the start state, end state, and transition pool.
@@ -1479,9 +1481,7 @@ def make_always_on_stage_battle_handler(
 
     stage_breaker = Breakers.make_always_on_stage_breaker(app_config, run_config)
 
-    on_stage_start_state, _, stage_pack = make_on_stage_handler(
-        app_config, run_config, abnormal_exit=end_state, tag_group=tag_group
-    )
+    on_stage_start_state, _, stage_pack = make_on_stage_handler(app_config, run_config, abnormal_exit=end_state)
 
     transition_pool = stage_pack
 

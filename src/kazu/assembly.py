@@ -8,7 +8,9 @@ from kazu.compile import (
     make_always_on_stage_battle_handler,
     make_always_off_stage_battle_handler,
 )
-from kazu.config import APPConfig, RunConfig, make_tag_group
+from kazu.config import APPConfig, RunConfig
+from kazu.hardwares import tag_detector
+from kazu.signal_light import sig_light_registry
 
 
 def assembly_AFG_schema(app_config: APPConfig, run_config: RunConfig) -> List[MovingTransition]:
@@ -37,14 +39,8 @@ def assembly_ANG_schema(app_config: APPConfig, run_config: RunConfig) -> List[Mo
     Returns:
         A list of MovingTransitions for managing stage effects in the ANG battle schema.
     """
-    # Determines whether to create a tag group based on if the camera is in use per app configuration
-    if app_config.vision.use_camera:
-        tag_group = make_tag_group(app_config)
-    else:
-        tag_group = None
-
     # Constructs the always-on-stage battle handler and returns the last MovingTransition
-    return make_always_on_stage_battle_handler(app_config, run_config, tag_group=tag_group)[-1]
+    return make_always_on_stage_battle_handler(app_config, run_config)[-1]
 
 
 def assembly_NGS_schema(app_config: APPConfig, run_config: RunConfig) -> List[MovingTransition]:
@@ -59,15 +55,10 @@ def assembly_NGS_schema(app_config: APPConfig, run_config: RunConfig) -> List[Mo
     Returns:
         A list of MovingTransitions representing the assembled workflow stages and transitions.
     """
-    # Determines whether to create a tag group based on if the camera is in use in the app config
-    if app_config.vision.use_camera:
-        tag_group = make_tag_group(app_config)
-    else:
-        tag_group = None
 
     # Creates a package of standard battle handling stages using the app and run configurations,
     # potentially including the tag group
-    stage_pack = make_std_battle_handler(app_config, run_config, tag_group=tag_group)
+    stage_pack = make_std_battle_handler(app_config, run_config)
 
     # Returns the last element of the stage pack, which is the final stage and transition
     return stage_pack[-1]
@@ -90,19 +81,19 @@ def assembly_FGS_schema(
         Tuple[List[MovingTransition], List[MovingTransition]]: A tuple containing two lists.
       The first list represents moving transitions for the reboot scene, and the second for the full game scene.
     """
-    # Determines whether to create a tag group based on if the camera is in use per app configuration
-    if app_config.vision.use_camera:
-        tag_group = make_tag_group(app_config)
-    else:
-        tag_group = None
 
     # Generates standard battle handling routines, potentially utilizing the created tag group
-    stage_pack = make_std_battle_handler(app_config, run_config, tag_group=tag_group)
+    stage_pack = make_std_battle_handler(
+        app_config,
+        run_config,
+    )
     # Generates reboot handling routines
-    boot_pack = make_reboot_handler(app_config, run_config)
-
+    with sig_light_registry:
+        states, boot_transition_pack = make_reboot_handler(app_config, run_config)
+    if app_config.vision.use_camera:
+        states[0].before_entering.extend([tag_detector.halt_detection, tag_detector.apriltag_detect_start])
     # Returns the last moving transition effect for both reboot and standard battle scenes
-    return boot_pack[-1], stage_pack[-1]
+    return boot_transition_pack, stage_pack[-1]
 
 
 def assembly_FGDL_schema(app_config: APPConfig, run_config: RunConfig) -> List[MovingTransition]:

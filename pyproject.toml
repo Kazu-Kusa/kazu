@@ -1,16 +1,16 @@
 [project]
 name = "kazu"
-version = "0.1.5.10"
+version = "0.2.2.1"
 description = "Default template for PDM package"
 authors = [
     { name = "Whth", email = "88489697+Whth@users.noreply.github.com" },
 ]
 dependencies = [
-    "mentabotix>=0.1.5.16",
+    "mentabotix>=0.1.5.17",
     "pyuptech>=0.1.6.3",
-    "bdmc>=0.1.5.14",
+    "bdmc>=0.1.6",
     "coloredlogs>=15.0.1",
-    "pydantic>=2.7.1",
+    "pydantic>=2.7.4",
     "click>=8.1.7",
     "toml>=0.10.2",
     "terminaltables>=3.1.10",

@@ -1,11 +1,14 @@
 from enum import Enum, auto
 from pathlib import Path
-from typing import Tuple, List, Self, Literal, TextIO, Optional, Any, Dict
+from typing import Tuple, List, Self, Literal, TextIO, Any, Dict
 
 from click import secho
+from colorama import Fore
 from pydantic import BaseModel
 from toml import load, dump
 from upic import TagDetector
+
+from kazu.logger import _logger
 
 DEFAULT_APP_CONFIG_PATH = f"{Path.home().as_posix()}/.kazu/config.toml"
 
@@ -27,7 +30,7 @@ class TagGroup(BaseModel):
     team_color: Literal["yellow", "blue"] | str
     enemy_tag: Literal[1, 2] = None
     allay_tag: Literal[1, 2] = None
-    neutral_tag: Literal[1] = 1
+    neutral_tag: Literal[0] = 0
     default_tag: int = TagDetector.Config.default_tag_id
 
     def __init__(self, /, **data: Any):
@@ -42,144 +45,148 @@ class TagGroup(BaseModel):
                 self.allay_tag = 1
             case _:
                 raise ValueError(f"Invalid team_color, got {self.team_color}")
+        _logger.debug(f"{Fore.MAGENTA}Team color: {self.team_color}{Fore.RESET}")
 
 
 class EdgeConfig(BaseModel):
-    lower_threshold: List[float] = [1700] * 4
-    upper_threshold: List[float] = [2200] * 4
+    lower_threshold: Tuple[float, float, float, float] = (1400, 1500, 1500, 1400)
+    upper_threshold: Tuple[float, float, float, float] = (2100, 2200, 2200, 2100)
 
-    fallback_speed: int = 6000
-    fallback_duration: float = 0.5
+    fallback_speed: int = 2100
+    fallback_duration: float = 0.7
 
-    advance_speed: int = 6000
-    advance_duration: float = 0.5
+    advance_speed: int = 2100
+    advance_duration: float = 0.7
 
     turn_speed: int = 5000
-    full_turn_duration: float = 0.9
-    half_turn_duration: float = 0.5
+    full_turn_duration: float = 0.45
+    half_turn_duration: float = 0.225
 
     turn_left_prob: float = 0.5
 
     drift_speed: int = 6000
-    drift_duration: float = 0.5
+    drift_duration: float = 0.18
 
 
 class SurroundingConfig(BaseModel):
+    io_encounter_object_value: int = 0
 
-    left_adc_lower_threshold: int = 1700
-    right_adc_lower_threshold: int = 1700
+    left_adc_lower_threshold: int = 1300
+    right_adc_lower_threshold: int = 1300
 
-    front_adc_lower_threshold: int = 1700
-    back_adc_lower_threshold: int = 1700
+    front_adc_lower_threshold: int = 1300
+    back_adc_lower_threshold: int = 1500
+
     atk_break_front_lower_threshold: int = 1700
+    atk_break_use_edge_sensors: bool = True
 
-    atk_speed_enemy_car: int = 3500
-    atk_speed_enemy_box: int = 3000
-    atk_speed_neutral_box: int = 3000
+    atk_speed_enemy_car: int = 2300
+    atk_speed_enemy_box: int = 1600
+    atk_speed_neutral_box: int = 1300
     fallback_speed_ally_box: int = 4000
-    fallback_speed_edge: int = 5000
+    fallback_speed_edge: int = 3000
 
-    atk_enemy_car_duration: float = 12.0
-    atk_enemy_box_duration: float = 5.0
-    atk_neutral_box_duration: float = 8.0
-    fallback_duration_ally_box: float = 0.5
-    fallback_duration_edge: float = 0.4
+    atk_enemy_car_duration: float = 6.0
+    atk_enemy_box_duration: float = 6.0
+    atk_neutral_box_duration: float = 6.0
+    fallback_duration_ally_box: float = 0.3
+    fallback_duration_edge: float = 0.2
 
     turn_speed: int = 5000
     turn_left_prob: float = 0.5
 
-    rand_turn_speeds: List[int] = [4000, 8000]
+    rand_turn_speeds: List[int] = [3000, 5000]
     rand_turn_speed_weights: List[float] = [1, 3]
 
-    full_turn_duration: float = 0.9
-    half_turn_duration: float = 0.5
+    full_turn_duration: float = 0.45
+    half_turn_duration: float = 0.225
 
 
 class GradientConfig(BaseModel):
 
-    max_speed: int = 5000
-    min_speed: int = 2500
-    lower_bound: int = 2200
-    upper_bound: int = 3200
+    max_speed: int = 3000
+    min_speed: int = 500
+    lower_bound: int = 2800
+    upper_bound: int = 3700
 
 
 class ScanConfig(BaseModel):
 
-    front_max_tolerance: int = 300
-    rear_max_tolerance: int = 300
-    left_max_tolerance: int = 300
-    right_max_tolerance: int = 300
+    front_max_tolerance: int = 1000
+    rear_max_tolerance: int = 1300
+    left_max_tolerance: int = 1000
+    right_max_tolerance: int = 1000
 
-    io_activated_value: int = 0
+    io_encounter_object_value: int = 0
 
-    scan_speed: int = 1200
-    scan_duration: float = 5.0
+    scan_speed: int = 300
+    scan_duration: float = 3.5
     scan_turn_left_prob: float = 0.5
 
-    fall_back_speed: int = 4000
-    fall_back_duration: float = 0.5
+    fall_back_speed: int = 1500
+    fall_back_duration: float = 0.2
 
     turn_speed: int = 5000
     turn_left_prob: float = 0.5
 
-    full_turn_duration: float = 0.9
-    half_turn_duration: float = 0.5
+    full_turn_duration: float = 0.45
+    half_turn_duration: float = 0.225
 
 
 class RandTurn(BaseModel):
 
     turn_speed: int = 5000
     turn_left_prob: float = 0.5
-    full_turn_duration: float = 0.9
-    half_turn_duration: float = 0.5
+    full_turn_duration: float = 0.45
+    half_turn_duration: float = 0.225
 
 
 class SearchConfig(BaseModel):
 
     use_gradient_move: bool = True
-    gradient_move_weight: int = 1
+    gradient_move_weight: float = 8
     gradient_move: GradientConfig = GradientConfig()
 
     use_scan_move: bool = True
-    scan_move_weight: int = 1
+    scan_move_weight: float = 1
     scan_move: ScanConfig = ScanConfig()
 
     use_rand_turn: bool = True
-    rand_turn_weight: int = 1
+    rand_turn_weight: float = 0.5
     rand_turn: RandTurn = RandTurn()
 
 
 class RandWalk(BaseModel):
 
     use_straight: bool = True
-    straight_weight: int | float = 2
+    straight_weight: float = 3
 
-    rand_straight_speeds: List[int] = [2500, 3000]
-    rand_straight_speed_weights: List[int | float] = [1, 3]
+    rand_straight_speeds: List[int] = [1300, 1600]
+    rand_straight_speed_weights: List[float] = [1, 3]
 
     use_turn: bool = True
-    turn_weight: int | float = 1
-    rand_turn_speeds: List[int] = [4000, 8000]
-    rand_turn_speed_weights: List[int | float] = [1, 3]
+    turn_weight: float = 1
+    rand_turn_speeds: List[int] = [3000, 5000]
+    rand_turn_speed_weights: List[float] = [1, 3]
 
     walk_duration: float = 0.5
 
 
 class fenceConfig(BaseModel):
-    front_adc_lower_threshold: int = 1750
-    rear_adc_lower_threshold: int = 1750
-    left_adc_lower_threshold: int = 1750
-    right_adc_lower_threshold: int = 1750
+    front_adc_lower_threshold: int = 1200
+    rear_adc_lower_threshold: int = 1300
+    left_adc_lower_threshold: int = 1300
+    right_adc_lower_threshold: int = 1300
 
-    io_activated_value: int = 0
+    io_encounter_fence_value: int = 0
     max_yaw_tolerance: float = 20.0
 
-    stage_align_speed: int = 1500
-    max_stage_align_duration: float = 5.0
+    stage_align_speed: int = 1000
+    max_stage_align_duration: float = 3.0
     stage_align_direction: Literal["l", "r", "rand"] = "rand"
 
-    direction_align_speed: int = 1500
-    max_direction_align_duration: float = 5.0
+    direction_align_speed: int = 1000
+    max_direction_align_duration: float = 3.0
     direction_align_direction: Literal["l", "r", "rand"] = "rand"
 
     exit_corner_speed: int = 2500
@@ -202,37 +209,40 @@ class PerformanceConfig(BaseModel):
 
 
 class BootConfig(BaseModel):
-    time_to_stabilize: float = 0.3
+    button_io_activate_case_value: int = 0
 
-    max_holding_duration: float = 180
+    time_to_stabilize: float = 0.1
+
+    max_holding_duration: float = 180.0
 
     left_threshold: int = 1100
     right_threshold: int = 1100
 
-    dash_speed: int = 8000
-    dash_duration: float = 0.7
+    dash_speed: int = 6000
+    dash_duration: float = 0.6
 
     turn_speed: int = 5000
-    full_turn_duration: float = 0.9
+    full_turn_duration: float = 0.45
     turn_left_prob: float = 0.5
 
 
 class BackStageConfig(BaseModel):
-    time_to_stabilize: float = 0.3
+    time_to_stabilize: float = 0.1
 
     small_advance_speed: int = 3000
-    small_advance_duration: float = 0.5
+    small_advance_duration: float = 0.3
 
-    dash_speed: int = 8000
-    dash_duration: float = 0.7
+    dash_speed: int = 6000
+    dash_duration: float = 0.6
 
     turn_speed: int = 5000
-    full_turn_duration: float = 0.9
+    full_turn_duration: float = 0.45
     turn_left_prob: float = 0.5
 
 
 class StageConfig(BaseModel):
-    gray_adc_upper_threshold: int = 2500
+    gray_adc_upper_threshold: int = 2850
+    gray_io_off_stage_case_value: int = 0
 
 
 class RunConfig(CounterHashable):
@@ -248,8 +258,6 @@ class RunConfig(CounterHashable):
 
     strategy: StrategyConfig = StrategyConfig()
     perf: PerformanceConfig = PerformanceConfig()
-    # TODO fill the configs that still remain
-    ...
 
     @classmethod
     def read_config(cls, fp: TextIO) -> Self:
@@ -294,12 +302,24 @@ class ContextVar(Enum):
 
     @property
     def default(self) -> Any:
+        """
+        Get the default value for the context variable.
+
+        Returns:
+            Any: The default value for the context variable.
+        """
         defaults = {"prev_salvo_speed": (0, 0, 0, 0), "is_aligned": False, "recorded_pack": (), "gradient_speed": 0}
         assert self.name in defaults, "should always find a default value!"
         return defaults.get(self.name)
 
     @staticmethod
     def export_context() -> Dict[str, Any]:
+        """
+        Export the context variables and their default values as a dictionary.
+
+        Returns:
+            Dict[str, Any]: A dictionary containing the names of the context variables as keys and their default values as values.
+        """
         return {a.name: a.default for a in ContextVar}
 
 
@@ -318,8 +338,9 @@ class VisionConfig(BaseModel):
     camera_device_id: int = 0
 
 
-class LoggerConfig(BaseModel):
+class DebugConfig(BaseModel):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
+    use_siglight: bool = True
 
 
 class SensorConfig(BaseModel):
@@ -342,7 +363,6 @@ class SensorConfig(BaseModel):
 
     gray_adc_index: int = 8
     # ---------IO----------
-    io_activating_value: int = 0
 
     gray_io_left_index: int = 0
     gray_io_right_index: int = 1
@@ -354,14 +374,12 @@ class SensorConfig(BaseModel):
     rr_io_index: int = 5
 
     reboot_button_index: int = 7
-    ...
-    # TODO fill the configs that still remain
 
 
 class APPConfig(CounterHashable):
     motion: MotionConfig = MotionConfig()
     vision: VisionConfig = VisionConfig()
-    logger: LoggerConfig = LoggerConfig()
+    debug: DebugConfig = DebugConfig()
     sensor: SensorConfig = SensorConfig()
 
     @classmethod
@@ -398,10 +416,18 @@ class APPConfig(CounterHashable):
 class _InternalConfig(BaseModel):
     app_config: APPConfig = APPConfig()
     app_config_file_path: Path = Path(DEFAULT_APP_CONFIG_PATH)
-    run_config: Optional[RunConfig] = None
 
 
 def load_run_config(run_config_path: Path | None) -> RunConfig:
+    """
+    A function that loads the run configuration based on the provided run_config_path.
+
+    Parameters:
+        run_config_path (Path | None): The path to the run configuration file.
+
+    Returns:
+        RunConfig: The loaded run configuration.
+    """
     if run_config_path and (r_conf := Path(run_config_path)).exists():
         secho(f'Loading run config from "{r_conf.absolute().as_posix()}"', fg="green", bold=True)
         with open(r_conf) as fp:
@@ -412,18 +438,17 @@ def load_run_config(run_config_path: Path | None) -> RunConfig:
     return run_config_path
 
 
-def make_tag_group(app_config) -> TagGroup:
-    tag_group = TagGroup(team_color=app_config.vision.team_color)
-    secho(f"Team color: {tag_group.team_color}", fg=tag_group.team_color, bold=True)
-    secho(f"Enemy tag: {tag_group.enemy_tag}", fg="red", bold=True)
-    secho(f"Allay tag: {tag_group.allay_tag}", fg="green", bold=True)
-    secho(f"Neutral tag: {tag_group.neutral_tag}", fg="cyan", bold=True)
+def load_app_config(app_config_path: Path | None) -> APPConfig:
+    """
+    A function that loads the application configuration based on the provided app_config_path.
 
-    return tag_group
+    Parameters:
+        app_config_path (Path | None): The path to the application configuration file.
 
-
-def load_app_config(app_config_path) -> APPConfig:
-    if app_config_path.exists():
+    Returns:
+        APPConfig: The loaded application configuration.
+    """
+    if app_config_path and app_config_path.exists():
         secho(f"Load app config from {app_config_path.absolute().as_posix()}", fg="yellow")
         with open(app_config_path, encoding="utf-8") as fp:
             app_config = APPConfig.read_config(fp)

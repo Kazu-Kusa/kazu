@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from time import sleep
 
 from bdmc.modules.cmd import CMD
 from bdmc.modules.controller import CloseLoopController, MotorInfo
@@ -12,6 +13,7 @@ from kazu.logger import _logger
 
 controller = CloseLoopController()
 screen = Screen()
+
 tag_detector = TagDetector()
 sensors = OnBoardSensors()
 menta = Menta(
@@ -70,11 +72,12 @@ def inited_controller(app_config: APPConfig) -> CloseLoopController:
     return controller.start_msg_sending().send_cmd(CMD.RESET)
 
 
-def inited_tag_detector(app_config: APPConfig) -> TagDetector:
+def inited_tag_detector(app_config: APPConfig, retry_interval: float = 0.5) -> TagDetector:
     """
     Initializes the tag detector with the given configuration.
 
     Args:
+        retry_interval (float, optional): The retry interval in seconds. Defaults to 0.5.
         app_config (APPConfig): The application configuration containing the tag information and port.
 
     Returns:
@@ -88,12 +91,18 @@ def inited_tag_detector(app_config: APPConfig) -> TagDetector:
     """
     _logger.info(f"Open Camera-{app_config.vision.camera_device_id}")
     tag_detector.open_camera(app_config.vision.camera_device_id)
+
     tag_detector.set_cam_resolution_mul(app_config.vision.resolution_multiplier)
     success, _ = tag_detector.camera_device.read()
     if success:
         _logger.info("Camera is successfully opened !")
     else:
-        _logger.critical(f"Failed to open Camera-{app_config.vision.camera_device_id}")
-        _logger.warning("Camera will not be used.")
-        app_config.vision.use_camera = False
+        _logger.error("Failed to open Camera !, retrying ...")
+        sleep(retry_interval)
+        success, _ = tag_detector.camera_device.read()
+        if not success:
+
+            _logger.critical(f"Failed to open Camera-{app_config.vision.camera_device_id}")
+            _logger.warning("Camera will not be used.")
+            app_config.vision.use_camera = False
     return tag_detector

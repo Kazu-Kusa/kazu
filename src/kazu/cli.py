@@ -1,7 +1,7 @@
-from functools import partial
+from enum import Enum
 from pathlib import Path
 from time import sleep
-from typing import Callable, Optional, Tuple, List
+from typing import Callable, Optional, Tuple, List, Type
 
 import click
 from click import secho, echo, clear
@@ -19,17 +19,22 @@ from kazu.callbacks import (
     set_camera_callback,
     log_level_callback,
     set_res_multiplier_callback,
+    bench_sleep_precision,
+    led_light_shell_callback,
+    disable_siglight_callback,
+    bench_siglight_switch_freq,
 )
 from kazu.config import (
     DEFAULT_APP_CONFIG_PATH,
     APPConfig,
     _InternalConfig,
     ContextVar,
-    TagGroup,
     load_run_config,
     load_app_config,
 )
 from kazu.constant import Env, RunMode, QUIT
+from kazu.logger import _logger
+from kazu.signal_light import sig_light_registry
 from kazu.visualize import print_colored_toml
 
 
@@ -55,17 +60,26 @@ from kazu.visualize import print_colored_toml
     default=None,
     show_default=True,
 )
-def main(ctx: click.Context, app_config_path: Path, log_level: str):
+@click.option(
+    "-s",
+    "--disable-siglight",
+    is_flag=True,
+    default=False,
+    help="Disable signal light",
+)
+def main(ctx: click.Context, app_config_path: Path, log_level: str, disable_siglight: bool):
     """A Dedicated Robots Control System"""
     app_config = load_app_config(app_config_path)
 
     ctx.obj = _InternalConfig(app_config=app_config, app_config_file_path=app_config_path)
 
     log_level_callback(ctx=ctx, _=None, value=log_level)
+    disable_siglight_callback(ctx=ctx, _=None, value=disable_siglight)
 
 
 @main.command("config")
 @click.pass_obj
+@click.pass_context
 @click.help_option("-h", "--help")
 @click.option(
     "-r",
@@ -85,6 +99,7 @@ def main(ctx: click.Context, app_config_path: Path, log_level: str):
 )
 @click.argument("kv", type=(str, str), required=False, default=None)
 def configure(
+    ctx: click.Context,
     config: _InternalConfig,
     kv: Optional[Tuple[str, str]],
     **_,
@@ -108,13 +123,15 @@ def configure(
     finally:
         with open(config.app_config_file_path, "w") as fp:
             APPConfig.dump_config(fp, app_config)
+        ctx.exit(0)
 
 
 @main.command("run")
 @click.pass_obj
+@click.pass_context
 @click.help_option("-h", "--help")
 @click.option(
-    "-e",
+    "-d",
     "--disable-camera",
     is_flag=True,
     default=False,
@@ -141,7 +158,7 @@ def configure(
     callback=set_camera_callback,
 )
 @click.option(
-    "-m",
+    "-l",
     "--camera-res-mul",
     type=click.FLOAT,
     help="Set the camera resolution multiplier temporarily",
@@ -158,7 +175,7 @@ def configure(
     callback=team_color_callback,
 )
 @click.option(
-    "-c",
+    "-r",
     "--run-config-path",
     show_default=True,
     default=None,
@@ -175,7 +192,7 @@ def configure(
     help=f"run mode, also can receive env {Env.KAZU_RUN_MODE}",
     envvar=Env.KAZU_RUN_MODE,
 )
-def run(conf: _InternalConfig, run_config_path: Path | None, mode: str, **_):
+def run(ctx: click.Context, conf: _InternalConfig, run_config_path: Path | None, mode: str, **_):
     """
     Run command for the main group.
     """
@@ -193,6 +210,7 @@ def run(conf: _InternalConfig, run_config_path: Path | None, mode: str, **_):
     tag_detector = inited_tag_detector(app_config)
     con = inited_controller(app_config)
     con.context.update(ContextVar.export_context())
+    _logger.info(f"Run Mode: {mode}")
     try:
         match mode:
             case RunMode.FGS:
@@ -240,13 +258,18 @@ def run(conf: _InternalConfig, run_config_path: Path | None, mode: str, **_):
                 while 1:
                     boot_func()
     except KeyboardInterrupt:
-        secho(f"Exited by user.", fg="red")
+        _logger.info("KAZU stopped by keyboard interrupt.")
+    except Exception as e:
+        _logger.critical(e)
     finally:
+        _logger.info(f"Releasing hardware resources...")
         set_all_black()
-        sensors.adc_io_close()
-        tag_detector.release_camera()
         con.send_cmd(CMD.FULL_STOP).send_cmd(CMD.RESET).stop_msg_sending()
-        secho(f"KAZU stopped.", fg="green")
+        tag_detector.apriltag_detect_end()
+        tag_detector.release_camera()
+        sensors.adc_io_close()
+        _logger.info(f"KAZU stopped.")
+        ctx.exit(0)
 
 
 @main.command("check")
@@ -337,13 +360,14 @@ def test(conf: _InternalConfig, device: str, **_):
 @main.command("read")
 @click.help_option("-h", "--help")
 @click.pass_obj
+@click.pass_context
 @click.argument(
     "device",
     type=click.Choice(["adc", "io", "mpu", "all"]),
     nargs=-1,
 )
-@click.option("-i", "interval", type=click.FLOAT, default=0.1, show_default=True)
-def read_sensors(conf: _InternalConfig, interval: float, device: str):
+@click.option("-i", "interval", type=click.FLOAT, default=0.5, show_default=True)
+def read_sensors(ctx: click.Context, conf: _InternalConfig, interval: float, device: str):
     """
     Read sensors data and print to terminal
     """
@@ -356,25 +380,48 @@ def read_sensors(conf: _InternalConfig, interval: float, device: str):
 
     app_config: APPConfig = conf.app_config
     device = set(device) or ("all",)
+    sensor_config = app_config.sensor
     (
         sensors.adc_io_open()
         .MPU6500_Open()
         .set_all_io_mode(0)
-        .mpu_set_gyro_fsr(app_config.sensor.gyro_fsr)
-        .mpu_set_accel_fsr(app_config.sensor.accel_fsr)
+        .mpu_set_gyro_fsr(sensor_config.gyro_fsr)
+        .mpu_set_accel_fsr(sensor_config.accel_fsr)
     )
 
     if "all" in device:
         device = ("adc", "io", "mpu")
 
     packs = []
+
+    adc_labels = {
+        sensor_config.edge_fl_index: "EDG-FL",
+        sensor_config.edge_fr_index: "EDG-FR",
+        sensor_config.edge_rl_index: "EDG-RL",
+        sensor_config.edge_rr_index: "EDG-RR",
+        sensor_config.left_adc_index: "LEFT",
+        sensor_config.right_adc_index: "RIGHT",
+        sensor_config.front_adc_index: "FRONT",
+        sensor_config.rb_adc_index: "BACK",
+        sensor_config.gray_adc_index: "GRAY",
+    }
+
+    io_labels = {
+        sensor_config.fl_io_index: "FL",
+        sensor_config.fr_io_index: "FR",
+        sensor_config.rl_io_index: "RL",
+        sensor_config.rr_io_index: "RR",
+        sensor_config.reboot_button_index: "REBOOT",
+        sensor_config.gray_io_left_index: "GRAY-LEFT",
+        sensor_config.gray_io_right_index: "GRAY-RIGHT",
+    }
     for dev in device:
         match dev:
             case "adc":
-                packs.append(lambda: make_adc_table(sensors))
+                packs.append(lambda: make_adc_table(sensors, adc_labels))
 
             case "io":
-                packs.append(lambda: make_io_table(sensors))
+                packs.append(lambda: make_io_table(sensors, io_labels))
             case "mpu":
                 packs.append(lambda: make_mpu_table(sensors))
             case _:
@@ -386,9 +433,12 @@ def read_sensors(conf: _InternalConfig, interval: float, device: str):
             echo(stdout)
             sleep(interval)
     except KeyboardInterrupt:
-        echo("Exit reading.")
-
-    sensors.adc_io_close()
+        _logger.info("Read sensors data interrupted.")
+    finally:
+        _logger.info("Closing sensors...")
+        sensors.adc_io_close()
+        _logger.info("Exit reading successfully.")
+        ctx.exit(0)
 
 
 @main.command("viz")
@@ -445,7 +495,7 @@ def visualize(
     destination: Path,
     run_config: Optional[Path],
     render: bool,
-    packname: str = ("all",),
+    packname: Tuple[str, ...],
 ):
     """
     Visualize State-Transition Diagram of KAZU with PlantUML
@@ -467,6 +517,7 @@ def visualize(
     )
     from plantuml import PlantUML
 
+    packname = packname or ("all",)
     puml_d = PlantUML(url="http://www.plantuml.com/plantuml/svg/")
 
     destination.mkdir(parents=True, exist_ok=True)
@@ -474,19 +525,18 @@ def visualize(
     app_config = conf.app_config
     run_config = load_run_config(run_config)
 
-    tag_group = TagGroup(team_color=app_config.vision.team_color)
     handlers = {
         "edge": make_edge_handler,
         "boot": make_reboot_handler,
         "bkstage": make_back_to_stage_handler,
-        "surr": partial(make_surrounding_handler, tag_group=tag_group),
+        "surr": make_surrounding_handler,
         "scan": make_scan_handler,
         "search": make_search_handler,
         "fence": make_fence_handler,
         "rdwalk": make_rand_walk_handler,
-        "stdbat": partial(make_std_battle_handler, tag_group=tag_group),
-        "onstage": partial(make_always_on_stage_battle_handler, tag_group=tag_group),
-        "angbat": partial(make_always_on_stage_battle_handler, tag_group=tag_group),
+        "stdbat": make_std_battle_handler,
+        "onstage": make_always_on_stage_battle_handler,
+        "angbat": make_always_on_stage_battle_handler,
         "afgbat": make_always_off_stage_battle_handler,
     }
 
@@ -499,8 +549,8 @@ def visualize(
         # 假设每个处理函数返回一个可以被导出的数据结构
         # 这里简化处理，实际可能需要根据handler的不同调用不同的导出方法
         handler_func: Callable = handlers.get(f_name)
-
-        (*_, handler_data) = handler_func(app_config=app_config, run_config=run_config)
+        with sig_light_registry:
+            (*_, handler_data) = handler_func(app_config=app_config, run_config=run_config)
         filename = f_name + ".puml"
         destination_filename = (destination / filename).as_posix()
 
@@ -651,7 +701,7 @@ def list_ports(conf: _InternalConfig, check: bool, timeout: float):
     def is_port_open(port_to_check):
         """检查端口是否开放（未被占用）"""
         try:
-            with serial.Serial(port_to_check, timeout=timeout) as ser:
+            with serial.Serial(port_to_check, timeout=timeout):
                 return True, "Available."
         except (OSError, serial.SerialException):
             return False, "Not available or Busy."
@@ -678,6 +728,7 @@ def list_ports(conf: _InternalConfig, check: bool, timeout: float):
 @main.command("msg")
 @click.help_option("-h", "--help")
 @click.pass_obj
+@click.pass_context
 @click.option(
     "-p",
     "--port",
@@ -687,7 +738,7 @@ def list_ports(conf: _InternalConfig, check: bool, timeout: float):
     show_default=True,
     callback=set_port_callback,
 )
-def stream_send_msg(conf: _InternalConfig, **_):
+def stream_send_msg(ctx: click.Context, conf: _InternalConfig, **_):
     """
     Sending msg in streaming input mode.
     """
@@ -723,33 +774,52 @@ def stream_send_msg(conf: _InternalConfig, **_):
     con.serial_client.stop_read_thread()
 
     secho("Quit streaming", fg="green", bold=True)
+    ctx.exit(0)
 
 
 @main.command("light")
 @click.help_option("-h", "--help")
-@click.argument("channel", type=click.IntRange(0, 255), nargs=3, required=True)
-def control_display(channel: Tuple[int, int, int]):
+@click.pass_obj
+@click.option("-s", "--shell", is_flag=True, default=False, callback=led_light_shell_callback)
+@click.option("-g", "--sig-lights", is_flag=True, default=False)
+def control_display(conf: _InternalConfig, sig_lights: bool, **_):
     """
     Control LED display.
     """
-    from kazu.hardwares import screen, sensors
-    from pyuptech import Color
+    if sig_lights:
 
-    sensors.adc_io_open()
-    c = Color.new_color(*channel)
-    (
-        screen.set_led_0(c)
-        .set_led_1(c)
-        .open(2)
-        .set_back_color(c)
-        .print(f"R:{channel[0]}\nG:{channel[1]}\nB:{channel[2]}")
-        .refresh()
-    )
+        if not conf.app_config.debug.use_siglight:
+            secho("Siglight is not enabled, temporarily enable it during the display", fg="yellow", bold=True)
+            conf.app_config.debug.use_siglight = True
+        from kazu.compile import make_std_battle_handler
+        from kazu.config import RunConfig
+        from kazu.signal_light import sig_light_registry
+        from kazu.hardwares import screen, sensors
+        from pyuptech import Color
+
+        sensors.adc_io_open()
+        screen.open(2)
+        with sig_light_registry:
+            _ = make_std_battle_handler(conf.app_config, RunConfig())
+
+        secho("Press 'Enter' to show next.", fg="yellow", bold=True)
+        for color, purpose in sig_light_registry.mapping.items():
+            screen.fill_screen(Color.BLACK).print(purpose).refresh().set_all_leds_single(*color)
+
+            color_names = sig_light_registry.get_key_color_name_colorful(color)
+            out_string = f"<{color_names[0]}, {color_names[1]}>"
+
+            click.prompt(f"{out_string}|{purpose} ", prompt_suffix="", default="next", show_default=False)
+
+        _logger.info("All displayed")
+        screen.fill_screen(Color.BLACK).refresh().close().set_all_leds_same(Color.BLACK)
+        sensors.adc_io_close()
 
 
 @main.command("tag")
 @click.help_option("-h", "--help")
 @click.pass_obj
+@click.pass_context
 @click.option(
     "-c",
     "--camera-id",
@@ -769,43 +839,120 @@ def control_display(channel: Tuple[int, int, int]):
     callback=set_res_multiplier_callback,
 )
 @click.option(
-    "-i", "--interval", type=click.FLOAT, default=0.1, show_default=True, help="Set the interval of the tag detector"
+    "-i", "--interval", type=click.FLOAT, default=0.5, show_default=True, help="Set the interval of the tag detector"
 )
-def tag_test(conf: _InternalConfig, interval: float, **_):
+def tag_test(ctx: click.Context, conf: _InternalConfig, interval: float, **_):
     """
     Use tag detector to test tag ID detection.
     """
     from kazu.hardwares import inited_tag_detector
     from kazu.checkers import check_camera
-    from threading import Thread
 
     detector = inited_tag_detector(conf.app_config)
     if not check_camera(detector):
         secho("Camera is not ready, exiting...", fg="red", bold=True)
         return
-    detector.apriltag_detect_start()
 
-    cmd = ""
-
-    def _display_tags():
-        while cmd != QUIT:
+    try:
+        detector.apriltag_detect_start()
+        while 1:
             sleep(interval)
             secho(f"\rTag: {detector.tag_id}", fg="green", bold=True, nl=False)
+
+    except KeyboardInterrupt:
+        _logger.info("KeyboardInterrupt, exiting...")
+    finally:
+        _logger.info("Release camera...")
         detector.apriltag_detect_end()
         detector.release_camera()
+        _logger.info("Released")
+        ctx.exit(0)
 
-    t = Thread(target=_display_tags, daemon=True)
-    t.start()
-    while cmd != QUIT:
-        cmd = click.prompt(
-            f"{Fore.YELLOW}Enter '{QUIT}' to quit {Fore.RESET}",
-            type=str,
-            default="",
-            prompt_suffix="",
-            show_choices=False,
-            show_default=False,
-        )
-    t.join()
+
+@main.command("breaker")
+@click.help_option("-h", "--help")
+@click.pass_obj
+@click.pass_context
+@click.option(
+    "-r",
+    "--run-config-path",
+    show_default=True,
+    default=None,
+    help=f"config file path, also can receive env {Env.KAZU_RUN_CONFIG_PATH}",
+    type=click.Path(dir_okay=False, readable=True, path_type=Path),
+    envvar=Env.KAZU_RUN_CONFIG_PATH,
+)
+@click.option(
+    "-i",
+    "--interval",
+    type=click.FLOAT,
+    default=0.5,
+    show_default=True,
+    help="Set the interval of the refresh frequency",
+)
+def breaker_test(
+    ctx: click.Context,
+    conf: _InternalConfig,
+    run_config_path: Path,
+    interval: float,
+):
+    """
+    Use breaker detector to test breaker detection.
+    """
+    from kazu.config import load_run_config
+    from kazu.judgers import Breakers
+    from kazu.constant import EdgeCodeSign, SurroundingCodeSign, ScanCodesign, FenceCodeSign
+    from terminaltables import SingleTable
+    from kazu.hardwares import sensors, controller
+    from kazu.config import ContextVar
+
+    sensors.adc_io_open().MPU6500_Open()
+    controller.context.update({ContextVar.recorded_pack.name: sensors.adc_all_channels()})
+    run_config = load_run_config(run_config_path)
+    config_pack = conf.app_config, run_config
+
+    def _make_display_pack(breaker: Callable[[], int], codesign_enum: Type[Enum]) -> Callable[[], Tuple[str, int]]:
+        def _display():
+            codesign = breaker()
+            [matched] = [x.name for x in codesign_enum if x.value == codesign]
+            return matched, codesign
+
+        return _display
+
+    data = []
+    table: SingleTable = SingleTable(data)
+
+    edge_breaker_display = _make_display_pack(Breakers.make_std_edge_full_breaker(*config_pack), EdgeCodeSign)
+
+    surr_breaker_display = _make_display_pack(Breakers.make_surr_breaker(*config_pack), SurroundingCodeSign)
+
+    scan_breaker_display = _make_display_pack(Breakers.make_std_scan_breaker(*config_pack), ScanCodesign)
+
+    fence_breaker_display = _make_display_pack(Breakers.make_std_fence_breaker(*config_pack), FenceCodeSign)
+
+    displays = [
+        ("Edge", edge_breaker_display),
+        ("Surr", surr_breaker_display),
+        ("Scan", scan_breaker_display),
+        ("Fence", fence_breaker_display),
+    ]
+    try:
+        while 1:
+            data.clear()
+            data.append(["Breaker", "CodeSign", "Value"])
+            for name, d in displays:
+                data.append([name, *d()])
+            click.clear()
+            secho(table.table, bold=True)
+            sleep(interval)
+    except KeyboardInterrupt:
+        _logger.info("KeyboardInterrupt, exiting...")
+
+    finally:
+        _logger.info("Releasing resources.")
+        sensors.adc_io_close()
+        _logger.info("Released")
+        ctx.exit(0)
 
 
 @main.command("bench")
@@ -820,8 +967,25 @@ def tag_test(conf: _InternalConfig, interval: float, **_):
 @click.option(
     "-p", "--add-up-per-second", is_flag=True, default=False, callback=bench_aps, help="measure add-ups per second"
 )
+@click.option(
+    "-c",
+    "--sleep-precision",
+    is_flag=True,
+    default=False,
+    callback=bench_sleep_precision,
+    help="measure sleep precision",
+)
+@click.option(
+    "-w",
+    "--light-switch-freq",
+    is_flag=True,
+    default=False,
+    callback=bench_siglight_switch_freq,
+    help="measure light switch freq",
+)
 def bench(**_):
     """
     Benchmarks
     """
+
     echo("bench test done!")
