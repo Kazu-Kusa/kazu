@@ -989,3 +989,64 @@ def bench(**_):
     """
 
     echo("bench test done!")
+
+
+@main.command("trac")
+@click.pass_obj
+@click.help_option("-h", "--help")
+@click.option(
+    "-r",
+    "--run-config-path",
+    show_default=True,
+    default=None,
+    help=f"config file path, also can receive env {Env.KAZU_RUN_CONFIG_PATH}",
+    type=click.Path(dir_okay=False, readable=True, path_type=Path),
+    envvar=Env.KAZU_RUN_CONFIG_PATH,
+)
+@click.option(
+    "-o",
+    "--output-path",
+    show_default=True,
+    default="./profile.json",
+    help=f"Viztracer profile dump path.",
+    type=click.Path(dir_okay=False, readable=True, path_type=Path),
+)
+def trace(conf: _InternalConfig, run_config_path: Path, output_path: Path, **_):
+    """
+    Trace the std battle using viztracer
+    """
+
+    import subprocess
+    from viztracer import VizTracer
+    from bdmc import CMD
+    from kazu.hardwares import inited_controller, sensors, inited_tag_detector
+    from kazu.signal_light import set_all_black
+    from kazu.assembly import assembly_NGS_schema
+    from kazu.compile import botix
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    traver = VizTracer()
+
+    run_config = load_run_config(run_config_path)
+
+    app_config = conf.app_config
+
+    sensors.adc_io_open().MPU6500_Open()
+    set_all_black()
+    tag_detector = inited_tag_detector(app_config).apriltag_detect_start()
+    con = inited_controller(app_config).start_msg_sending().send_cmd(CMD.RESET)
+    con.context.update(ContextVar.export_context())
+
+    botix.token_pool = assembly_NGS_schema(app_config, run_config)
+    stage_func = botix.compile()
+    traver.start()
+    stage_func()
+    traver.stop()
+
+    sensors.adc_io_close()
+    tag_detector.apriltag_detect_end().release_camera()
+    con.send_cmd(CMD.RESET).stop_msg_sending()
+    traver.save(output_path.as_posix())
+
+    subprocess.run(["vizviewer", output_path.as_posix()])
