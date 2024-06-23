@@ -400,11 +400,16 @@ def make_surrounding_handler(
 
         start_state.after_exiting.append(_log_state)
 
+    surr_conf = run_config.surrounding
     # <editor-fold desc="Breakers">
 
     surr_full_breaker = Breakers.make_surr_breaker(app_config, run_config)
 
-    atk_breaker = Breakers.make_std_atk_breaker(app_config, run_config)
+    atk_breaker = (
+        Breakers.make_atk_breaker_with_edge_sensors(app_config, run_config)
+        if surr_conf.atk_break_use_edge_sensors
+        else Breakers.make_std_atk_breaker(app_config, run_config)
+    )
 
     edge_rear_breaker = Breakers.make_std_edge_rear_breaker(app_config, run_config)
 
@@ -413,11 +418,11 @@ def make_surrounding_handler(
 
     # <editor-fold desc="Templates">
 
-    atk_enemy_car_state = MovingState.straight(run_config.surrounding.atk_speed_enemy_car)
-    atk_enemy_box_state = MovingState.straight(run_config.surrounding.atk_speed_enemy_box)
-    atk_neutral_box_state = MovingState.straight(run_config.surrounding.atk_speed_neutral_box)
-    allay_fallback_state = MovingState.straight(-run_config.surrounding.fallback_speed_ally_box)
-    edge_fallback_state = MovingState.straight(-run_config.surrounding.fallback_speed_edge)
+    atk_enemy_car_state = MovingState.straight(surr_conf.atk_speed_enemy_car)
+    atk_enemy_box_state = MovingState.straight(surr_conf.atk_speed_enemy_box)
+    atk_neutral_box_state = MovingState.straight(surr_conf.atk_speed_neutral_box)
+    allay_fallback_state = MovingState.straight(-surr_conf.fallback_speed_ally_box)
+    edge_fallback_state = MovingState.straight(-surr_conf.fallback_speed_edge)
 
     atk_enemy_car_state.after_exiting.append(
         sig_light_registry.register_singles("Surr|Attack enemy car", Color.PURPLE, Color.RED)
@@ -435,36 +440,32 @@ def make_surrounding_handler(
     )
 
     edge_fallback_state.after_exiting.append(sig_light_registry.register_all("Surr|Edge fallback", Color.CYAN))
-    atk_enemy_car_transition = MovingTransition(run_config.surrounding.atk_speed_enemy_car, breaker=atk_breaker)
-    atk_enemy_box_transition = MovingTransition(run_config.surrounding.atk_speed_enemy_box, breaker=atk_breaker)
-    atk_neutral_box_transition = MovingTransition(run_config.surrounding.atk_neutral_box_duration, breaker=atk_breaker)
-    allay_fallback_transition = MovingTransition(
-        run_config.surrounding.fallback_duration_ally_box, breaker=edge_rear_breaker
-    )
-    edge_fallback_transition = MovingTransition(
-        run_config.surrounding.fallback_duration_edge, breaker=edge_rear_breaker
-    )
+    atk_enemy_car_transition = MovingTransition(surr_conf.atk_speed_enemy_car, breaker=atk_breaker)
+    atk_enemy_box_transition = MovingTransition(surr_conf.atk_speed_enemy_box, breaker=atk_breaker)
+    atk_neutral_box_transition = MovingTransition(surr_conf.atk_neutral_box_duration, breaker=atk_breaker)
+    allay_fallback_transition = MovingTransition(surr_conf.fallback_duration_ally_box, breaker=edge_rear_breaker)
+    edge_fallback_transition = MovingTransition(surr_conf.fallback_duration_edge, breaker=edge_rear_breaker)
 
     rand_turn_state = MovingState.rand_dir_turn(
-        controller, run_config.surrounding.turn_speed, turn_left_prob=run_config.surrounding.turn_left_prob
+        controller, surr_conf.turn_speed, turn_left_prob=surr_conf.turn_left_prob
     )
-    left_turn_state = MovingState.turn("l", run_config.surrounding.turn_speed)
-    right_turn_state = MovingState.turn("r", run_config.surrounding.turn_speed)
+    left_turn_state = MovingState.turn("l", surr_conf.turn_speed)
+    right_turn_state = MovingState.turn("r", surr_conf.turn_speed)
     rand_spd_turn_left_state = MovingState.rand_spd_turn(
         controller,
         "l",
-        run_config.surrounding.rand_turn_speeds,
-        weights=run_config.surrounding.rand_turn_speed_weights,
+        surr_conf.rand_turn_speeds,
+        weights=surr_conf.rand_turn_speed_weights,
     )
     rand_spd_turn_right_state = MovingState.rand_spd_turn(
         controller,
         "r",
-        run_config.surrounding.rand_turn_speeds,
-        weights=run_config.surrounding.rand_turn_speed_weights,
+        surr_conf.rand_turn_speeds,
+        weights=surr_conf.rand_turn_speed_weights,
     )
 
-    full_turn_transition = MovingTransition(run_config.surrounding.full_turn_duration, breaker=turn_to_front_breaker)
-    half_turn_transition = MovingTransition(run_config.surrounding.half_turn_duration, breaker=turn_to_front_breaker)
+    full_turn_transition = MovingTransition(surr_conf.full_turn_duration, breaker=turn_to_front_breaker)
+    half_turn_transition = MovingTransition(surr_conf.half_turn_duration, breaker=turn_to_front_breaker)
     # </editor-fold>
 
     # <editor-fold desc="Init Container">

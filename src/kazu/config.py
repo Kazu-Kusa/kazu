@@ -76,7 +76,9 @@ class SurroundingConfig(BaseModel):
 
     front_adc_lower_threshold: int = 1300
     back_adc_lower_threshold: int = 1500
+
     atk_break_front_lower_threshold: int = 1700
+    atk_break_use_edge_sensors: bool = True
 
     atk_speed_enemy_car: int = 2300
     atk_speed_enemy_box: int = 1600
