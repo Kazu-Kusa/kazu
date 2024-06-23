@@ -300,12 +300,24 @@ class ContextVar(Enum):
 
     @property
     def default(self) -> Any:
+        """
+        Get the default value for the context variable.
+
+        Returns:
+            Any: The default value for the context variable.
+        """
         defaults = {"prev_salvo_speed": (0, 0, 0, 0), "is_aligned": False, "recorded_pack": (), "gradient_speed": 0}
         assert self.name in defaults, "should always find a default value!"
         return defaults.get(self.name)
 
     @staticmethod
     def export_context() -> Dict[str, Any]:
+        """
+        Export the context variables and their default values as a dictionary.
+
+        Returns:
+            Dict[str, Any]: A dictionary containing the names of the context variables as keys and their default values as values.
+        """
         return {a.name: a.default for a in ContextVar}
 
 
@@ -404,6 +416,15 @@ class _InternalConfig(BaseModel):
 
 
 def load_run_config(run_config_path: Path | None) -> RunConfig:
+    """
+    A function that loads the run configuration based on the provided run_config_path.
+
+    Parameters:
+        run_config_path (Path | None): The path to the run configuration file.
+
+    Returns:
+        RunConfig: The loaded run configuration.
+    """
     if run_config_path and (r_conf := Path(run_config_path)).exists():
         secho(f'Loading run config from "{r_conf.absolute().as_posix()}"', fg="green", bold=True)
         with open(r_conf) as fp:
@@ -414,8 +435,17 @@ def load_run_config(run_config_path: Path | None) -> RunConfig:
     return run_config_path
 
 
-def load_app_config(app_config_path) -> APPConfig:
-    if app_config_path.exists():
+def load_app_config(app_config_path: Path | None) -> APPConfig:
+    """
+    A function that loads the application configuration based on the provided app_config_path.
+
+    Parameters:
+        app_config_path (Path | None): The path to the application configuration file.
+
+    Returns:
+        APPConfig: The loaded application configuration.
+    """
+    if app_config_path and app_config_path.exists():
         secho(f"Load app config from {app_config_path.absolute().as_posix()}", fg="yellow")
         with open(app_config_path, encoding="utf-8") as fp:
             app_config = APPConfig.read_config(fp)
