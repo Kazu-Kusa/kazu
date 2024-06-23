@@ -142,28 +142,28 @@ class RandTurn(BaseModel):
 class SearchConfig(BaseModel):
 
     use_gradient_move: bool = True
-    gradient_move_weight: int = 8
+    gradient_move_weight: float = 8
     gradient_move: GradientConfig = GradientConfig()
 
     use_scan_move: bool = True
-    scan_move_weight: int = 1
+    scan_move_weight: float = 1
     scan_move: ScanConfig = ScanConfig()
 
     use_rand_turn: bool = True
-    rand_turn_weight: int = 0.5
+    rand_turn_weight: float = 0.5
     rand_turn: RandTurn = RandTurn()
 
 
 class RandWalk(BaseModel):
 
     use_straight: bool = True
-    straight_weight: int | float = 3
+    straight_weight: float = 3
 
     rand_straight_speeds: List[int] = [1300, 1600]
     rand_straight_speed_weights: List[int | float] = [1, 3]
 
     use_turn: bool = True
-    turn_weight: int | float = 1
+    turn_weight: float = 1
     rand_turn_speeds: List[int] = [3000, 5000]
     rand_turn_speed_weights: List[int | float] = [1, 3]
 
