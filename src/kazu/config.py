@@ -49,8 +49,8 @@ class TagGroup(BaseModel):
 
 
 class EdgeConfig(BaseModel):
-    lower_threshold: List[float] = [1400, 1500, 1500, 1400]
-    upper_threshold: List[float] = [2100, 2200, 2200, 2100]
+    lower_threshold: Tuple[float, float, float, float] = (1400, 1500, 1500, 1400)
+    upper_threshold: Tuple[float, float, float, float] = (2100, 2200, 2200, 2100)
 
     fallback_speed: int = 2100
     fallback_duration: float = 0.7
@@ -160,12 +160,12 @@ class RandWalk(BaseModel):
     straight_weight: float = 3
 
     rand_straight_speeds: List[int] = [1300, 1600]
-    rand_straight_speed_weights: List[int | float] = [1, 3]
+    rand_straight_speed_weights: List[float] = [1, 3]
 
     use_turn: bool = True
     turn_weight: float = 1
     rand_turn_speeds: List[int] = [3000, 5000]
-    rand_turn_speed_weights: List[int | float] = [1, 3]
+    rand_turn_speed_weights: List[float] = [1, 3]
 
     walk_duration: float = 0.5
 
