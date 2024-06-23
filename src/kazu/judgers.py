@@ -153,7 +153,44 @@ class Breakers:
             # indicating front is empty
             return_type=bool,
             return_raw=False,
-            function_name="atk_breaker",
+            function_name="std_atk_breaker",
+        )
+
+    @staticmethod
+    @lru_cache(maxsize=None)
+    def make_atk_breaker_with_edge_sensors(app_config: APPConfig, run_config: RunConfig):
+        off_stage_activate = run_config.stage.gray_io_off_stage_case_value
+        surr_obj_activate = run_config.surrounding.io_encounter_object_value
+
+        fl_lower_threshold = run_config.edge.lower_threshold[0]
+        fr_lower_threshold = run_config.edge.lower_threshold[-1]
+
+        return menta.construct_inlined_function(
+            usages=[
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.io_all,
+                    required_data_indexes=[
+                        app_config.sensor.gray_io_left_index,  # s0
+                        app_config.sensor.gray_io_right_index,  # s1
+                        app_config.sensor.fl_io_index,  # s2
+                        app_config.sensor.fr_io_index,  # s3
+                    ],
+                ),
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.adc_all,
+                    required_data_indexes=[
+                        app_config.sensor.front_adc_index,  # s4
+                        app_config.sensor.edge_fl_index,  # s5
+                        app_config.sensor.edge_fr_index,  # s6
+                    ],
+                ),
+            ],
+            judging_source=f"ret=bool(s0=={off_stage_activate} or s1=={off_stage_activate}  "  # use gray scaler, indicating the edge is encountered
+            f"or all( (s2!={surr_obj_activate} , s3!={surr_obj_activate} , s4<{run_config.surrounding.atk_break_front_lower_threshold}))"  # indicating front is empty
+            f"or s5<{fl_lower_threshold} or s6<{fr_lower_threshold}))",  # long scan using edge sensors
+            return_type=bool,
+            return_raw=False,
+            function_name="atk_breaker_with_edge_sensors",
         )
 
     @staticmethod
