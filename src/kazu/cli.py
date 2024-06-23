@@ -1078,24 +1078,64 @@ def trace(
 
     if not disable_view_profile:
         from kazu.static import get_local_ip
-        from subprocess import run, DEVNULL
-        from threading import Thread
+        from subprocess import DEVNULL, Popen
 
         local_ip = get_local_ip()
         if local_ip is None:
             secho("Cannot get local ip, vizviewer will not be opened", fg="red", bold=True)
             return
         url = f"http://{local_ip}:{port}"
+        with Popen(["vizviewer", "--server_only", "--port", str(port)], stdout=DEVNULL, stderr=DEVNULL) as process:
+            secho(f"View profile at {url}", fg="green", bold=True)
 
-        def _server_thread():
+            while True:
+                line = click.prompt(f"Enter '{QUIT}' to quit")
+                if line == QUIT:
+                    break
+            process.kill()
 
-            run(["vizviewer", "--server_only", "--port", str(port)], stdout=DEVNULL, stderr=DEVNULL)
 
-        server = Thread(target=_server_thread, daemon=True)
-        server.start()
+@main.command("view")
+@click.pass_obj
+@click.help_option("-h", "--help")
+@click.argument("profile", type=click.Path(dir_okay=False, readable=True, path_type=Path))
+@click.option(
+    "-p",
+    "--port",
+    type=click.INT,
+    help="Set the port of the render server",
+    default=2024,
+    show_default=True,
+)
+@click.option(
+    "-f",
+    "--flamegraph",
+    is_flag=True,
+    help="If generate flamegraph",
+    default=False,
+    show_default=True,
+)
+def view_profile(conf: _InternalConfig, port: int, flamegraph: Path, profile: Path, **_):
+    """
+    View the profile using vizviewer
+    """
+    from kazu.static import get_local_ip
+    from subprocess import DEVNULL, Popen
+
+    local_ip = get_local_ip()
+    if local_ip is None:
+        secho("Cannot get local ip, vizviewer will not be opened", fg="red", bold=True)
+        return
+    url = f"http://{local_ip}:{port}"
+
+    args = ["vizviewer", "--server_only", "--port", str(port), profile.as_posix()]
+    if flamegraph:
+        args.append("--flamegraph")
+    with Popen(args, stdout=DEVNULL, stderr=DEVNULL) as process:
         secho(f"View profile at {url}", fg="green", bold=True)
 
-        while 1:
-            cmd = click.prompt(f"Enter '{QUIT}' to quit")
-            if cmd == QUIT:
+        while True:
+            line = click.prompt(f"Enter '{QUIT}' to quit")
+            if line == QUIT:
                 break
+        process.kill()
