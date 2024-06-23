@@ -366,17 +366,14 @@ def test(conf: _InternalConfig, device: str, **_):
     type=click.Choice(["adc", "io", "mpu", "all"]),
     nargs=-1,
 )
+@click.option("-s", "--use-screen", is_flag=True, default=False, show_default=True, help="Print to onboard lcd screen")
 @click.option("-i", "interval", type=click.FLOAT, default=0.5, show_default=True)
-def read_sensors(ctx: click.Context, conf: _InternalConfig, interval: float, device: str):
+def read_sensors(ctx: click.Context, conf: _InternalConfig, interval: float, device: str, use_screen: bool):
     """
     Read sensors data and print to terminal
     """
-    from pyuptech import (
-        make_mpu_table,
-        make_io_table,
-        make_adc_table,
-    )
-    from kazu.hardwares import sensors
+    from pyuptech import make_mpu_table, make_io_table, make_adc_table, adc_io_display_on_lcd, Color
+    from kazu.hardwares import sensors, screen
 
     app_config: APPConfig = conf.app_config
     device = set(device) or ("all",)
@@ -412,8 +409,8 @@ def read_sensors(ctx: click.Context, conf: _InternalConfig, interval: float, dev
         sensor_config.rl_io_index: "RL",
         sensor_config.rr_io_index: "RR",
         sensor_config.reboot_button_index: "REBOOT",
-        sensor_config.gray_io_left_index: "GRAY-LEFT",
-        sensor_config.gray_io_right_index: "GRAY-RIGHT",
+        sensor_config.gray_io_left_index: "GRAY-L",
+        sensor_config.gray_io_right_index: "GRAY-R",
     }
     for dev in device:
         match dev:
@@ -427,7 +424,11 @@ def read_sensors(ctx: click.Context, conf: _InternalConfig, interval: float, dev
             case _:
                 raise ValueError(f"Invalid device: {dev}")
     try:
+        if use_screen:
+            screen.open(2)
         while 1:
+            if use_screen:
+                adc_io_display_on_lcd(sensors, screen, adc_labels, io_labels)
             stdout: str = "\n".join(pack() for pack in packs)
             clear()
             echo(stdout)
@@ -437,6 +438,8 @@ def read_sensors(ctx: click.Context, conf: _InternalConfig, interval: float, dev
     finally:
         _logger.info("Closing sensors...")
         sensors.adc_io_close()
+        if use_screen:
+            screen.fill_screen(Color.BLACK).refresh().close()
         _logger.info("Exit reading successfully.")
         ctx.exit(0)
 
@@ -989,3 +992,152 @@ def bench(**_):
     """
 
     echo("bench test done!")
+
+
+@main.command("trac")
+@click.pass_obj
+@click.help_option("-h", "--help")
+@click.option(
+    "-r",
+    "--run-config-path",
+    show_default=True,
+    default=None,
+    help=f"config file path, also can receive env {Env.KAZU_RUN_CONFIG_PATH}",
+    type=click.Path(dir_okay=False, readable=True, path_type=Path),
+    envvar=Env.KAZU_RUN_CONFIG_PATH,
+)
+@click.option(
+    "-o",
+    "--output-path",
+    show_default=True,
+    default="./profile.json",
+    help=f"Viztracer profile dump path.",
+    type=click.Path(dir_okay=False, readable=True, path_type=Path),
+)
+@click.option(
+    "-s",
+    "--salvo",
+    show_default=True,
+    default=10,
+    help=f"How many salvo to run.",
+    type=click.INT,
+)
+@click.option(
+    "-d",
+    "--disable-view-profile",
+    is_flag=True,
+    default=False,
+    help=f"Disable view profile using vizviewer.",
+)
+@click.option(
+    "-p",
+    "--port",
+    type=click.INT,
+    help="Set the port of the render server",
+    default=2024,
+    show_default=True,
+)
+def trace(
+    conf: _InternalConfig, run_config_path: Path, output_path: Path, salvo, disable_view_profile: bool, port: int, **_
+):
+    """
+    Trace the std battle using viztracer
+    """
+
+    from viztracer import VizTracer
+    from bdmc import CMD
+    from kazu.hardwares import inited_controller, sensors, inited_tag_detector
+    from kazu.signal_light import set_all_black
+    from kazu.assembly import assembly_NGS_schema
+    from kazu.compile import botix
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    traver = VizTracer()
+
+    run_config = load_run_config(run_config_path)
+
+    app_config = conf.app_config
+
+    sensors.adc_io_open().MPU6500_Open()
+    set_all_black()
+    tag_detector = inited_tag_detector(app_config).apriltag_detect_start()
+    con = inited_controller(app_config).start_msg_sending().send_cmd(CMD.RESET)
+    con.context.update(ContextVar.export_context())
+
+    botix.token_pool = assembly_NGS_schema(app_config, run_config)
+    stage_func = botix.compile(function_name="std_battle")
+    seq = (0,) * salvo
+    traver.start()
+    for _ in seq:
+        stage_func()
+    traver.stop()
+
+    set_all_black()
+    tag_detector.apriltag_detect_end().release_camera()
+    con.send_cmd(CMD.RESET).stop_msg_sending()
+    sensors.adc_io_close()
+    traver.save(output_path.as_posix())
+
+    if not disable_view_profile:
+        from kazu.static import get_local_ip
+        from subprocess import DEVNULL, Popen
+
+        local_ip = get_local_ip()
+        if local_ip is None:
+            secho("Cannot get local ip, vizviewer will not be opened", fg="red", bold=True)
+            return
+        url = f"http://{local_ip}:{port}"
+        with Popen(["vizviewer", "--server_only", "--port", str(port), output_path], stdout=DEVNULL) as process:
+            secho(f"View profile at {url}", fg="green", bold=True)
+
+            while True:
+                line = click.prompt(f"Enter '{QUIT}' to quit")
+                if line == QUIT:
+                    break
+            process.kill()
+
+
+@main.command("view")
+@click.help_option("-h", "--help")
+@click.argument("profile", type=click.Path(dir_okay=False, readable=True, path_type=Path))
+@click.option(
+    "-p",
+    "--port",
+    type=click.INT,
+    help="Set the port of the render server",
+    default=2024,
+    show_default=True,
+)
+@click.option(
+    "-f",
+    "--flamegraph",
+    is_flag=True,
+    help="If generate flamegraph",
+    default=False,
+    show_default=True,
+)
+def view_profile(port: int, flamegraph: Path, profile: Path, **_):
+    """
+    View the profile using vizviewer
+    """
+    from kazu.static import get_local_ip
+    from subprocess import DEVNULL, Popen
+
+    local_ip = get_local_ip()
+    if local_ip is None:
+        secho("Cannot get local ip, vizviewer will not be opened", fg="red", bold=True)
+        return
+    url = f"http://{local_ip}:{port}"
+
+    args = ["vizviewer", "--server_only", "--port", str(port), profile.as_posix()]
+    if flamegraph:
+        args.append("--flamegraph")
+    with Popen(args, stdout=DEVNULL) as process:
+        secho(f"View profile at {url}", fg="green", bold=True)
+
+        while True:
+            line = click.prompt(f"Enter '{QUIT}' to quit")
+            if line == QUIT:
+                break
+        process.kill()
