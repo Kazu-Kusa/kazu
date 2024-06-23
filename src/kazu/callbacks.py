@@ -60,6 +60,17 @@ def disable_cam_callback(conf: _InternalConfig, ctx: click.Context, _, value: st
         conf.app_config.vision.use_camera = False
 
 
+@click.pass_obj
+def disable_siglight_callback(conf: _InternalConfig, ctx: click.Context, _, value: str):
+    """
+    Disable the siglight.
+    """
+    if value:
+
+        secho("Disable siglight", fg="red", bold=True)
+        conf.app_config.debug.use_siglight = False
+
+
 def _set_all_log_level(level: int | str):
     import pyuptech
     import bdmc

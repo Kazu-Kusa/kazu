@@ -21,6 +21,7 @@ from kazu.callbacks import (
     set_res_multiplier_callback,
     bench_sleep_precision,
     led_light_shell_callback,
+    disable_siglight_callback,
 )
 from kazu.config import (
     DEFAULT_APP_CONFIG_PATH,
@@ -58,13 +59,21 @@ from kazu.visualize import print_colored_toml
     default=None,
     show_default=True,
 )
-def main(ctx: click.Context, app_config_path: Path, log_level: str):
+@click.option(
+    "-s",
+    "--disable-siglight",
+    is_flag=True,
+    default=False,
+    help="Disable signal light",
+)
+def main(ctx: click.Context, app_config_path: Path, log_level: str, disable_siglight: bool):
     """A Dedicated Robots Control System"""
     app_config = load_app_config(app_config_path)
 
     ctx.obj = _InternalConfig(app_config=app_config, app_config_file_path=app_config_path)
 
     log_level_callback(ctx=ctx, _=None, value=log_level)
+    disable_siglight_callback(ctx=ctx, _=None, value=disable_siglight)
 
 
 @main.command("config")
@@ -778,6 +787,9 @@ def control_display(conf: _InternalConfig, sig_lights: bool, **_):
     """
     if sig_lights:
 
+        if not conf.app_config.debug.use_siglight:
+            secho("Siglight is not enabled, temporarily enable it during the display", fg="yellow", bold=True)
+            conf.app_config.debug.use_siglight = True
         from kazu.compile import make_std_battle_handler
         from kazu.config import RunConfig
         from kazu.signal_light import sig_light_registry

@@ -109,7 +109,11 @@ def make_edge_handler(
 
     # <editor-fold desc="Initialize Containers">
     transitions_pool: List[MovingTransition] = []
-    abnormal_exit.after_exiting.append(sig_light_registry.register_all("Edge|Abnormal Exit", Color.PURPLE))
+    (
+        abnormal_exit.after_exiting.append(sig_light_registry.register_all("Edge|Abnormal Exit", Color.PURPLE))
+        if app_config.debug.use_siglight
+        else None
+    )
     (case_reg := CaseRegistry(EdgeCodeSign)).register(EdgeCodeSign.O_O_O_O, normal_exit)
     # </editor-fold>
 
@@ -423,23 +427,23 @@ def make_surrounding_handler(
     atk_neutral_box_state = MovingState.straight(surr_conf.atk_speed_neutral_box)
     allay_fallback_state = MovingState.straight(-surr_conf.fallback_speed_ally_box)
     edge_fallback_state = MovingState.straight(-surr_conf.fallback_speed_edge)
+    if app_config.debug.use_siglight:
+        atk_enemy_car_state.after_exiting.append(
+            sig_light_registry.register_singles("Surr|Attack enemy car", Color.PURPLE, Color.RED)
+        )
+        atk_enemy_box_state.after_exiting.append(
+            sig_light_registry.register_singles("Surr|Attack enemy box", Color.PURPLE, Color.YELLOW)
+        )
 
-    atk_enemy_car_state.after_exiting.append(
-        sig_light_registry.register_singles("Surr|Attack enemy car", Color.PURPLE, Color.RED)
-    )
-    atk_enemy_box_state.after_exiting.append(
-        sig_light_registry.register_singles("Surr|Attack enemy box", Color.PURPLE, Color.YELLOW)
-    )
+        atk_neutral_box_state.after_exiting.append(
+            sig_light_registry.register_singles("Surr|Attack neutral box", Color.PURPLE, Color.WHITE)
+        )
 
-    atk_neutral_box_state.after_exiting.append(
-        sig_light_registry.register_singles("Surr|Attack neutral box", Color.PURPLE, Color.WHITE)
-    )
+        allay_fallback_state.after_exiting.append(
+            sig_light_registry.register_singles("Surr|Ally fallback", Color.PURPLE, Color.GREEN)
+        )
 
-    allay_fallback_state.after_exiting.append(
-        sig_light_registry.register_singles("Surr|Ally fallback", Color.PURPLE, Color.GREEN)
-    )
-
-    edge_fallback_state.after_exiting.append(sig_light_registry.register_all("Surr|Edge fallback", Color.CYAN))
+        edge_fallback_state.after_exiting.append(sig_light_registry.register_all("Surr|Edge fallback", Color.CYAN))
     atk_enemy_car_transition = MovingTransition(surr_conf.atk_speed_enemy_car, breaker=atk_breaker)
     atk_enemy_box_transition = MovingTransition(surr_conf.atk_speed_enemy_box, breaker=atk_breaker)
     atk_neutral_box_transition = MovingTransition(surr_conf.atk_neutral_box_duration, breaker=atk_breaker)
@@ -762,7 +766,13 @@ def make_scan_handler(
     case_reg = CaseRegistry(to_cover=ScanCodesign)
 
     scan_state = MovingState.rand_dir_turn(controller, conf.scan_speed, conf.scan_turn_left_prob)
-    scan_state.after_exiting.append(sig_light_registry.register_singles("Scan|Start Scanning", Color.RED, Color.GREEN))
+    (
+        scan_state.after_exiting.append(
+            sig_light_registry.register_singles("Scan|Start Scanning", Color.RED, Color.GREEN)
+        )
+        if app_config.debug.use_siglight
+        else None
+    )
     scan_state.before_entering.append(
         controller.register_context_executor(
             sensors.adc_all_channels, output_keys=ContextVar.recorded_pack.name, function_name="update_recorded_pack"
@@ -786,7 +796,11 @@ def make_scan_handler(
     fall_back_state = MovingState.straight(-conf.fall_back_speed)
     fall_back_transition = MovingTransition(conf.fall_back_duration, breaker=rear_edge_breaker)
 
-    end_state.after_exiting.append(sig_light_registry.register_all("Scan|End Scanning", Color.RED))
+    (
+        end_state.after_exiting.append(sig_light_registry.register_all("Scan|End Scanning", Color.RED))
+        if app_config.debug.use_siglight
+        else None
+    )
     transitions_pool: List[MovingTransition] = []
     # ---------------------------------------------------------------------
     [head_state, *_], transitions = composer.init_container().add(end_state).export_structure()
@@ -906,7 +920,11 @@ def make_rand_turn_handler(
     conf = run_config.search.rand_turn
 
     rand_lr_turn_state = MovingState.rand_dir_turn(controller, conf.turn_speed, turn_left_prob=conf.turn_left_prob)
-    rand_lr_turn_state.after_exiting.append(sig_light_registry.register_all("Rturn|Start Rturn", Color.YELLOW))
+    (
+        rand_lr_turn_state.after_exiting.append(sig_light_registry.register_all("Rturn|Start Rturn", Color.YELLOW))
+        if app_config.debug.use_siglight
+        else None
+    )
     half_turn_transition = MovingTransition(conf.half_turn_duration)
 
     states, transitions = composer.add(rand_lr_turn_state).add(half_turn_transition).add(end_state).export_structure()
@@ -962,7 +980,11 @@ def make_gradient_move(app_config: APPConfig, run_config: RunConfig, is_salvo_en
         speed_expressions=ContextVar.gradient_speed.name,
         used_context_variables=[ContextVar.gradient_speed.name],
         before_entering=updaters,
-        after_exiting=[sig_light_registry.register_all("GMove|Start gradient move", Color.BLUE)],
+        after_exiting=(
+            [sig_light_registry.register_all("GMove|Start gradient move", Color.BLUE)]
+            if app_config.debug.use_siglight
+            else []
+        ),
     )
 
 
@@ -1044,8 +1066,8 @@ def make_fence_handler(
 
     align_stage_breaker = Breakers.make_stage_align_breaker_mpu(app_config, run_config)
 
-    back_stage_pack = make_back_to_stage_handler(run_config, stop_state)
-    rand_move_pack = make_rand_walk_handler(run_config, stop_state)
+    back_stage_pack = make_back_to_stage_handler(app_config, run_config, stop_state)
+    rand_move_pack = make_rand_walk_handler(app_config, run_config, stop_state)
 
     align_direction_pack = make_align_direction_handler(app_config, run_config, rand_move_pack[0][0])
 
@@ -1131,7 +1153,11 @@ def make_fence_handler(
     case_reg.batch_register([FenceCodeSign.O_O_O_O, FenceCodeSign.X_X_X_X], head_state)
     # ---------------------------------------------------------------------
 
-    start_state.after_exiting.append(sig_light_registry.register_all("Fence|Starting Fence finding", Color.ORANGE))
+    (
+        start_state.after_exiting.append(sig_light_registry.register_all("Fence|Starting Fence finding", Color.ORANGE))
+        if app_config.debug.use_siglight
+        else None
+    )
     # <editor-fold desc="Assembly">
     _, head_trans = (
         composer.init_container()
@@ -1191,12 +1217,13 @@ def make_align_direction_handler(
 
 
 def make_back_to_stage_handler(
-    run_config: RunConfig, end_state: Optional[MovingState] = MovingState.halt(), **_
+    app_config: APPConfig, run_config: RunConfig, end_state: Optional[MovingState] = MovingState.halt(), **_
 ) -> Tuple[List[MovingState], List[MovingTransition]]:
     """
     Creates a state machine handler for moving back to the stage.
 
     Args:
+        app_config (APPConfig): The configuration object for the application.
         run_config (RunConfig): Runtime configuration object with parameters for movement actions.
         end_state (Optional[MovingState], optional): The final state of the state machine. Defaults to MovingState.halt().
 
@@ -1207,7 +1234,11 @@ def make_back_to_stage_handler(
     small_advance_transition = MovingTransition(run_config.backstage.small_advance_duration)
     stab_trans = MovingTransition(run_config.backstage.time_to_stabilize)
     # waiting for a booting signal, and dash on to the stage once received
-    small_advance.after_exiting.append(sig_light_registry.register_all("BStage|Small move", Color.GREEN))
+    (
+        small_advance.after_exiting.append(sig_light_registry.register_all("BStage|Small move", Color.GREEN))
+        if app_config.debug.use_siglight
+        else None
+    )
     states, transitions = (
         composer.init_container()
         .add(small_advance)
@@ -1265,18 +1296,22 @@ def make_reboot_handler(
         .add(
             MovingState(
                 0,
-                before_entering=[
-                    sig_light_registry.register_singles("Reboot|Start rebooting", Color.G_RED, Color.R_GREEN)
-                ],
+                before_entering=(
+                    [sig_light_registry.register_singles("Reboot|Start rebooting", Color.G_RED, Color.R_GREEN)]
+                    if app_config.debug.use_siglight
+                    else []
+                ),
             )
         )
         .add(holding_transition)
         .add(
             MovingState(
                 -run_config.boot.dash_speed,
-                after_exiting=[
-                    sig_light_registry.register_singles("Reboot|In rebooting", Color.DARKBLUE, Color.DARKGREEN)
-                ],
+                after_exiting=(
+                    [sig_light_registry.register_singles("Reboot|In rebooting", Color.DARKBLUE, Color.DARKGREEN)]
+                    if app_config.debug.use_siglight
+                    else []
+                ),
             )
         )
         .add(MovingTransition(run_config.boot.dash_duration))
@@ -1296,12 +1331,13 @@ def make_reboot_handler(
 
 
 def make_rand_walk_handler(
-    run_config: RunConfig, end_state: MovingState = MovingState.halt(), **_
+    app_config: APPConfig, run_config: RunConfig, end_state: MovingState = MovingState.halt(), **_
 ) -> Tuple[List[MovingState], List[MovingTransition]]:
     """
     Generates a random walk handler for the given run configuration and end state.
 
     Args:
+        app_config (APPConfig): The application configuration containing the sensor details.
         run_config (RunConfig): The run configuration containing the fence settings.
         end_state (MovingState, optional): The end state to transition to after the random walk. Defaults to MovingState.halt().
         **_: Additional keyword arguments.
@@ -1334,7 +1370,11 @@ def make_rand_walk_handler(
             weights.append(w * conf.straight_weight)
 
     rand_move_state = MovingState.rand_move(controller, moves_seq, weights)
-    rand_move_state.after_exiting.append(sig_light_registry.register_all("Rwalk|Start rand walking", Color.WHITE))
+    (
+        rand_move_state.after_exiting.append(sig_light_registry.register_all("Rwalk|Start rand walking", Color.WHITE))
+        if app_config.debug.use_siglight
+        else None
+    )
 
     move_transition = MovingTransition(conf.walk_duration)
     return composer.init_container().add(rand_move_state).add(move_transition).add(end_state).export_structure()

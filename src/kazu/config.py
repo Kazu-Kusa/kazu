@@ -340,6 +340,7 @@ class VisionConfig(BaseModel):
 
 class DebugConfig(BaseModel):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
+    use_siglight: bool = True
 
 
 class SensorConfig(BaseModel):
