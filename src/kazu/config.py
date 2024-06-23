@@ -338,7 +338,7 @@ class VisionConfig(BaseModel):
     camera_device_id: int = 0
 
 
-class LoggerConfig(BaseModel):
+class DebugConfig(BaseModel):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
 
 
@@ -378,7 +378,7 @@ class SensorConfig(BaseModel):
 class APPConfig(CounterHashable):
     motion: MotionConfig = MotionConfig()
     vision: VisionConfig = VisionConfig()
-    logger: LoggerConfig = LoggerConfig()
+    debug: DebugConfig = DebugConfig()
     sensor: SensorConfig = SensorConfig()
 
     @classmethod

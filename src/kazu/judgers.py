@@ -76,7 +76,7 @@ class Breakers:
             + "])"
         ]
         ctx = {}
-        if app_config.logger.log_level == "DEBUG":
+        if app_config.debug.log_level == "DEBUG":
 
             ctx["_logger"] = _logger
             source.append('_logger.debug(f"Edge Code: {ret}")')
@@ -187,7 +187,7 @@ class Breakers:
             ],
             judging_source=f"ret=bool(s0=={off_stage_activate} or s1=={off_stage_activate}  "  # use gray scaler, indicating the edge is encountered
             f"or all( (s2!={surr_obj_activate} , s3!={surr_obj_activate} , s4<{run_config.surrounding.atk_break_front_lower_threshold}))"  # indicating front is empty
-            f"or s5<{fl_lower_threshold} or s6<{fr_lower_threshold}))",  # long scan using edge sensors
+            f"or s5<{fl_lower_threshold} or s6<{fr_lower_threshold})",  # long scan using edge sensors
             return_type=bool,
             return_raw=False,
             function_name="atk_breaker_with_edge_sensors",
@@ -288,7 +288,7 @@ class Breakers:
         ]
 
         ctx = {}
-        if app_config.logger.log_level == "DEBUG":
+        if app_config.debug.log_level == "DEBUG":
             source.append('_logger.debug(f"Fence Code: {ret}")')
             ctx["_logger"] = _logger
 
@@ -356,7 +356,7 @@ class Breakers:
         ]
         ctx = {"adc_pack_getter": adc_pack_getter}
 
-        if app_config.logger.log_level == "DEBUG":
+        if app_config.debug.log_level == "DEBUG":
             source.append('_logger.debug(f"Scan Code: {ret}")')
             ctx["_logger"] = _logger
 
@@ -493,7 +493,7 @@ class Breakers:
                 f"+(s2=={activate} or s3=={activate} or s7>{conf.right_adc_lower_threshold})*{SurroundingWeights.BEHIND_OBJECT}"
             )
         ]
-        if app_config.logger.log_level == "DEBUG":
+        if app_config.debug.log_level == "DEBUG":
             source.append('_logger.debug(f"Surrounding Code: {ret}")')
             ctx["_logger"] = _logger
 

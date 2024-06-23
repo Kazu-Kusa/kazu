@@ -80,7 +80,7 @@ def log_level_callback(conf: _InternalConfig, ctx: click.Context, _, value: str)
     if value:
 
         secho(f"Change log level to {value}", fg="magenta", bold=True)
-        conf.app_config.logger.log_level = value
+        conf.app_config.debug.log_level = value
         _set_all_log_level(value)
 
 

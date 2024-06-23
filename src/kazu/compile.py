@@ -56,7 +56,7 @@ def make_edge_handler(
         abnormal_exit: 异常退出的移动状态。
         transitions_pool: 状态转换列表。
     """
-    if app_config.logger.log_level == "DEBUG":
+    if app_config.debug.log_level == "DEBUG":
 
         def _log_state():
             _logger.debug("Entering Edge State")
@@ -393,7 +393,7 @@ def make_surrounding_handler(
       一个四元组，包含开始状态、正常退出状态、异常退出状态和一系列可能的状态转换。
     """
 
-    if app_config.logger.log_level == "DEBUG":
+    if app_config.debug.log_level == "DEBUG":
 
         def _log_state():
             _logger.debug("Entering Surr State")
@@ -768,7 +768,7 @@ def make_scan_handler(
             sensors.adc_all_channels, output_keys=ContextVar.recorded_pack.name, function_name="update_recorded_pack"
         )
     )
-    if app_config.logger.log_level == "DEBUG":
+    if app_config.debug.log_level == "DEBUG":
 
         def _log_state():
             _logger.debug("Entering Scan State")
@@ -1034,7 +1034,7 @@ def make_fence_handler(
     Returns:
         Tuple[MovingState, MovingState, List[MovingTransition]]: A tuple containing the start state, stop state, and list of transitions.
     """
-    if app_config.logger.log_level == "DEBUG":
+    if app_config.debug.log_level == "DEBUG":
 
         def _log_state():
             _logger.debug("Entering Fence State")
