@@ -366,17 +366,14 @@ def test(conf: _InternalConfig, device: str, **_):
     type=click.Choice(["adc", "io", "mpu", "all"]),
     nargs=-1,
 )
+@click.option("-s", "--use-screen", is_flag=True, default=False, show_default=True, help="Print to onboard lcd screen")
 @click.option("-i", "interval", type=click.FLOAT, default=0.5, show_default=True)
-def read_sensors(ctx: click.Context, conf: _InternalConfig, interval: float, device: str):
+def read_sensors(ctx: click.Context, conf: _InternalConfig, interval: float, device: str, use_screen: bool):
     """
     Read sensors data and print to terminal
     """
-    from pyuptech import (
-        make_mpu_table,
-        make_io_table,
-        make_adc_table,
-    )
-    from kazu.hardwares import sensors
+    from pyuptech import make_mpu_table, make_io_table, make_adc_table, adc_io_display_on_lcd
+    from kazu.hardwares import sensors, screen
 
     app_config: APPConfig = conf.app_config
     device = set(device) or ("all",)
@@ -427,7 +424,11 @@ def read_sensors(ctx: click.Context, conf: _InternalConfig, interval: float, dev
             case _:
                 raise ValueError(f"Invalid device: {dev}")
     try:
+        if use_screen:
+            screen.open(2)
         while 1:
+            if use_screen:
+                adc_io_display_on_lcd(sensors, screen, adc_labels, io_labels)
             stdout: str = "\n".join(pack() for pack in packs)
             clear()
             echo(stdout)
