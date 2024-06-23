@@ -1011,7 +1011,15 @@ def bench(**_):
     help=f"Viztracer profile dump path.",
     type=click.Path(dir_okay=False, readable=True, path_type=Path),
 )
-def trace(conf: _InternalConfig, run_config_path: Path, output_path: Path, **_):
+@click.option(
+    "-s",
+    "--salvo",
+    show_default=True,
+    default=10,
+    help=f"How many salvo to run.",
+    type=click.INT,
+)
+def trace(conf: _InternalConfig, run_config_path: Path, output_path: Path, salvo, **_):
     """
     Trace the std battle using viztracer
     """
@@ -1039,8 +1047,10 @@ def trace(conf: _InternalConfig, run_config_path: Path, output_path: Path, **_):
 
     botix.token_pool = assembly_NGS_schema(app_config, run_config)
     stage_func = botix.compile()
+    seq = (0,) * salvo
     traver.start()
-    stage_func()
+    for _ in seq:
+        stage_func()
     traver.stop()
 
     set_all_black()
