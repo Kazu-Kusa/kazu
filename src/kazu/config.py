@@ -30,7 +30,7 @@ class TagGroup(BaseModel):
     team_color: Literal["yellow", "blue"] | str
     enemy_tag: Literal[1, 2] = None
     allay_tag: Literal[1, 2] = None
-    neutral_tag: Literal[1] = 1
+    neutral_tag: Literal[0] = 0
     default_tag: int = TagDetector.Config.default_tag_id
 
     def __init__(self, /, **data: Any):
