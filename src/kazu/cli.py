@@ -1016,7 +1016,6 @@ def trace(conf: _InternalConfig, run_config_path: Path, output_path: Path, **_):
     Trace the std battle using viztracer
     """
 
-    import subprocess
     from viztracer import VizTracer
     from bdmc import CMD
     from kazu.hardwares import inited_controller, sensors, inited_tag_detector
@@ -1044,9 +1043,8 @@ def trace(conf: _InternalConfig, run_config_path: Path, output_path: Path, **_):
     stage_func()
     traver.stop()
 
-    sensors.adc_io_close()
+    set_all_black()
     tag_detector.apriltag_detect_end().release_camera()
     con.send_cmd(CMD.RESET).stop_msg_sending()
+    sensors.adc_io_close()
     traver.save(output_path.as_posix())
-
-    subprocess.run(["vizviewer", output_path.as_posix()])
