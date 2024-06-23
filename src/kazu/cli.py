@@ -1046,7 +1046,7 @@ def trace(conf: _InternalConfig, run_config_path: Path, output_path: Path, salvo
     con.context.update(ContextVar.export_context())
 
     botix.token_pool = assembly_NGS_schema(app_config, run_config)
-    stage_func = botix.compile()
+    stage_func = botix.compile(function_name="std_battle")
     seq = (0,) * salvo
     traver.start()
     for _ in seq:
