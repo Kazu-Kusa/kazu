@@ -22,6 +22,7 @@ from kazu.callbacks import (
     bench_sleep_precision,
     led_light_shell_callback,
     disable_siglight_callback,
+    bench_siglight_switch_freq,
 )
 from kazu.config import (
     DEFAULT_APP_CONFIG_PATH,
@@ -974,8 +975,17 @@ def breaker_test(
     callback=bench_sleep_precision,
     help="measure sleep precision",
 )
+@click.option(
+    "-w",
+    "--light-switch-freq",
+    is_flag=True,
+    default=False,
+    callback=bench_siglight_switch_freq,
+    help="measure light switch freq",
+)
 def bench(**_):
     """
     Benchmarks
     """
+
     echo("bench test done!")

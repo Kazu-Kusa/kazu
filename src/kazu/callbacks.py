@@ -224,6 +224,30 @@ def bench_sleep_precision(ctx, _, enable: bool):
 
 
 def led_light_shell_callback(ctx: click.Context, _, shell):
+    """
+    Callback function for the LED light shell.
+
+    Args:
+        ctx (click.Context): The click context.
+        _ (Any): Unused parameter.
+        shell (bool): Flag indicating whether the shell is enabled.
+
+    Returns:
+        None: If the shell is not enabled.
+
+    Raises:
+        None.
+
+    Description:
+        This function is a callback for the LED light shell. It initializes the necessary hardware
+        modules and enters a loop to prompt the user for commands. The valid commands are either a
+        single number or three numbers separated by spaces. The function validates the input and
+        sets the LED lights to the specified color. The loop continues until the user enters the
+        "QUIT" command.
+
+        The function also handles the cleanup of the hardware modules and exits the context.
+
+    """
     if not shell:
         return
     from kazu.hardwares import screen, sensors
@@ -280,3 +304,39 @@ def led_light_shell_callback(ctx: click.Context, _, shell):
     screen.fill_screen(Color.BLACK).refresh().close().set_all_leds_same(Color.BLACK)
     sensors.adc_io_close()
     ctx.exit(0)
+
+
+def bench_siglight_switch_freq(ctx: click.Context, _, enable):
+    """
+    Callback function for the bench_siglight_switch_freq shell. Will test to acquire the signal light switch freq per second
+    Args:
+        ctx:
+        _:
+        enable:
+
+    Returns:
+
+    """
+    if not enable:
+        return
+
+    from kazu.signal_light import sig_light_registry
+    from pyuptech import Color
+    from time import perf_counter
+    from kazu.hardwares import sensors
+
+    sensors.adc_io_open()
+    setter_a = sig_light_registry.register_singles("bench", Color.RED, Color.GREEN)
+    setter_b = sig_light_registry.register_singles("bench", Color.BLUE, Color.RED)
+
+    DURATION = 10
+    counter = 0
+    end_time = perf_counter() + DURATION
+    while perf_counter() < end_time:
+        setter_a()
+        setter_b()
+        counter += 1
+
+    freq = counter / DURATION
+    secho(f"Signal light switch freq: {freq}")
+    sensors.adc_io_close()
