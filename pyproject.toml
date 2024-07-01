@@ -6,16 +6,16 @@ authors = [
     { name = "Whth", email = "88489697+Whth@users.noreply.github.com" },
 ]
 dependencies = [
-    "mentabotix>=0.1.6.1",
-    "bdmc>=0.1.6",
+    "mentabotix>=0.1.6.2",
     "pyuptech>=0.1.6.3",
-    "upicvision>=0.1.0.6",
+    "bdmc>=0.1.6",
     "coloredlogs>=15.0.1",
     "pydantic>=2.7.4",
     "click>=8.1.7",
     "toml>=0.10.2",
     "terminaltables>=3.1.10",
     "colorama>=0.4.6",
+    "upicvision>=0.1.0.6",
     "pyserial>=3.5",
     "plantuml>=0.3.0",
     "six>=1.16.0",
@@ -31,7 +31,7 @@ distribution = true
 dev = [
     "pyinstaller>=6.7.0",
     "viztracer>=0.16.3",
-    "pip>=24.1",
+    "nuitka>=2.3.6",
 ]
 [project.scripts]
 kazu = "kazu.cli:main"
