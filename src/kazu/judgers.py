@@ -673,7 +673,7 @@ class Breakers:
                 f"ret=q_tb.get(({get_id_source}, bool(s0=={activate} or s1=={activate} or s4>{conf.front_adc_lower_threshold})))"
                 f"+(s5>{conf.left_adc_lower_threshold})*{SurroundingWeights.LEFT_OBJECT}"
                 f"+(s6>{conf.right_adc_lower_threshold})*{SurroundingWeights.RIGHT_OBJECT}"
-                f"+(s2=={activate} or s3=={activate} or s7>{conf.right_adc_lower_threshold})*{SurroundingWeights.BEHIND_OBJECT}"
+                f"+(s2=={activate} or s3=={activate} or s7>{conf.back_adc_lower_threshold})*{SurroundingWeights.BEHIND_OBJECT}"
             )
         ]
         # 如果处于调试模式，添加日志记录逻辑
