@@ -1095,7 +1095,6 @@ def make_fence_handler(
     case_reg = CaseRegistry(FenceCodeSign)
 
     # ---------------------------------------------------------------------
-    # TODO impl
     [head_state, *_], transitions = composer.init_container().concat(*back_stage_pack).export_structure()
     transitions_pool.extend(transitions)
     case_reg.register(FenceCodeSign.X_O_O_O, head_state)
