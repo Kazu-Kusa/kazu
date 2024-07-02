@@ -144,15 +144,15 @@ class RandTurn(BaseModel):
 class SearchConfig(BaseModel):
 
     use_gradient_move: bool = True
-    gradient_move_weight: float = 8
+    gradient_move_weight: float = 20
     gradient_move: GradientConfig = GradientConfig()
 
     use_scan_move: bool = True
-    scan_move_weight: float = 1
+    scan_move_weight: float = 0.25
     scan_move: ScanConfig = ScanConfig()
 
     use_rand_turn: bool = True
-    rand_turn_weight: float = 0.5
+    rand_turn_weight: float = 1
     rand_turn: RandTurn = RandTurn()
 
 
