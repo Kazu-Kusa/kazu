@@ -363,7 +363,7 @@ def make_edge_handler(
         composer.init_container()
         .add(start_state)
         .add(
-            MovingTransition(run_config.perf.min_sync_interval, breaker=edge_full_breaker, to_states=case_reg.export())
+            MovingTransition(run_config.perf.checking_duration, breaker=edge_full_breaker, to_states=case_reg.export())
         )
         .export_structure()
     )
@@ -730,7 +730,7 @@ def make_surrounding_handler(
         composer.init_container()
         .add(start_state)
         .add(
-            MovingTransition(run_config.perf.min_sync_interval, breaker=surr_full_breaker, to_states=case_reg.export())
+            MovingTransition(run_config.perf.checking_duration, breaker=surr_full_breaker, to_states=case_reg.export())
         )
         .export_structure()
     )
@@ -1162,7 +1162,7 @@ def make_fence_handler(
     _, head_trans = (
         composer.init_container()
         .add(start_state)
-        .add(MovingTransition(run_config.perf.min_sync_interval, breaker=fence_breaker, to_states=case_reg.export()))
+        .add(MovingTransition(run_config.perf.checking_duration, breaker=fence_breaker, to_states=case_reg.export()))
         .export_structure()
     )
     # </editor-fold>
@@ -1426,7 +1426,7 @@ def make_std_battle_handler(
     )
 
     check_trans = MovingTransition(
-        run_config.perf.min_sync_interval, breaker=stage_breaker, to_states=case_reg.export()
+        run_config.perf.checking_duration, breaker=stage_breaker, to_states=case_reg.export()
     )
 
     _, trans = composer.init_container().add(start_state).add(check_trans).export_structure()
@@ -1486,7 +1486,7 @@ def make_always_on_stage_battle_handler(
     transition_pool = stage_pack
 
     check_trans = MovingTransition(
-        run_config.perf.min_sync_interval, breaker=stage_breaker, to_states=on_stage_start_state
+        run_config.perf.checking_duration, breaker=stage_breaker, to_states=on_stage_start_state
     )
 
     _, trans = composer.init_container().add(start_state).add(check_trans).export_structure()
@@ -1522,7 +1522,7 @@ def make_always_off_stage_battle_handler(
     transition_pool = [*reboot_pack[-1], *fence_pack[-1]]
 
     check_trans = MovingTransition(
-        run_config.perf.min_sync_interval,
+        run_config.perf.checking_duration,
         breaker=stage_breaker,
         to_states={StageCodeSign.OFF_STAGE: fence_pack[0], StageCodeSign.OFF_STAGE_REBOOT: reboot_pack[0][0]},
     )

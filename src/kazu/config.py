@@ -203,9 +203,7 @@ class StrategyConfig(BaseModel):
 
 
 class PerformanceConfig(BaseModel):
-    min_sync_interval: float = 0.007
-
-    gray_adc_lower_threshold: int = 2000
+    checking_duration: float = 0.0
 
 
 class BootConfig(BaseModel):
