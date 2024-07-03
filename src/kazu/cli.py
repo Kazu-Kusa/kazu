@@ -946,7 +946,7 @@ def breaker_test(ctx: click.Context, conf: _InternalConfig, run_config_path: Pat
             for name, d in displays:
                 data.append(pack := [name, *d()])
                 if use_screen:
-                    screen.print("|".join(pack) + "\n")
+                    screen.print("|".join(map(str, pack)) + "\n")
             click.clear()
             secho(table.table, bold=True)
             if use_screen:
@@ -955,6 +955,8 @@ def breaker_test(ctx: click.Context, conf: _InternalConfig, run_config_path: Pat
     except KeyboardInterrupt:
         _logger.info("KeyboardInterrupt, exiting...")
 
+    except Exception as e:
+        _logger.critical(e)
     finally:
 
         _logger.info("Releasing resources.")
