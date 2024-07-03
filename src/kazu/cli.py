@@ -264,7 +264,7 @@ def run(ctx: click.Context, conf: _InternalConfig, run_config_path: Path | None,
     finally:
         _logger.info(f"Releasing hardware resources...")
         set_all_black()
-        con.send_cmd(CMD.FULL_STOP).send_cmd(CMD.RESET).stop_msg_sending()
+        con.send_cmd(CMD.FULL_STOP).send_cmd(CMD.RESET).close()
         tag_detector.apriltag_detect_end()
         tag_detector.release_camera()
         sensors.adc_io_close()
@@ -353,7 +353,7 @@ def test(conf: _InternalConfig, device: str, **_):
 
         controller = inited_controller(app_config)
         table.append(_shader("MOTOR", check_motor(controller)))
-        controller.stop_msg_sending()
+        controller.close()
     secho(SingleTable(table).table)
 
 
@@ -600,7 +600,7 @@ def control_motor(conf: _InternalConfig, duration: Optional[float], speeds: Opti
     import threading
 
     controller = inited_controller(conf.app_config)
-    if not controller.serial_client.is_connected:
+    if not controller.seriald.is_open:
         secho(f"Serial client is not connected to {conf.app_config.motion.port}, exiting...", fg="red", bold=True)
         return
 
@@ -684,7 +684,7 @@ def control_motor(conf: _InternalConfig, duration: Optional[float], speeds: Opti
             "You should specify duration and speeds if you want to a single send cmd or add '-s' to open shell",
             fg="red",
         )
-    controller.stop_msg_sending()
+    controller.close()
 
 
 @main.command("ports")
@@ -748,15 +748,13 @@ def stream_send_msg(ctx: click.Context, conf: _InternalConfig, **_):
     from kazu.hardwares import inited_controller
 
     con = inited_controller(conf.app_config)
-    if not con.serial_client.is_connected:
+    if not con.seriald.is_open:
         secho(f"Serial client is not connected to {conf.app_config.motion.port}, exiting...", fg="red", bold=True)
         return
     secho("Start reading thread", fg="green", bold=True)
 
     def _ret_handler(msg: str):
         print(f"\n{Fore.YELLOW}< {msg}{Fore.RESET}")
-
-    con.serial_client.start_read_thread(_ret_handler)
 
     secho(f"Start streaming input, enter '{QUIT}' to quit", fg="green", bold=True)
 
@@ -771,10 +769,9 @@ def stream_send_msg(ctx: click.Context, conf: _InternalConfig, **_):
         )
         if cmd == QUIT:
             break
-        con.cmd_queue.put(f"{cmd}\r".encode("ascii"))
+        con.seriald.write(f"{cmd}\r".encode("ascii"))
 
-    con.stop_msg_sending()
-    con.serial_client.stop_read_thread()
+    con.close()
 
     secho("Quit streaming", fg="green", bold=True)
     ctx.exit(0)
@@ -893,12 +890,8 @@ def tag_test(ctx: click.Context, conf: _InternalConfig, interval: float, **_):
     show_default=True,
     help="Set the interval of the refresh frequency",
 )
-def breaker_test(
-    ctx: click.Context,
-    conf: _InternalConfig,
-    run_config_path: Path,
-    interval: float,
-):
+@click.option("-s", "--use-screen", is_flag=True, default=False, show_default=True, help="Print to onboard lcd screen")
+def breaker_test(ctx: click.Context, conf: _InternalConfig, run_config_path: Path, interval: float, use_screen: bool):
     """
     Use breaker detector to test breaker detection.
     """
@@ -906,8 +899,9 @@ def breaker_test(
     from kazu.judgers import Breakers
     from kazu.constant import EdgeCodeSign, SurroundingCodeSign, ScanCodesign, FenceCodeSign
     from terminaltables import SingleTable
-    from kazu.hardwares import sensors, controller
+    from kazu.hardwares import sensors, controller, screen
     from kazu.config import ContextVar
+    from pyuptech import Color, FontSize
 
     sensors.adc_io_open().MPU6500_Open()
     controller.context.update({ContextVar.recorded_pack.name: sensors.adc_all_channels()})
@@ -939,20 +933,32 @@ def breaker_test(
         ("Scan", scan_breaker_display),
         ("Fence", fence_breaker_display),
     ]
+
+    if use_screen:
+        screen.open(2).fill_screen(Color.BLACK).refresh().set_font_size(FontSize.FONT_6X8)
     try:
         while 1:
             data.clear()
             data.append(["Breaker", "CodeSign", "Value"])
-            for name, d in displays:
-                data.append([name, *d()])
+            packs = [[name, *d()] for name, d in displays]
+            data.extend(packs)
             click.clear()
             secho(table.table, bold=True)
+            if use_screen:
+                for pack, start_y in zip(packs, range(0, 80, 8)):
+                    screen.put_string(0, start_y, "|".join(map(str, pack)))
+                screen.refresh()
             sleep(interval)
     except KeyboardInterrupt:
         _logger.info("KeyboardInterrupt, exiting...")
 
+    except Exception as e:
+        _logger.critical(e)
     finally:
+
         _logger.info("Releasing resources.")
+        if use_screen:
+            screen.fill_screen(0).refresh().close()
         sensors.adc_io_close()
         _logger.info("Released")
         ctx.exit(0)
@@ -1062,7 +1068,7 @@ def trace(
     sensors.adc_io_open().MPU6500_Open()
     set_all_black()
     tag_detector = inited_tag_detector(app_config).apriltag_detect_start()
-    con = inited_controller(app_config).start_msg_sending().send_cmd(CMD.RESET)
+    con = inited_controller(app_config)
     con.context.update(ContextVar.export_context())
 
     botix.token_pool = assembly_NGS_schema(app_config, run_config)
@@ -1075,7 +1081,7 @@ def trace(
 
     set_all_black()
     tag_detector.apriltag_detect_end().release_camera()
-    con.send_cmd(CMD.RESET).stop_msg_sending()
+    con.send_cmd(CMD.RESET).close()
     sensors.adc_io_close()
     traver.save(output_path.as_posix())
 

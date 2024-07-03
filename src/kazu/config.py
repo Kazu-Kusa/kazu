@@ -49,8 +49,8 @@ class TagGroup(BaseModel):
 
 
 class EdgeConfig(BaseModel):
-    lower_threshold: Tuple[float, float, float, float] = (1400, 1500, 1500, 1400)
-    upper_threshold: Tuple[float, float, float, float] = (2100, 2200, 2200, 2100)
+    lower_threshold: Tuple[float, float, float, float] = (1800, 1750, 1750, 1800)
+    upper_threshold: Tuple[float, float, float, float] = (2100, 2270, 2270, 2100)
 
     fallback_speed: int = 2100
     fallback_duration: float = 0.7
@@ -96,7 +96,7 @@ class SurroundingConfig(BaseModel):
     turn_left_prob: float = 0.5
 
     rand_turn_speeds: List[int] = [3000, 5000]
-    rand_turn_speed_weights: List[float] = [1, 3]
+    rand_turn_speed_weights: List[float] = [3, 1]
 
     full_turn_duration: float = 0.45
     half_turn_duration: float = 0.225
@@ -144,15 +144,15 @@ class RandTurn(BaseModel):
 class SearchConfig(BaseModel):
 
     use_gradient_move: bool = True
-    gradient_move_weight: float = 8
+    gradient_move_weight: float = 20
     gradient_move: GradientConfig = GradientConfig()
 
     use_scan_move: bool = True
-    scan_move_weight: float = 1
+    scan_move_weight: float = 0.25
     scan_move: ScanConfig = ScanConfig()
 
     use_rand_turn: bool = True
-    rand_turn_weight: float = 0.5
+    rand_turn_weight: float = 1
     rand_turn: RandTurn = RandTurn()
 
 
@@ -182,15 +182,15 @@ class fenceConfig(BaseModel):
     max_yaw_tolerance: float = 20.0
 
     stage_align_speed: int = 1000
-    max_stage_align_duration: float = 3.0
+    max_stage_align_duration: float = 3.5
     stage_align_direction: Literal["l", "r", "rand"] = "rand"
 
     direction_align_speed: int = 1000
-    max_direction_align_duration: float = 3.0
+    max_direction_align_duration: float = 3.5
     direction_align_direction: Literal["l", "r", "rand"] = "rand"
 
-    exit_corner_speed: int = 2500
-    max_exit_corner_duration: float = 3.0
+    exit_corner_speed: int = 1950
+    max_exit_corner_duration: float = 2.0
 
     rand_walk: RandWalk = RandWalk()
 
@@ -203,9 +203,7 @@ class StrategyConfig(BaseModel):
 
 
 class PerformanceConfig(BaseModel):
-    min_sync_interval: float = 0.007
-
-    gray_adc_lower_threshold: int = 2000
+    checking_duration: float = 0.0
 
 
 class BootConfig(BaseModel):
@@ -227,16 +225,16 @@ class BootConfig(BaseModel):
 
 
 class BackStageConfig(BaseModel):
-    time_to_stabilize: float = 0.1
+    time_to_stabilize: float = 0.2
 
     small_advance_speed: int = 3000
     small_advance_duration: float = 0.3
 
-    dash_speed: int = 6000
-    dash_duration: float = 0.6
+    dash_speed: int = 7500
+    dash_duration: float = 0.7
 
     turn_speed: int = 5000
-    full_turn_duration: float = 0.45
+    full_turn_duration: float = 0.35
     turn_left_prob: float = 0.5
 
 
@@ -350,30 +348,30 @@ class SensorConfig(BaseModel):
 
     adc_min_sample_interval: int = 5
 
-    edge_fl_index: int = 0
-    edge_fr_index: int = 1
+    edge_fl_index: int = 3
+    edge_fr_index: int = 0
     edge_rl_index: int = 2
-    edge_rr_index: int = 3
+    edge_rr_index: int = 1
 
-    left_adc_index: int = 4
-    right_adc_index: int = 5
+    left_adc_index: int = 6
+    right_adc_index: int = 4
 
-    front_adc_index: int = 6
+    front_adc_index: int = 5
     rb_adc_index: int = 7
 
     gray_adc_index: int = 8
     # ---------IO----------
 
-    gray_io_left_index: int = 0
-    gray_io_right_index: int = 1
+    gray_io_left_index: int = 1
+    gray_io_right_index: int = 0
 
-    fl_io_index: int = 2
-    fr_io_index: int = 3
+    fl_io_index: int = 5
+    fr_io_index: int = 2
 
     rl_io_index: int = 4
-    rr_io_index: int = 5
+    rr_io_index: int = 3
 
-    reboot_button_index: int = 7
+    reboot_button_index: int = 6
 
 
 class APPConfig(CounterHashable):
