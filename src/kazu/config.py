@@ -203,7 +203,7 @@ class StrategyConfig(BaseModel):
 
 
 class PerformanceConfig(BaseModel):
-    checking_duration: float = 0.007
+    checking_duration: float = 0.0
 
 
 class BootConfig(BaseModel):
