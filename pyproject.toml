@@ -6,9 +6,9 @@ authors = [
     { name = "Whth", email = "88489697+Whth@users.noreply.github.com" },
 ]
 dependencies = [
-    "mentabotix>=0.1.6.2",
+    "mentabotix>=0.1.7",
     "pyuptech>=0.1.6.5",
-    "bdmc>=0.1.6",
+    "bdmc>=0.2.6",
     "coloredlogs>=15.0.1",
     "pydantic>=2.7.4",
     "click>=8.1.7",
@@ -32,6 +32,7 @@ dev = [
     "pyinstaller>=6.7.0",
     "viztracer>=0.16.3",
     "nuitka>=2.3.6",
+    "pip>=24.1.1",
 ]
 [project.scripts]
 kazu = "kazu.cli:main"

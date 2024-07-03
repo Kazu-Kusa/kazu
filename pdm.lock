@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = ["cross_platform", "inherit_metadata"]
 lock_version = "4.4.2"
-content_hash = "sha256:ce866bf15fcadde99c79172746baf10bae6c9360fe3e8d946f03bb4d0add03ea"
+content_hash = "sha256:fe108213dc6b78cb08d360f9d48cb0f1738a8ef1024c9bb7e50b36f6263aa0e5"
 
 [[package]]
 name = "altgraph"
@@ -30,17 +30,18 @@ files = [
 
 [[package]]
 name = "bdmc"
-version = "0.1.6"
+version = "0.2.6"
 requires_python = ">=3.11"
 summary = "An api wrapper lib designed for the uptech BDMC divers"
 groups = ["default"]
 dependencies = [
     "coloredlogs>=15.0.1",
+    "pydantic>=2.8.0",
     "pyserial>=3.5",
 ]
 files = [
-    {file = "bdmc-0.1.6-py3-none-any.whl", hash = "sha256:4668df019824eb28af87754cc809f3921f47692b301c0e9b4fb1ad655d583587"},
-    {file = "bdmc-0.1.6.tar.gz", hash = "sha256:1c440b05236c3331938b0de8b720e1b339e723479a133c4426ff9e00040799de"},
+    {file = "bdmc-0.2.6-py3-none-any.whl", hash = "sha256:2d87a781ecb956c7841f3297ffd2b8bc7fced3d3c06cdbf6712f5587d27e9a62"},
+    {file = "bdmc-0.2.6.tar.gz", hash = "sha256:985c5918c0c634121a0e5d309e9fd100b0ed846fff7d7427bd74c54f9fa11ff7"},
 ]
 
 [[package]]
@@ -151,20 +152,20 @@ files = [
 
 [[package]]
 name = "mentabotix"
-version = "0.1.6.2"
+version = "0.1.7"
 requires_python = ">=3.11"
 summary = "A Bot control lib"
 groups = ["default"]
 dependencies = [
-    "bdmc>=0.1.5.14",
+    "bdmc>=0.2.6",
     "colorama>=0.4.6",
     "coloredlogs>=15.0.1",
     "numpy>=2.0.0",
     "terminaltables>=3.1.10",
 ]
 files = [
-    {file = "mentabotix-0.1.6.2-py3-none-any.whl", hash = "sha256:62f4594542eb33da0a37f8f442141c05548d06f7c89423842975018e7548245b"},
-    {file = "mentabotix-0.1.6.2.tar.gz", hash = "sha256:a34175501d445191c5c60ceed35ab42b3e4ced8b9400054bdcf134101cbaa1b9"},
+    {file = "mentabotix-0.1.7-py3-none-any.whl", hash = "sha256:37184c6587b7307cd4d841c90d2bce8ccaded14a0f0ca69ce207e0727a198708"},
+    {file = "mentabotix-0.1.7.tar.gz", hash = "sha256:af4f4aa69909567baa70585b5f8eca5b3211472eb23de788fcec4b6e83baecf5"},
 ]
 
 [[package]]
@@ -272,6 +273,17 @@ marker = "sys_platform == \"win32\""
 files = [
     {file = "pefile-2023.2.7-py3-none-any.whl", hash = "sha256:da185cd2af68c08a6cd4481f7325ed600a88f6a813bad9dea07ab3ef73d8d8d6"},
     {file = "pefile-2023.2.7.tar.gz", hash = "sha256:82e6114004b3d6911c77c3953e3838654b04511b8b66e8583db70c65998017dc"},
+]
+
+[[package]]
+name = "pip"
+version = "24.1.1"
+requires_python = ">=3.8"
+summary = "The PyPA recommended tool for installing Python packages."
+groups = ["dev"]
+files = [
+    {file = "pip-24.1.1-py3-none-any.whl", hash = "sha256:efca15145a95e95c00608afeab66311d40bfb73bb2266a855befd705e6bb15a0"},
+    {file = "pip-24.1.1.tar.gz", hash = "sha256:5aa64f65e1952733ee0a9a9b1f52496ebdb3f3077cc46f80a16d983b58d1180a"},
 ]
 
 [[package]]
