@@ -893,12 +893,8 @@ def tag_test(ctx: click.Context, conf: _InternalConfig, interval: float, **_):
     show_default=True,
     help="Set the interval of the refresh frequency",
 )
-def breaker_test(
-    ctx: click.Context,
-    conf: _InternalConfig,
-    run_config_path: Path,
-    interval: float,
-):
+@click.option("-s", "--use-screen", is_flag=True, default=False, show_default=True, help="Print to onboard lcd screen")
+def breaker_test(ctx: click.Context, conf: _InternalConfig, run_config_path: Path, interval: float, use_screen: bool):
     """
     Use breaker detector to test breaker detection.
     """
@@ -906,8 +902,9 @@ def breaker_test(
     from kazu.judgers import Breakers
     from kazu.constant import EdgeCodeSign, SurroundingCodeSign, ScanCodesign, FenceCodeSign
     from terminaltables import SingleTable
-    from kazu.hardwares import sensors, controller
+    from kazu.hardwares import sensors, controller, screen
     from kazu.config import ContextVar
+    from pyuptech import Color, FontSize
 
     sensors.adc_io_open().MPU6500_Open()
     controller.context.update({ContextVar.recorded_pack.name: sensors.adc_all_channels()})
@@ -939,20 +936,30 @@ def breaker_test(
         ("Scan", scan_breaker_display),
         ("Fence", fence_breaker_display),
     ]
+
+    if use_screen:
+        screen.open(2).fill_screen(Color.BLACK).refresh().set_font_size(FontSize.FONT_6X8)
     try:
         while 1:
             data.clear()
             data.append(["Breaker", "CodeSign", "Value"])
             for name, d in displays:
-                data.append([name, *d()])
+                data.append(pack := [name, *d()])
+                if use_screen:
+                    screen.print("|".join(pack) + "\n")
             click.clear()
             secho(table.table, bold=True)
+            if use_screen:
+                screen.refresh()
             sleep(interval)
     except KeyboardInterrupt:
         _logger.info("KeyboardInterrupt, exiting...")
 
     finally:
+
         _logger.info("Releasing resources.")
+        if use_screen:
+            screen.fill_screen(0).refresh().close()
         sensors.adc_io_close()
         _logger.info("Released")
         ctx.exit(0)
