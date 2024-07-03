@@ -203,7 +203,7 @@ class StrategyConfig(BaseModel):
 
 
 class PerformanceConfig(BaseModel):
-    checking_duration: float = 0.0
+    checking_duration: float = 0.007
 
 
 class BootConfig(BaseModel):
@@ -348,30 +348,30 @@ class SensorConfig(BaseModel):
 
     adc_min_sample_interval: int = 5
 
-    edge_fl_index: int = 0
-    edge_fr_index: int = 1
+    edge_fl_index: int = 3
+    edge_fr_index: int = 0
     edge_rl_index: int = 2
-    edge_rr_index: int = 3
+    edge_rr_index: int = 1
 
-    left_adc_index: int = 4
-    right_adc_index: int = 5
+    left_adc_index: int = 6
+    right_adc_index: int = 4
 
-    front_adc_index: int = 6
+    front_adc_index: int = 5
     rb_adc_index: int = 7
 
     gray_adc_index: int = 8
     # ---------IO----------
 
-    gray_io_left_index: int = 0
-    gray_io_right_index: int = 1
+    gray_io_left_index: int = 1
+    gray_io_right_index: int = 0
 
-    fl_io_index: int = 2
-    fr_io_index: int = 3
+    fl_io_index: int = 5
+    fr_io_index: int = 2
 
     rl_io_index: int = 4
-    rr_io_index: int = 5
+    rr_io_index: int = 3
 
-    reboot_button_index: int = 7
+    reboot_button_index: int = 6
 
 
 class APPConfig(CounterHashable):
