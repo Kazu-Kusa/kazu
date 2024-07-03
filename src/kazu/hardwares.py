@@ -11,7 +11,7 @@ from upic.vision.tagdetector import TagDetector
 from kazu.config import APPConfig
 from kazu.logger import _logger
 
-controller = CloseLoopController()
+controller: CloseLoopController = CloseLoopController()
 screen = Screen()
 
 tag_detector = TagDetector()
@@ -67,9 +67,7 @@ def inited_controller(app_config: APPConfig) -> CloseLoopController:
         MotorInfo(*app_config.motion.motor_rr),
         MotorInfo(*app_config.motion.motor_fr),
     )
-    controller.serial_client.port = app_config.motion.port
-    controller.serial_client.open()
-    return controller.start_msg_sending().send_cmd(CMD.RESET)
+    return controller.open(app_config.motion.port).send_cmd(CMD.RESET)
 
 
 def inited_tag_detector(app_config: APPConfig, retry_interval: float = 0.5) -> TagDetector:

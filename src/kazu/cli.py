@@ -264,7 +264,7 @@ def run(ctx: click.Context, conf: _InternalConfig, run_config_path: Path | None,
     finally:
         _logger.info(f"Releasing hardware resources...")
         set_all_black()
-        con.send_cmd(CMD.FULL_STOP).send_cmd(CMD.RESET).stop_msg_sending()
+        con.send_cmd(CMD.FULL_STOP).send_cmd(CMD.RESET).close()
         tag_detector.apriltag_detect_end()
         tag_detector.release_camera()
         sensors.adc_io_close()
@@ -353,7 +353,7 @@ def test(conf: _InternalConfig, device: str, **_):
 
         controller = inited_controller(app_config)
         table.append(_shader("MOTOR", check_motor(controller)))
-        controller.stop_msg_sending()
+        controller.close()
     secho(SingleTable(table).table)
 
 
@@ -600,7 +600,7 @@ def control_motor(conf: _InternalConfig, duration: Optional[float], speeds: Opti
     import threading
 
     controller = inited_controller(conf.app_config)
-    if not controller.serial_client.is_connected:
+    if not controller.seriald.is_open:
         secho(f"Serial client is not connected to {conf.app_config.motion.port}, exiting...", fg="red", bold=True)
         return
 
@@ -684,7 +684,7 @@ def control_motor(conf: _InternalConfig, duration: Optional[float], speeds: Opti
             "You should specify duration and speeds if you want to a single send cmd or add '-s' to open shell",
             fg="red",
         )
-    controller.stop_msg_sending()
+    controller.close()
 
 
 @main.command("ports")
@@ -748,15 +748,13 @@ def stream_send_msg(ctx: click.Context, conf: _InternalConfig, **_):
     from kazu.hardwares import inited_controller
 
     con = inited_controller(conf.app_config)
-    if not con.serial_client.is_connected:
+    if not con.seriald.is_open:
         secho(f"Serial client is not connected to {conf.app_config.motion.port}, exiting...", fg="red", bold=True)
         return
     secho("Start reading thread", fg="green", bold=True)
 
     def _ret_handler(msg: str):
         print(f"\n{Fore.YELLOW}< {msg}{Fore.RESET}")
-
-    con.serial_client.start_read_thread(_ret_handler)
 
     secho(f"Start streaming input, enter '{QUIT}' to quit", fg="green", bold=True)
 
@@ -771,10 +769,9 @@ def stream_send_msg(ctx: click.Context, conf: _InternalConfig, **_):
         )
         if cmd == QUIT:
             break
-        con.cmd_queue.put(f"{cmd}\r".encode("ascii"))
+        con.seriald.write(f"{cmd}\r".encode("ascii"))
 
-    con.stop_msg_sending()
-    con.serial_client.stop_read_thread()
+    con.close()
 
     secho("Quit streaming", fg="green", bold=True)
     ctx.exit(0)
@@ -1071,7 +1068,7 @@ def trace(
     sensors.adc_io_open().MPU6500_Open()
     set_all_black()
     tag_detector = inited_tag_detector(app_config).apriltag_detect_start()
-    con = inited_controller(app_config).start_msg_sending().send_cmd(CMD.RESET)
+    con = inited_controller(app_config)
     con.context.update(ContextVar.export_context())
 
     botix.token_pool = assembly_NGS_schema(app_config, run_config)
@@ -1084,7 +1081,7 @@ def trace(
 
     set_all_black()
     tag_detector.apriltag_detect_end().release_camera()
-    con.send_cmd(CMD.RESET).stop_msg_sending()
+    con.send_cmd(CMD.RESET).close()
     sensors.adc_io_close()
     traver.save(output_path.as_posix())
 
