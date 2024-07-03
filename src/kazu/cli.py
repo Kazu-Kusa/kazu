@@ -943,13 +943,13 @@ def breaker_test(ctx: click.Context, conf: _InternalConfig, run_config_path: Pat
         while 1:
             data.clear()
             data.append(["Breaker", "CodeSign", "Value"])
-            for name, d in displays:
-                data.append(pack := [name, *d()])
-                if use_screen:
-                    screen.print("|".join(map(str, pack)) + "\n")
+            packs = [[name, *d()] for name, d in displays]
+            data.extend(packs)
             click.clear()
             secho(table.table, bold=True)
             if use_screen:
+                for pack, start_y in zip(packs, range(0, 80, 8)):
+                    screen.put_string(0, start_y, "|".join(map(str, pack)))
                 screen.refresh()
             sleep(interval)
     except KeyboardInterrupt:
