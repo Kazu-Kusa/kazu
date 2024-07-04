@@ -245,16 +245,15 @@ class StageConfig(BaseModel):
 
 class RunConfig(CounterHashable):
 
+    strategy: StrategyConfig = StrategyConfig()
+    boot: BootConfig = BootConfig()
+    backstage: BackStageConfig = BackStageConfig()
     stage: StageConfig = StageConfig()
     edge: EdgeConfig = EdgeConfig()
     surrounding: SurroundingConfig = SurroundingConfig()
     search: SearchConfig = SearchConfig()
     fence: fenceConfig = fenceConfig()
 
-    boot: BootConfig = BootConfig()
-    backstage: BackStageConfig = BackStageConfig()
-
-    strategy: StrategyConfig = StrategyConfig()
     perf: PerformanceConfig = PerformanceConfig()
 
     @classmethod
