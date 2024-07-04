@@ -42,7 +42,21 @@ from kazu.visualize import print_colored_toml
     epilog=r"For more details, Check at https://github.com/Kazu-Kusa/kazu",
 )
 @click.help_option("-h", "--help")
-@click.version_option(__version__, "-v", "--version", prog_name=__command__)
+@click.version_option(
+    __version__,
+    "-v",
+    "--version",
+    message=f"""
+{Fore.MAGENTA}______ __                    
+___  //_/_____ __________  __
+__  ,<  _  __ `/__  /_  / / /
+_  /| | / /_/ /__  /_/ /_/ / 
+/_/ |_| \__,_/ _____/\__,_/  
+{Fore.RESET}
+{Fore.YELLOW}Kazu: A Dedicated Robots Control System
+{Fore.GREEN}Version: {__command__}-v{__version__}{Fore.RESET}
+                             """,
+)
 @click.pass_context
 @click.option(
     "-a",
