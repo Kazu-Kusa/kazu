@@ -63,6 +63,7 @@ class Breakers:
         """
         lt_seq = run_config.edge.lower_threshold
         ut_seq = run_config.edge.upper_threshold
+        activate = run_config.stage.gray_io_off_stage_case_value
         return menta.construct_inlined_function(
             usages=[
                 SamplerUsage(
@@ -77,8 +78,8 @@ class Breakers:
                     ],
                 ),
             ],
-            judging_source=f"ret=s0=={run_config.stage.gray_io_off_stage_case_value} "
-            f"or s1=={run_config.stage.gray_io_off_stage_case_value} "
+            judging_source=f"ret=s0=={activate} "
+            f"or s1=={activate} "
             f"or ({lt_seq[0]}>s2 or s2 > {ut_seq[0]}) "
             f"or ({lt_seq[-1]}>s3 or s3 > {ut_seq[-1]})",
             return_type=bool,
@@ -101,15 +102,32 @@ class Breakers:
         """
         lt_seq = run_config.edge.lower_threshold
         ut_seq = run_config.edge.upper_threshold
+        if run_config.edge.use_gray_io:
+            _logger.info("Using gray io for edge full detection")
+            fl_lt, rl_lt, rr_lt, fr_lt = lt_seq
+            fl_ut, rl_ut, rr_ut, fr_ut = ut_seq
+            fl_wt, rl_wt, rr_wt, fr_wt = EdgeWeights.export_std_weight_seq()
 
-        source = [
-            "ret=sum(["
-            + ",".join(
-                f"({lt}>s{s_id} or {ut}<{s_id})*{wt}"
-                for s_id, lt, ut, wt in zip(range(4), lt_seq, ut_seq, EdgeWeights.export_std_weight_seq())
-            )
-            + "])"
-        ]
+            fl_id, rl_id, rr_id, fr_id = list(range(4))
+
+            activate = run_config.stage.gray_io_off_stage_case_value
+            source = [
+                f"ret=sum(["
+                f"(s{fl_id}<{fl_lt} or s{fl_id}>{fl_ut} or s4=={activate} )*{fl_wt}, "
+                f"(s{rl_id}<{rl_lt} or s{rl_id}>{rl_ut})*{rl_wt}, "
+                f"(s{rr_id}<{rr_lt} or s{rr_id}>{rr_ut})*{rr_wt}, "
+                f"(s{fr_id}<{fr_lt} or s{fr_id}>{fr_ut} or s5=={activate})*{fr_wt}"
+                f"])"
+            ]
+        else:
+            source = [
+                "ret=sum(["
+                + ",".join(
+                    f"({lt}>s{s_id} or {ut}<s{s_id})*{wt}"
+                    for s_id, lt, ut, wt in zip(range(4), lt_seq, ut_seq, EdgeWeights.export_std_weight_seq())
+                )
+                + "])"
+            ]
         ctx = {}
         if app_config.debug.log_level == "DEBUG":
 
@@ -121,13 +139,26 @@ class Breakers:
                 SamplerUsage(
                     used_sampler_index=SamplerIndexes.adc_all,
                     required_data_indexes=[
-                        app_config.sensor.edge_fl_index,
-                        app_config.sensor.edge_rl_index,
-                        app_config.sensor.edge_rr_index,
-                        app_config.sensor.edge_fr_index,
+                        app_config.sensor.edge_fl_index,  # s0
+                        app_config.sensor.edge_rl_index,  # s1
+                        app_config.sensor.edge_rr_index,  # s2
+                        app_config.sensor.edge_fr_index,  # s3
                     ],
                 )
-            ],
+            ]
+            + (
+                [
+                    SamplerUsage(
+                        used_sampler_index=SamplerIndexes.io_all,
+                        required_data_indexes=[
+                            app_config.sensor.gray_io_left_index,  # s4
+                            app_config.sensor.gray_io_right_index,  # s5
+                        ],
+                    )
+                ]
+                if run_config.edge.use_gray_io
+                else []
+            ),
             judging_source=source,
             extra_context=ctx,
             return_type=int,

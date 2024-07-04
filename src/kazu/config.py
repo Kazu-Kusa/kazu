@@ -67,6 +67,8 @@ class EdgeConfig(BaseModel):
     drift_speed: int = 1500
     drift_duration: float = 0.13
 
+    use_gray_io: bool = True
+
 
 class SurroundingConfig(BaseModel):
     io_encounter_object_value: int = 0
