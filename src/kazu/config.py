@@ -201,7 +201,6 @@ class StrategyConfig(BaseModel):
     use_edge_component: bool = True
     use_surrounding_component: bool = True
     use_normal_component: bool = True
-    use_fence_component: bool = True
 
 
 class PerformanceConfig(BaseModel):

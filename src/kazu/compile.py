@@ -1447,7 +1447,7 @@ def make_std_battle_handler(
     )
     [reboot_start_state, *_] = reboot_states_pack
     fence_start_state, _, fence_pack = make_fence_handler(app_config, run_config, stop_state=end_state.clone())
-    on_stage_start_state, _, stage_pack = make_on_stage_handler(
+    on_stage_start_state, stage_pack = make_on_stage_handler(
         app_config,
         run_config,
         abnormal_exit=end_state.clone(),
@@ -1479,7 +1479,7 @@ def make_on_stage_handler(
     run_config: RunConfig,
     start_state: MovingState = None,
     abnormal_exit: MovingState = None,
-) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
+) -> Tuple[MovingState, List[MovingTransition]]:
     """
     创建一个舞台处理程序，用于管理机器人的移动状态和过渡。
 
@@ -1494,16 +1494,35 @@ def make_on_stage_handler(
         异常退出状态；
         包含所有边缘、环绕和搜索处理状态转换的列表。
     """
+
+    conf = run_config.strategy
     start_state = start_state or continues_state.clone()
     abnormal_exit = abnormal_exit or MovingState.halt()
-    edge_pack = make_edge_handler(app_config, run_config, start_state=start_state, abnormal_exit=abnormal_exit.clone())
-    surr_pack = make_surrounding_handler(
-        app_config, run_config, start_state=edge_pack[1], abnormal_exit=abnormal_exit.clone()
-    )
-    search_pack = make_search_handler(
-        app_config, run_config, start_state=surr_pack[1], stop_state=abnormal_exit.clone()
-    )
-    return edge_pack[0], abnormal_exit, [*edge_pack[-1], *surr_pack[-1], *search_pack[-1]]
+
+    transitions = []
+    concat_state = start_state
+    if conf.use_edge_component:
+        edge_pack = make_edge_handler(
+            app_config, run_config, start_state=concat_state, abnormal_exit=abnormal_exit.clone()
+        )
+        transitions.extend(edge_pack[-1])
+        concat_state = edge_pack[1]
+    if conf.use_surrounding_component:
+        surr_pack = make_surrounding_handler(
+            app_config, run_config, start_state=concat_state, abnormal_exit=abnormal_exit.clone()
+        )
+        transitions.extend(surr_pack[-1])
+        concat_state = surr_pack[1]
+    if conf.use_normal_component:
+        search_pack = make_search_handler(
+            app_config, run_config, start_state=concat_state, stop_state=abnormal_exit.clone()
+        )
+        transitions.extend(search_pack[-1])
+    if not any(transitions):
+        _logger.warning(
+            f"No transition is generated for on stage handler, since the strategy config does not use any component."
+        )
+    return start_state, transitions
 
 
 def make_always_on_stage_battle_handler(
@@ -1525,7 +1544,7 @@ def make_always_on_stage_battle_handler(
 
     stage_breaker = Breakers.make_always_on_stage_breaker(app_config, run_config)
 
-    on_stage_start_state, _, stage_pack = make_on_stage_handler(app_config, run_config, abnormal_exit=end_state)
+    on_stage_start_state, stage_pack = make_on_stage_handler(app_config, run_config, abnormal_exit=end_state)
 
     transition_pool = stage_pack
 
