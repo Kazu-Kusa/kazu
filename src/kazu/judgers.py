@@ -444,7 +444,25 @@ class Breakers:
     @staticmethod
     @lru_cache(maxsize=None)
     def make_std_scan_breaker(app_config: APPConfig, run_config: RunConfig) -> Callable[[], int]:
+        """
+        Generates a function that acts as a breaker for standard scanning.
 
+        Args:
+            app_config (APPConfig): The application configuration.
+            run_config (RunConfig): The run configuration.
+
+        Returns:
+            Callable[[], int]: A function that takes no arguments and returns an integer.
+
+        This function uses the `lru_cache` decorator to cache the result of the function.
+        It also registers a context getter for the ADC pack.
+        The function constructs a source code string based on the provided configuration.
+        If the debug log level is set to "DEBUG", an additional line of code is added to log the scan code.
+        Finally, the function constructs and returns an inlined function using the `menta.construct_inlined_function` method.
+        The inlined function has two usages: one for the ADC sampler and one for the IO sampler.
+        The judging source is constructed based on the provided configuration.
+        The function name is set to "std_scan_breaker".
+        """
         adc_pack_getter: Callable[[], Tuple] = controller.register_context_getter(ContextVar.recorded_pack.name)
         conf = run_config.search.scan_move
         source = [  # activate once the deviation surpluses the tolerance

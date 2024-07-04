@@ -1,9 +1,14 @@
 from dataclasses import dataclass
-from enum import IntEnum, auto
+from enum import IntEnum, auto, Enum
 from typing import List, Tuple
 
 
 QUIT: str = "q"
+
+
+class Activation(Enum):
+    Activate: bool = True
+    Deactivate: bool = False
 
 
 @dataclass(frozen=True)

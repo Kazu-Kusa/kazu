@@ -897,7 +897,7 @@ def breaker_test(ctx: click.Context, conf: _InternalConfig, run_config_path: Pat
     """
     from kazu.config import load_run_config
     from kazu.judgers import Breakers
-    from kazu.constant import EdgeCodeSign, SurroundingCodeSign, ScanCodesign, FenceCodeSign
+    from kazu.constant import EdgeCodeSign, SurroundingCodeSign, ScanCodesign, FenceCodeSign, Activation
     from terminaltables import SingleTable
     from kazu.hardwares import sensors, controller, screen
     from kazu.config import ContextVar
@@ -908,7 +908,9 @@ def breaker_test(ctx: click.Context, conf: _InternalConfig, run_config_path: Pat
     run_config = load_run_config(run_config_path)
     config_pack = conf.app_config, run_config
 
-    def _make_display_pack(breaker: Callable[[], int], codesign_enum: Type[Enum]) -> Callable[[], Tuple[str, int]]:
+    def _make_display_pack(
+        breaker: Callable[[], int | bool], codesign_enum: Type[Enum]
+    ) -> Callable[[], Tuple[str, int | bool]]:
         def _display():
             codesign = breaker()
             [matched] = [x.name for x in codesign_enum if x.value == codesign]
@@ -927,11 +929,24 @@ def breaker_test(ctx: click.Context, conf: _InternalConfig, run_config_path: Pat
 
     fence_breaker_display = _make_display_pack(Breakers.make_std_fence_breaker(*config_pack), FenceCodeSign)
 
+    edge_front_breaker_display = _make_display_pack(Breakers.make_std_edge_front_breaker(*config_pack), Activation)
+    edge_rear_breaker_display = _make_display_pack(Breakers.make_std_edge_rear_breaker(*config_pack), Activation)
+
+    stage_align_breaker_display = _make_display_pack(Breakers.make_std_stage_align_breaker(*config_pack), Activation)
+    stage_align_breaker_mpu_display = _make_display_pack(
+        Breakers.make_stage_align_breaker_mpu(*config_pack), Activation
+    )
+    align_breaker_display = _make_display_pack(Breakers.make_align_direction_breaker(*config_pack), Activation)
     displays = [
         ("Edge", edge_breaker_display),
         ("Surr", surr_breaker_display),
         ("Scan", scan_breaker_display),
         ("Fence", fence_breaker_display),
+        ("FrontE", edge_front_breaker_display),
+        ("RearE", edge_rear_breaker_display),
+        ("SAlign", stage_align_breaker_display),
+        ("SAlignM", stage_align_breaker_mpu_display),
+        ("Align", align_breaker_display),
     ]
 
     if use_screen:
