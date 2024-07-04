@@ -1,4 +1,4 @@
-from typing import Callable, List, Tuple, Optional, TypeVar
+from typing import Callable, List, Tuple, TypeVar, Optional
 
 from mentabotix import (
     MovingChainComposer,
@@ -36,9 +36,9 @@ T = TypeVar("T")
 def make_edge_handler(
     app_config: APPConfig,
     run_config: RunConfig,
-    start_state: MovingState = continues_state.clone(),
-    normal_exit: MovingState = continues_state.clone(),
-    abnormal_exit: MovingState = MovingState.halt(),
+    start_state: MovingState = None,
+    normal_exit: MovingState = None,
+    abnormal_exit: MovingState = None,
 ) -> Tuple[MovingState, MovingState, MovingState, List[MovingTransition]]:
     """
     根据应用和运行配置创建边缘处理函数。
@@ -56,6 +56,10 @@ def make_edge_handler(
         abnormal_exit: 异常退出的移动状态。
         transitions_pool: 状态转换列表。
     """
+    start_state = start_state or continues_state.clone()
+    normal_exit = normal_exit or continues_state.clone()
+    abnormal_exit = abnormal_exit or MovingState.halt()
+
     if app_config.debug.log_level == "DEBUG":
 
         def _log_state():
@@ -378,9 +382,9 @@ def make_edge_handler(
 def make_surrounding_handler(
     app_config: APPConfig,
     run_config: RunConfig,
-    start_state: MovingState = continues_state.clone(),
-    normal_exit: MovingState = continues_state.clone(),
-    abnormal_exit: MovingState = MovingState.halt(),
+    start_state: MovingState = None,
+    normal_exit: MovingState = None,
+    abnormal_exit: MovingState = None,
 ) -> Tuple[MovingState, MovingState, MovingState, List[MovingTransition]]:
     """
     构造一个处理周围环境信息的策略处理器。
@@ -396,7 +400,9 @@ def make_surrounding_handler(
         Tuple[MovingState, MovingState, MovingState, List[MovingTransition]]:
       一个四元组，包含开始状态、正常退出状态、异常退出状态和一系列可能的状态转换。
     """
-
+    start_state = start_state or continues_state.clone()
+    normal_exit = normal_exit or continues_state.clone()
+    abnormal_exit = abnormal_exit or MovingState.halt()
     if app_config.debug.log_level == "DEBUG":
 
         def _log_state():
@@ -746,7 +752,7 @@ def make_surrounding_handler(
 def make_scan_handler(
     app_config: APPConfig,
     run_config: RunConfig,
-    end_state: Optional[MovingState] = MovingState.halt(),
+    end_state: MovingState = None,
 ) -> Tuple[List[MovingState], List[MovingTransition]]:
     """
     Generates a scan handler for the given application configuration, run configuration, and optional end state.
@@ -754,11 +760,13 @@ def make_scan_handler(
     Args:
         app_config (APPConfig): The application configuration.
         run_config (RunConfig): The run configuration.
-        end_state (Optional[MovingState], optional): The optional end state. Defaults to MovingState(0).
+        end_state (MovingState, optional): The optional end state. Defaults to MovingState(0).
 
     Returns:
         Tuple[List[MovingState], List[MovingTransition]]: A tuple containing the list of states and the list of transitions.
     """
+    end_state = end_state or MovingState.halt()
+
     scan_breaker = Breakers.make_std_scan_breaker(app_config, run_config)
     rear_edge_breaker = Breakers.make_std_edge_rear_breaker(app_config, run_config)
     turn_to_front_breaker = Breakers.make_std_turn_to_front_breaker(app_config, run_config)
@@ -904,7 +912,7 @@ def make_scan_handler(
 
 
 def make_rand_turn_handler(
-    app_config: APPConfig, run_config: RunConfig, end_state: MovingState = MovingState.halt()
+    app_config: APPConfig, run_config: RunConfig, end_state: MovingState = None
 ) -> Tuple[List[MovingState], List[MovingTransition]]:
     """
     Generates a handler for a random turn action.
@@ -917,6 +925,9 @@ def make_rand_turn_handler(
     Returns:
         Tuple[List[MovingState], List[MovingTransition]]: A tuple containing the list of states and the list of transitions.
     """
+
+    end_state = end_state or MovingState.halt()
+
     conf = run_config.search.rand_turn
 
     rand_lr_turn_state = MovingState.rand_dir_turn(controller, conf.turn_speed, turn_left_prob=conf.turn_left_prob)
@@ -991,8 +1002,8 @@ def make_gradient_move(app_config: APPConfig, run_config: RunConfig, is_salvo_en
 def make_search_handler(
     app_config: APPConfig,
     run_config: RunConfig,
-    start_state: Optional[MovingState] = None,
-    stop_state: MovingState = MovingState.halt(),
+    start_state: MovingState = None,
+    stop_state: MovingState = None,
 ) -> Tuple[List[MovingState], List[MovingTransition]]:
     """
     Generates a search handler for the given application configuration, run configuration, and optional start and stop states.
@@ -1000,13 +1011,14 @@ def make_search_handler(
     Args:
         app_config (APPConfig): The application configuration.
         run_config (RunConfig): The run configuration.
-        start_state (Optional[MovingState], optional): The optional start state. Defaults to None.
+        start_state (MovingState, optional): The optional start state. Defaults to None.
         stop_state (MovingState, optional): The stop state. Defaults to MovingState.halt().
 
     Returns:
         Tuple[List[MovingState], List[MovingTransition]]: A tuple containing the list of states and the list of transitions.
     """
     start_state = start_state or continues_state.clone()
+    stop_state = stop_state or MovingState.halt()
     scan_states, scan_transitions = make_scan_handler(app_config, run_config, end_state=stop_state)
     rand_turn_states, rand_turn_transitions = make_rand_turn_handler(app_config, run_config, end_state=stop_state)
     grad_move_state = make_gradient_move(app_config, run_config, is_salvo_end=True)
@@ -1041,8 +1053,8 @@ def make_search_handler(
 def make_fence_handler(
     app_config: APPConfig,
     run_config: RunConfig,
-    start_state: MovingState = continues_state.clone(),
-    stop_state: MovingState = MovingState.halt(),
+    start_state: MovingState = None,
+    stop_state: MovingState = None,
 ) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
     """
     Generates a fence handler for a given app configuration, run configuration, and optional start state.
@@ -1050,12 +1062,15 @@ def make_fence_handler(
     Args:
         app_config (APPConfig): The app configuration.
         run_config (RunConfig): The run configuration.
-        start_state (Optional[MovingState], optional): The optional start state. Defaults to None.
+        start_state (MovingState, optional): The optional start state. Defaults to None.
         stop_state (MovingState, optional): The stop state. Defaults to MovingState.halt().
 
     Returns:
         Tuple[MovingState, MovingState, List[MovingTransition]]: A tuple containing the start state, stop state, and list of transitions.
     """
+
+    start_state = start_state or continues_state.clone()
+    stop_state = stop_state or MovingState.halt()
     if app_config.debug.log_level == "DEBUG":
 
         def _log_state():
@@ -1074,7 +1089,7 @@ def make_fence_handler(
     rand_move_pack = make_rand_walk_handler(app_config, run_config, stop_state)
 
     rand_move_head_state = rand_move_pack[0][0]
-    align_direction_pack = make_align_direction_handler(app_config, run_config, rand_move_head_state)
+    align_direction_pack = make_align_direction_handler(app_config, run_config, rand_move_head_state, stop_state)
 
     conf = run_config.fence
 
@@ -1093,7 +1108,9 @@ def make_fence_handler(
         case _:
             raise ValueError(f"Invalid align direction: {conf.stage_align_direction}")
 
-    align_stage_transition = MovingTransition(conf.max_stage_align_duration, breaker=align_stage_breaker)
+    align_stage_transition = MovingTransition(
+        conf.max_stage_align_duration, breaker=align_stage_breaker, to_states={False: rand_move_head_state}
+    )
 
     transitions_pool: List[MovingTransition] = []
 
@@ -1108,11 +1125,10 @@ def make_fence_handler(
     [head_state, *_], transitions = (
         composer.init_container()
         .add(align_state.clone())
-        .add(align_to_stage := align_stage_transition.clone())
+        .add(align_stage_transition.clone())
         .concat(*back_stage_pack, register_case=True)  # back to stage only when the check is passed
         .export_structure()
     )
-    align_to_stage.to_states[False] = rand_move_head_state
 
     transitions_pool.extend(transitions)
     case_reg.batch_register(
@@ -1146,9 +1162,7 @@ def make_fence_handler(
     transitions_pool.extend(transitions)
     case_reg.batch_register([FenceCodeSign.X_O_O_X, FenceCodeSign.X_O_X_O], head_state)
     # ---------------------------------------------------------------------
-    [head_state, *_], transitions = (
-        composer.init_container().concat(*align_direction_pack).add(stop_state, True).export_structure()
-    )
+    [head_state, *_], transitions = composer.init_container().concat(*align_direction_pack).export_structure()
     transitions_pool.extend(transitions)
     case_reg.batch_register(
         [FenceCodeSign.O_X_X_X, FenceCodeSign.X_O_X_X, FenceCodeSign.X_X_O_X, FenceCodeSign.X_X_X_O], head_state
@@ -1183,7 +1197,7 @@ def make_fence_handler(
 def make_align_direction_handler(
     app_config: APPConfig,
     run_config: RunConfig,
-    not_aligned_state: MovingState = MovingState.halt(),
+    not_aligned_state: Optional[MovingState] = None,
     aligned_state: Optional[MovingState] = None,
 ) -> Tuple[List[MovingState], List[MovingTransition]]:
     """
@@ -1193,7 +1207,7 @@ def make_align_direction_handler(
         app_config (APPConfig): The configuration object for the application.
         run_config (RunConfig): The runtime configuration object.
         not_aligned_state (MovingState): The state to transition to when not aligned. Defaults to MovingState.halt().
-        aligned_state (Optional[MovingState], optional): The state to transition to when aligned. Defaults to None.
+        aligned_state (MovingState, optional): The state to transition to when aligned. Defaults to None.
 
     Returns:
         Tuple[List[MovingState], List[MovingTransition]]: A tuple containing the list of states and transitions.
@@ -1201,6 +1215,7 @@ def make_align_direction_handler(
     Raises:
         ValueError: If the align direction is invalid.
     """
+
     conf = run_config.fence
 
     match conf.direction_align_direction:
@@ -1213,17 +1228,26 @@ def make_align_direction_handler(
         case _:
             raise ValueError(f"Invalid align direction: {conf.direction_align_direction}")
     align_direction_breaker = Breakers.make_align_direction_breaker(app_config, run_config)
+    if aligned_state and not_aligned_state:
+        branch = {True: aligned_state, False: not_aligned_state}
+    elif aligned_state:
+        branch = {True: aligned_state}
+    elif not_aligned_state:
+        branch = {False: not_aligned_state}
+    else:
+        branch = {}
     align_direction_transition = MovingTransition(
-        conf.max_direction_align_duration, breaker=align_direction_breaker, to_states={False: not_aligned_state}
+        conf.max_direction_align_duration,
+        breaker=align_direction_breaker,
+        to_states=branch,
     )
 
     composer.init_container().add(align_state).add(align_direction_transition)
-    composer.add(aligned_state, True) if aligned_state else None
     return composer.export_structure()
 
 
 def make_back_to_stage_handler(
-    app_config: APPConfig, run_config: RunConfig, end_state: Optional[MovingState] = MovingState.halt(), **_
+    app_config: APPConfig, run_config: RunConfig, end_state: MovingState = None, **_
 ) -> Tuple[List[MovingState], List[MovingTransition]]:
     """
     Creates a state machine handler for moving back to the stage.
@@ -1231,11 +1255,13 @@ def make_back_to_stage_handler(
     Args:
         app_config (APPConfig): The configuration object for the application.
         run_config (RunConfig): Runtime configuration object with parameters for movement actions.
-        end_state (Optional[MovingState], optional): The final state of the state machine. Defaults to MovingState.halt().
+        end_state (MovingState, optional): The final state of the state machine. Defaults to MovingState.halt().
 
     Returns:
         Tuple[List[MovingState], List[MovingTransition]]: A tuple containing lists of states and transitions.
     """
+
+    end_state = end_state or MovingState.halt()
     small_advance = MovingState(run_config.backstage.small_advance_speed)
     small_advance_transition = MovingTransition(run_config.backstage.small_advance_duration)
     stab_trans = MovingTransition(run_config.backstage.time_to_stabilize)
@@ -1269,7 +1295,7 @@ def make_back_to_stage_handler(
 
 
 def make_reboot_handler(
-    app_config: APPConfig, run_config: RunConfig, end_state: Optional[MovingState] = MovingState.halt()
+    app_config: APPConfig, run_config: RunConfig, end_state: MovingState = None
 ) -> Tuple[List[MovingState], List[MovingTransition]]:
     """
     Constructs a state machine handler for reboot sequences.
@@ -1277,11 +1303,13 @@ def make_reboot_handler(
     Parameters:
         app_config: APPConfig, configuration object for application specifics including sensor details.
         run_config: RunConfig, runtime configuration object with parameters for bootup and movement actions.
-        end_state: Optional[MovingState], the final state of the state machine, defaults to MovingState(0).
+        end_state: MovingState, the final state of the state machine, defaults to MovingState(0).
 
     Returns:
         Tuple[List[MovingState], List[MovingTransition]], a tuple containing lists of states and transitions.
     """
+    end_state = end_state or MovingState.halt()
+
     activation_breaker = menta.construct_inlined_function(
         usages=[
             SamplerUsage(
@@ -1337,7 +1365,7 @@ def make_reboot_handler(
 
 
 def make_rand_walk_handler(
-    app_config: APPConfig, run_config: RunConfig, end_state: MovingState = MovingState.halt(), **_
+    app_config: APPConfig, run_config: RunConfig, end_state: MovingState = None, **_
 ) -> Tuple[List[MovingState], List[MovingTransition]]:
     """
     Generates a random walk handler for the given run configuration and end state.
@@ -1362,6 +1390,7 @@ def make_rand_walk_handler(
         and the specified end state.
 
     """
+    end_state = end_state or MovingState.halt()
     conf = run_config.fence.rand_walk
 
     moves_seq = []
@@ -1443,8 +1472,8 @@ def make_std_battle_handler(
 def make_on_stage_handler(
     app_config: APPConfig,
     run_config: RunConfig,
-    start_state: MovingState = continues_state.clone(),
-    abnormal_exit: MovingState = MovingState.halt(),
+    start_state: MovingState = None,
+    abnormal_exit: MovingState = None,
 ) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
     """
     创建一个舞台处理程序，用于管理机器人的移动状态和过渡。
@@ -1460,6 +1489,8 @@ def make_on_stage_handler(
         异常退出状态；
         包含所有边缘、环绕和搜索处理状态转换的列表。
     """
+    start_state = start_state or continues_state.clone()
+    abnormal_exit = abnormal_exit or MovingState.halt()
     edge_pack = make_edge_handler(app_config, run_config, start_state=start_state, abnormal_exit=abnormal_exit)
     surr_pack = make_surrounding_handler(app_config, run_config, start_state=edge_pack[1], abnormal_exit=abnormal_exit)
     if app_config.vision.use_camera:
