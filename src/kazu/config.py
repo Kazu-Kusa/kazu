@@ -52,10 +52,10 @@ class EdgeConfig(BaseModel):
     lower_threshold: Tuple[float, float, float, float] = (1800, 1750, 1750, 1800)
     upper_threshold: Tuple[float, float, float, float] = (2100, 2270, 2270, 2100)
 
-    fallback_speed: int = 2400
+    fallback_speed: int = 2600
     fallback_duration: float = 0.2
 
-    advance_speed: int = 2100
+    advance_speed: int = 2400
     advance_duration: float = 0.35
 
     turn_speed: int = 4000
@@ -71,11 +71,11 @@ class EdgeConfig(BaseModel):
 class SurroundingConfig(BaseModel):
     io_encounter_object_value: int = 0
 
-    left_adc_lower_threshold: int = 1300
-    right_adc_lower_threshold: int = 1300
+    left_adc_lower_threshold: int = 900
+    right_adc_lower_threshold: int = 900
 
-    front_adc_lower_threshold: int = 1300
-    back_adc_lower_threshold: int = 1500
+    front_adc_lower_threshold: int = 900
+    back_adc_lower_threshold: int = 1000
 
     atk_break_front_lower_threshold: int = 1700
     atk_break_use_edge_sensors: bool = True
@@ -86,17 +86,17 @@ class SurroundingConfig(BaseModel):
     fallback_speed_ally_box: int = 4000
     fallback_speed_edge: int = 3000
 
-    atk_enemy_car_duration: float = 6.0
-    atk_enemy_box_duration: float = 6.0
-    atk_neutral_box_duration: float = 6.0
+    atk_enemy_car_duration: float = 5.1
+    atk_enemy_box_duration: float = 5.1
+    atk_neutral_box_duration: float = 5.1
     fallback_duration_ally_box: float = 0.3
     fallback_duration_edge: float = 0.2
 
-    turn_speed: int = 5000
+    turn_speed: int = 4000
     turn_left_prob: float = 0.5
 
-    rand_turn_speeds: List[int] = [3000, 5000]
-    rand_turn_speed_weights: List[float] = [3, 1]
+    rand_turn_speeds: List[int] = [2100, 3000, 5000]
+    rand_turn_speed_weights: List[float] = [2, 3, 1]
 
     full_turn_duration: float = 0.45
     half_turn_duration: float = 0.225
@@ -106,16 +106,16 @@ class GradientConfig(BaseModel):
 
     max_speed: int = 3000
     min_speed: int = 500
-    lower_bound: int = 2800
+    lower_bound: int = 2900
     upper_bound: int = 3700
 
 
 class ScanConfig(BaseModel):
 
-    front_max_tolerance: int = 800
-    rear_max_tolerance: int = 900
-    left_max_tolerance: int = 800
-    right_max_tolerance: int = 800
+    front_max_tolerance: int = 500
+    rear_max_tolerance: int = 600
+    left_max_tolerance: int = 500
+    right_max_tolerance: int = 500
 
     io_encounter_object_value: int = 0
 
@@ -123,7 +123,7 @@ class ScanConfig(BaseModel):
     scan_duration: float = 3.5
     scan_turn_left_prob: float = 0.5
 
-    fall_back_speed: int = 2100
+    fall_back_speed: int = 3250
     fall_back_duration: float = 0.2
 
     turn_speed: int = 4350
@@ -135,7 +135,7 @@ class ScanConfig(BaseModel):
 
 class RandTurn(BaseModel):
 
-    turn_speed: int = 4000
+    turn_speed: int = 3500
     turn_left_prob: float = 0.5
     full_turn_duration: float = 0.45
     half_turn_duration: float = 0.225
@@ -152,7 +152,7 @@ class SearchConfig(BaseModel):
     scan_move: ScanConfig = ScanConfig()
 
     use_rand_turn: bool = True
-    rand_turn_weight: float = 0.45
+    rand_turn_weight: float = 0.01
     rand_turn: RandTurn = RandTurn()
 
 
@@ -181,7 +181,7 @@ class fenceConfig(BaseModel):
     io_encounter_fence_value: int = 0
     max_yaw_tolerance: float = 20.0
 
-    use_mpu_align: bool = True
+    use_mpu_align: bool = False
 
     stage_align_speed: int = 850
     max_stage_align_duration: float = 4.5
@@ -192,7 +192,7 @@ class fenceConfig(BaseModel):
     direction_align_direction: Literal["l", "r", "rand"] = "rand"
 
     exit_corner_speed: int = 1200
-    max_exit_corner_duration: float = 2.0
+    max_exit_corner_duration: float = 1.5
 
     rand_walk: RandWalk = RandWalk()
 
@@ -218,8 +218,8 @@ class BootConfig(BaseModel):
     left_threshold: int = 1100
     right_threshold: int = 1100
 
-    dash_speed: int = 7500
-    dash_duration: float = 0.32
+    dash_speed: int = 7000
+    dash_duration: float = 0.45
 
     turn_speed: int = 4000
     full_turn_duration: float = 0.45
@@ -232,8 +232,8 @@ class BackStageConfig(BaseModel):
     small_advance_speed: int = 1500
     small_advance_duration: float = 0.6
 
-    dash_speed: int = 7500
-    dash_duration: float = 0.42
+    dash_speed: int = 7000
+    dash_duration: float = 0.55
 
     turn_speed: int = 4000
     full_turn_duration: float = 0.35
