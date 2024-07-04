@@ -299,7 +299,7 @@ class Breakers:
                     ],
                 ),
             ],
-            judging_source=f"ret=(s0=={activate} and s1=={activate}) and (s2!=={activate} and s3!=={activate})",
+            judging_source=f"ret=(s0=={activate} and s1=={activate}) and (s2!={activate} and s3!={activate})",
             return_type=bool,
             return_raw=False,
             function_name="stage_align_breaker",
