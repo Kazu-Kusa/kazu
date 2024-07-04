@@ -152,7 +152,7 @@ class Breakers:
         return menta.construct_inlined_function(
             usages=[
                 SamplerUsage(
-                    used_sampler_index=SamplerIndexes.io_level_idx,
+                    used_sampler_index=SamplerIndexes.io_all,
                     required_data_indexes=[
                         app_config.sensor.fl_io_index,  # s0
                         app_config.sensor.fr_io_index,  # s1
@@ -290,7 +290,7 @@ class Breakers:
         return menta.construct_inlined_function(
             usages=[
                 SamplerUsage(
-                    used_sampler_index=SamplerIndexes.io_level_idx,
+                    used_sampler_index=SamplerIndexes.io_all,
                     required_data_indexes=[
                         app_config.sensor.fl_io_index,  # s0
                         app_config.sensor.fr_io_index,  # s1
@@ -336,7 +336,7 @@ class Breakers:
                     ],
                 ),
                 SamplerUsage(
-                    used_sampler_index=SamplerIndexes.io_level_idx,
+                    used_sampler_index=SamplerIndexes.io_all,
                     required_data_indexes=[
                         app_config.sensor.fl_io_index,  # s1
                         app_config.sensor.fr_io_index,  # s2
