@@ -1069,7 +1069,8 @@ def make_fence_handler(
     back_stage_pack = make_back_to_stage_handler(app_config, run_config, stop_state)
     rand_move_pack = make_rand_walk_handler(app_config, run_config, stop_state)
 
-    align_direction_pack = make_align_direction_handler(app_config, run_config, rand_move_pack[0][0])
+    rand_move_head_state = rand_move_pack[0][0]
+    align_direction_pack = make_align_direction_handler(app_config, run_config, rand_move_head_state)
 
     conf = run_config.fence
 
@@ -1103,10 +1104,12 @@ def make_fence_handler(
     [head_state, *_], transitions = (
         composer.init_container()
         .add(align_state.clone())
-        .add(align_stage_transition.clone())
-        .concat(*back_stage_pack)
+        .add(align_to_stage := align_stage_transition.clone())
+        .concat(*back_stage_pack, register_case=True)  # back to stage only when the check is passed
         .export_structure()
     )
+    align_to_stage.to_states[False] = rand_move_head_state
+
     transitions_pool.extend(transitions)
     case_reg.batch_register(
         [
