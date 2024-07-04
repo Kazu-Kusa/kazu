@@ -23,7 +23,7 @@ from kazu.constant import (
 from kazu.hardwares import controller, tag_detector, menta, SamplerIndexes, sensors
 from kazu.judgers import Breakers
 from kazu.logger import _logger
-from kazu.signal_light import sig_light_registry, set_all_black
+from kazu.signal_light import sig_light_registry
 from kazu.static import continues_state
 
 botix = Botix(controller=controller)
@@ -1437,17 +1437,20 @@ def make_std_battle_handler(
 
     stage_breaker = Breakers.make_std_stage_breaker(app_config, run_config)
 
-    reboot_states_pack, reboot_transitions_pack = make_reboot_handler(app_config, run_config, end_state=end_state)
+    reboot_states_pack, reboot_transitions_pack = make_reboot_handler(
+        app_config, run_config, end_state=end_state.clone()
+    )
     [reboot_start_state, *_] = reboot_states_pack
-    fence_start_state, _, fence_pack = make_fence_handler(app_config, run_config, stop_state=end_state)
+    fence_start_state, _, fence_pack = make_fence_handler(app_config, run_config, stop_state=end_state.clone())
     on_stage_start_state, _, stage_pack = make_on_stage_handler(
         app_config,
         run_config,
-        abnormal_exit=end_state,
+        abnormal_exit=end_state.clone(),
     )
     if app_config.vision.use_camera:
         fence_start_state.before_entering.append(tag_detector.halt_detection)
         reboot_start_state.after_exiting.append(tag_detector.halt_detection)
+
     case_reg = CaseRegistry(StageCodeSign)
     transition_pool = [*reboot_transitions_pack, *fence_pack, *stage_pack]
 
@@ -1491,11 +1494,15 @@ def make_on_stage_handler(
     """
     start_state = start_state or continues_state.clone()
     abnormal_exit = abnormal_exit or MovingState.halt()
-    edge_pack = make_edge_handler(app_config, run_config, start_state=start_state, abnormal_exit=abnormal_exit)
-    surr_pack = make_surrounding_handler(app_config, run_config, start_state=edge_pack[1], abnormal_exit=abnormal_exit)
+    edge_pack = make_edge_handler(app_config, run_config, start_state=start_state, abnormal_exit=abnormal_exit.clone())
+    surr_pack = make_surrounding_handler(
+        app_config, run_config, start_state=edge_pack[1], abnormal_exit=abnormal_exit.clone()
+    )
     if app_config.vision.use_camera:
         edge_pack[1].before_entering.append(tag_detector.resume_detection)
-    search_pack = make_search_handler(app_config, run_config, start_state=surr_pack[1], stop_state=abnormal_exit)
+    search_pack = make_search_handler(
+        app_config, run_config, start_state=surr_pack[1], stop_state=abnormal_exit.clone()
+    )
     return edge_pack[0], abnormal_exit, [*edge_pack[-1], *surr_pack[-1], *search_pack[-1]]
 
 
@@ -1583,5 +1590,4 @@ def make_salvo_end_state() -> MovingState:
         lambda: (0, 0, 0, 0), output_keys=[ContextVar.prev_salvo_speed.name], function_name="zero_salvo_speed_updater"
     )
     end_state.before_entering.append(zero_salvo_speed_updater)
-    end_state.after_exiting.append(set_all_black)
     return end_state
