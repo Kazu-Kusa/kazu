@@ -71,13 +71,13 @@ class EdgeConfig(BaseModel):
 class SurroundingConfig(BaseModel):
     io_encounter_object_value: int = 0
 
-    left_adc_lower_threshold: int = 900
-    right_adc_lower_threshold: int = 900
+    left_adc_lower_threshold: int = 1000
+    right_adc_lower_threshold: int = 1000
 
-    front_adc_lower_threshold: int = 900
-    back_adc_lower_threshold: int = 1000
+    front_adc_lower_threshold: int = 1000
+    back_adc_lower_threshold: int = 1100
 
-    atk_break_front_lower_threshold: int = 1700
+    atk_break_front_lower_threshold: int = 1500
     atk_break_use_edge_sensors: bool = True
 
     atk_speed_enemy_car: int = 2300

@@ -935,32 +935,19 @@ def breaker_test(ctx: click.Context, conf: _InternalConfig, run_config_path: Pat
     data = []
     table: SingleTable = SingleTable(data)
 
-    edge_breaker_display = _make_display_pack(Breakers.make_std_edge_full_breaker(*config_pack), EdgeCodeSign)
-
-    surr_breaker_display = _make_display_pack(Breakers.make_surr_breaker(*config_pack), SurroundingCodeSign)
-
-    scan_breaker_display = _make_display_pack(Breakers.make_std_scan_breaker(*config_pack), ScanCodesign)
-
-    fence_breaker_display = _make_display_pack(Breakers.make_std_fence_breaker(*config_pack), FenceCodeSign)
-
-    edge_front_breaker_display = _make_display_pack(Breakers.make_std_edge_front_breaker(*config_pack), Activation)
-    edge_rear_breaker_display = _make_display_pack(Breakers.make_std_edge_rear_breaker(*config_pack), Activation)
-
-    stage_align_breaker_display = _make_display_pack(Breakers.make_std_stage_align_breaker(*config_pack), Activation)
-    stage_align_breaker_mpu_display = _make_display_pack(
-        Breakers.make_stage_align_breaker_mpu(*config_pack), Activation
-    )
-    align_breaker_display = _make_display_pack(Breakers.make_align_direction_breaker(*config_pack), Activation)
     displays = [
-        ("Edge", edge_breaker_display),
-        ("Surr", surr_breaker_display),
-        ("Scan", scan_breaker_display),
-        ("Fence", fence_breaker_display),
-        ("FrontE", edge_front_breaker_display),
-        ("RearE", edge_rear_breaker_display),
-        ("SAlign", stage_align_breaker_display),
-        ("SAlignM", stage_align_breaker_mpu_display),
-        ("Align", align_breaker_display),
+        ("Edge", (_make_display_pack(Breakers.make_std_edge_full_breaker(*config_pack), EdgeCodeSign))),
+        ("Surr", (_make_display_pack(Breakers.make_surr_breaker(*config_pack), SurroundingCodeSign))),
+        ("Scan", (_make_display_pack(Breakers.make_std_scan_breaker(*config_pack), ScanCodesign))),
+        ("Fence", (_make_display_pack(Breakers.make_std_fence_breaker(*config_pack), FenceCodeSign))),
+        ("FrontE", (_make_display_pack(Breakers.make_std_edge_front_breaker(*config_pack), Activation))),
+        ("RearE", (_make_display_pack(Breakers.make_std_edge_rear_breaker(*config_pack), Activation))),
+        ("SAlign", (_make_display_pack(Breakers.make_std_stage_align_breaker(*config_pack), Activation))),
+        ("SAlignM", (_make_display_pack(Breakers.make_stage_align_breaker_mpu(*config_pack), Activation))),
+        ("Align", (_make_display_pack(Breakers.make_align_direction_breaker(*config_pack), Activation))),
+        ("TTFront", (_make_display_pack(Breakers.make_std_turn_to_front_breaker(*config_pack), Activation))),
+        ("ATK", (_make_display_pack(Breakers.make_std_atk_breaker(*config_pack), Activation))),
+        ("ATKE", (_make_display_pack(Breakers.make_atk_breaker_with_edge_sensors(*config_pack), Activation))),
     ]
 
     if use_screen:
