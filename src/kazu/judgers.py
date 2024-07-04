@@ -299,7 +299,7 @@ class Breakers:
                     ],
                 ),
             ],
-            judging_source=f"ret=bool((s0=={activate} or s1=={activate}) and s2!={activate} and s3!={activate})",
+            judging_source=f"ret=(s0=={activate} and s1=={activate}) and (s2!={activate} and s3!={activate})",
             return_type=bool,
             return_raw=False,
             function_name="stage_align_breaker",
@@ -344,7 +344,7 @@ class Breakers:
                 ),
             ],
             judging_source=f"ret=bool(not ({invalid_lower_bound}<abs(s0)//90<{invalid_upper_bound}) "
-            f"and (s1=={activate} or s2=={activate}))",
+            f"and (s1=={activate} and s2=={activate}))",
             return_type=bool,
             return_raw=False,
             function_name="stage_align_breaker_mpu",

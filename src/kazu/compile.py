@@ -1064,7 +1064,11 @@ def make_fence_handler(
         start_state.after_exiting.append(_log_state)
     fence_breaker = Breakers.make_std_fence_breaker(app_config, run_config)
 
-    align_stage_breaker = Breakers.make_stage_align_breaker_mpu(app_config, run_config)
+    align_stage_breaker = (
+        Breakers.make_stage_align_breaker_mpu(app_config, run_config)
+        if run_config.fence.use_mpu_align
+        else Breakers.make_std_stage_align_breaker(app_config, run_config)
+    )
 
     back_stage_pack = make_back_to_stage_handler(app_config, run_config, stop_state)
     rand_move_pack = make_rand_walk_handler(app_config, run_config, stop_state)
