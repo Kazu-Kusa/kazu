@@ -403,6 +403,11 @@ def make_surrounding_handler(
     start_state = start_state or continues_state.clone()
     normal_exit = normal_exit or continues_state.clone()
     abnormal_exit = abnormal_exit or MovingState.halt()
+    if app_config.vision.use_camera:
+        start_state.before_entering.append(tag_detector.resume_detection)
+        normal_exit.before_entering.append(tag_detector.halt_detection)
+        abnormal_exit.before_entering.append(tag_detector.halt_detection)
+
     if app_config.debug.log_level == "DEBUG":
 
         def _log_state():
@@ -1447,9 +1452,6 @@ def make_std_battle_handler(
         run_config,
         abnormal_exit=end_state.clone(),
     )
-    if app_config.vision.use_camera:
-        fence_start_state.before_entering.append(tag_detector.halt_detection)
-        reboot_start_state.after_exiting.append(tag_detector.halt_detection)
 
     case_reg = CaseRegistry(StageCodeSign)
     transition_pool = [*reboot_transitions_pack, *fence_pack, *stage_pack]
@@ -1498,8 +1500,6 @@ def make_on_stage_handler(
     surr_pack = make_surrounding_handler(
         app_config, run_config, start_state=edge_pack[1], abnormal_exit=abnormal_exit.clone()
     )
-    if app_config.vision.use_camera:
-        edge_pack[1].before_entering.append(tag_detector.resume_detection)
     search_pack = make_search_handler(
         app_config, run_config, start_state=surr_pack[1], stop_state=abnormal_exit.clone()
     )
