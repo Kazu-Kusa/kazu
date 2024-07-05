@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = ["cross_platform", "inherit_metadata"]
 lock_version = "4.4.2"
-content_hash = "sha256:0609fbf1144a8525addb44e157d23cd84d1c0ec44608f04197267cc8b6d0e6aa"
+content_hash = "sha256:d68cc165471f63866470ac2fd74eb7b9cf1fb1ebf4b1f6cc5f25d74c2e8520b4"
 
 [[package]]
 name = "altgraph"
@@ -152,7 +152,7 @@ files = [
 
 [[package]]
 name = "mentabotix"
-version = "0.1.7"
+version = "0.1.7.2"
 requires_python = ">=3.11"
 summary = "A Bot control lib"
 groups = ["default"]
@@ -164,8 +164,8 @@ dependencies = [
     "terminaltables>=3.1.10",
 ]
 files = [
-    {file = "mentabotix-0.1.7-py3-none-any.whl", hash = "sha256:37184c6587b7307cd4d841c90d2bce8ccaded14a0f0ca69ce207e0727a198708"},
-    {file = "mentabotix-0.1.7.tar.gz", hash = "sha256:af4f4aa69909567baa70585b5f8eca5b3211472eb23de788fcec4b6e83baecf5"},
+    {file = "mentabotix-0.1.7.2-py3-none-any.whl", hash = "sha256:282b715df798af654a3e313418a1904eca983805b0013a3bba9bc0b2b16a5815"},
+    {file = "mentabotix-0.1.7.2.tar.gz", hash = "sha256:45cf89411ae50929a12d8746208e250ed7fab3772bee9a2caf937cd414adbc3f"},
 ]
 
 [[package]]
