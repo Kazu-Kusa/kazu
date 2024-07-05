@@ -1089,6 +1089,7 @@ def make_fence_handler(
         if run_config.fence.use_mpu_align
         else Breakers.make_std_stage_align_breaker(app_config, run_config)
     )
+    lr_blocked_breaker = Breakers.make_lr_sides_blocked_breaker(app_config, run_config)
 
     back_stage_pack = make_back_to_stage_handler(app_config, run_config, stop_state)
     rand_move_pack = make_rand_walk_handler(app_config, run_config, stop_state)
@@ -1101,7 +1102,7 @@ def make_fence_handler(
     rear_exit_corner_state = MovingState.straight(-conf.exit_corner_speed)
     front_exit_corner_state = MovingState.straight(conf.exit_corner_speed)
 
-    exit_duration = MovingTransition(conf.max_exit_corner_duration)
+    exit_duration = MovingTransition(conf.max_exit_corner_duration, breaker=lr_blocked_breaker)
 
     match conf.stage_align_direction:
         case "rand":

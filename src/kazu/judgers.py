@@ -437,6 +437,33 @@ class Breakers:
 
     @staticmethod
     @lru_cache(maxsize=None)
+    def make_lr_sides_blocked_breaker(app_config: APPConfig, run_config: RunConfig) -> Callable[[], bool]:
+        """
+        Constructs a function to judge if the left and right sides are blocked based on sensor data.
+
+        Args:
+            app_config: APPConfig object containing sensor configurations.
+            run_config: RunConfig object containing fence threshold values.
+
+        Returns:
+            A callable function that evaluates if the left and right sides are blocked.
+        """
+        return menta.construct_inlined_function(
+            usages=[
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.adc_all,
+                    required_data_indexes=[app_config.sensor.left_adc_index, app_config.sensor.right_adc_index],
+                )
+            ],
+            judging_source=f"ret=(s0>{run_config.fence.left_adc_lower_threshold} "
+            f"and s1>{run_config.fence.right_adc_lower_threshold})",
+            return_type=bool,
+            return_raw=False,
+            function_name="lr_sides_blocked_breaker",
+        )
+
+    @staticmethod
+    @lru_cache(maxsize=None)
     def make_align_direction_breaker(app_config: APPConfig, run_config: RunConfig) -> Callable[[], int]:
         """
         Generates a function that determines whether the alignment of a direction has breached the specified yaw tolerance.
