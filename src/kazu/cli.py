@@ -1236,25 +1236,22 @@ def record_data(conf: _InternalConfig, output_dir: Path, interval: float, run_co
     try:
         secho("Press the reboot button to start recording", fg="green", bold=True)
         set_white()
-        while True:
-            if is_pressed():
-                break
-        while True:
-            if not is_pressed():
-                secho("Start recording|Salvo 1", fg="red", bold=True)
-                break
+        while not is_pressed():
+            pass
+        while is_pressed():
+            pass
+        secho("Start recording|Salvo 1", fg="red", bold=True)
         set_red()
         while True:
             recording_container.append(sensors.adc_all_channels() + (get_timestamp(),))
+            sleep(interval)
             if is_pressed():
-                while True:
-                    if not is_pressed():
-                        secho(f"Start recording|Salvo {len(recorded_df)+1}", fg="red", bold=True)
-                    break
+                while is_pressed():
+                    pass
+                secho(f"Start recording|Salvo {len(recorded_df)+1}", fg="red", bold=True)
                 recorded_df[f"record_{get_timestamp()}"] = _conv_to_df(recording_container)
                 recording_container.clear()
                 continue
-            sleep(interval)
     except KeyboardInterrupt:
         _logger.info(f"Record interrupted, Exiting...")
     finally:
