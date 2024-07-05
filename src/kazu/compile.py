@@ -1358,7 +1358,7 @@ def make_back_to_stage_handler(
 
     all_states, all_transitions = list(main_branch_states), list(main_branch_transitions)
     if run_config.backstage.use_is_on_stage_check and run_config.backstage.use_side_away_check:
-        _logger.info("Using is_on_stage_check and side_away_check to restrict the behavior.")
+        _logger.info("Using side_away_check to restrict the behavior.")
         side_away_breaker = Breakers.make_back_stage_side_away_breaker(app_config, run_config)
         extra_states, extra_transitions = (
             composer.init_container()
