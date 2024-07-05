@@ -1213,20 +1213,24 @@ def record_data(conf: _InternalConfig, output_dir: Path, interval: float, run_co
 
     def _conv_to_df(data_container: List[Tuple[int, ...]]):
         pack = list(zip(*data_container))
-        temp_df = DataFrame(
-            {
-                "Timestamp": pack[-1],
-                "EDGE_FL": pack[sensor_conf.edge_fl_index],
-                "EDGE_FR": pack[sensor_conf.edge_fr_index],
-                "EDGE_RL": pack[sensor_conf.edge_rl_index],
-                "EDGE_RR": pack[sensor_conf.edge_rr_index],
-                "LEFT": pack[sensor_conf.left_adc_index],
-                "RIGHT": pack[sensor_conf.right_adc_index],
-                "FRONT": pack[sensor_conf.front_adc_index],
-                "BACK": pack[sensor_conf.rb_adc_index],
-                "GRAY": pack[sensor_conf.gray_adc_index],
-            }
-        )
+        col_names = ["Timestamp", "EDGE_FL", "EDGE_FR", "EDGE_RL", "EDGE_RR", "LEFT", "RIGHT", "FRONT", "BACK", "GRAY"]
+        if pack:
+            temp_df = DataFrame(
+                {
+                    "Timestamp": pack[-1],
+                    "EDGE_FL": pack[sensor_conf.edge_fl_index],
+                    "EDGE_FR": pack[sensor_conf.edge_fr_index],
+                    "EDGE_RL": pack[sensor_conf.edge_rl_index],
+                    "EDGE_RR": pack[sensor_conf.edge_rr_index],
+                    "LEFT": pack[sensor_conf.left_adc_index],
+                    "RIGHT": pack[sensor_conf.right_adc_index],
+                    "FRONT": pack[sensor_conf.front_adc_index],
+                    "BACK": pack[sensor_conf.rb_adc_index],
+                    "GRAY": pack[sensor_conf.gray_adc_index],
+                }
+            )
+        else:
+            temp_df = DataFrame(columns=col_names)
         return temp_df
 
     try:
@@ -1241,12 +1245,12 @@ def record_data(conf: _InternalConfig, output_dir: Path, interval: float, run_co
                 break
         set_red()
         while True:
+            recording_container.append(sensors.adc_all_channels() + (get_timestamp(),))
             if is_pressed():
                 secho(f"Start recording|Salvo {len(recorded_df)+1}", fg="red", bold=True)
                 recorded_df[f"record_{get_timestamp()}"] = _conv_to_df(recording_container)
                 recording_container.clear()
                 continue
-            recording_container.append(sensors.adc_all_channels() + (get_timestamp(),))
             sleep(interval)
     except KeyboardInterrupt:
         _logger.info(f"Record interrupted, Exiting...")
