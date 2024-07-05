@@ -947,7 +947,9 @@ def make_rand_turn_handler(
     return states, transitions
 
 
-def make_gradient_move(app_config: APPConfig, run_config: RunConfig, is_salvo_end: bool = True) -> MovingState:
+def make_gradient_move(
+    app_config: APPConfig, run_config: RunConfig, is_salvo_end: bool = True, fall_back: bool = False
+) -> MovingState:
     """
     Generates a MovingState object for a gradient move in a search algorithm.
 
@@ -955,6 +957,7 @@ def make_gradient_move(app_config: APPConfig, run_config: RunConfig, is_salvo_en
         app_config (APPConfig): The application configuration.
         run_config (RunConfig): The run configuration.
         is_salvo_end (bool, optional): Indicates if this is the last gradient move in a salvo. Defaults to True.
+        fall_back (bool): Indicates if the gradient move should be in the opposite direction.
 
     Returns:
         MovingState: The MovingState object representing the gradient move.
@@ -962,6 +965,7 @@ def make_gradient_move(app_config: APPConfig, run_config: RunConfig, is_salvo_en
     """
     conf = run_config.search.gradient_move
 
+    sign = "-" if fall_back else ""
     speed_range = conf.max_speed - conf.min_speed
 
     speed_calc_func = menta.construct_inlined_function(
@@ -970,7 +974,7 @@ def make_gradient_move(app_config: APPConfig, run_config: RunConfig, is_salvo_en
                 used_sampler_index=SamplerIndexes.adc_all, required_data_indexes=[app_config.sensor.gray_adc_index]
             )
         ],
-        judging_source=f"ret={conf.min_speed}+int({speed_range}*(s0-{conf.min_speed})/({conf.max_speed}-{conf.min_speed}))",
+        judging_source=f"ret={sign}({conf.min_speed}+int({speed_range}*(s0-{conf.min_speed})/({conf.max_speed}-{conf.min_speed})))",
         return_type=int,
         return_raw=False,
         function_name="calc_gradient_speed",
