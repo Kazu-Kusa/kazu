@@ -1175,8 +1175,9 @@ def view_profile(port: int, flamegraph: Path, profile: Path, **_):
     type=click.Path(file_okay=False, dir_okay=True, path_type=Path),
     default="./record",
     show_default=True,
+    help="Output directory",
 )
-@click.option("-i", "interval", type=click.FLOAT, default=0.1, show_default=True)
+@click.option("-i", "interval", type=click.FLOAT, default=0.1, show_default=True, help="Set the interval of the record")
 @click.option(
     "-r",
     "--run-config-path",
@@ -1230,12 +1231,14 @@ def record_data(conf: _InternalConfig, output_dir: Path, interval: float, run_co
 
     try:
         secho("Press the reboot button to start recording", fg="green", bold=True)
+        set_white()
         while True:
-            set_white()
             if is_pressed():
+                break
+        while True:
+            if not is_pressed():
                 secho("Start recording|Salvo 1", fg="red", bold=True)
                 break
-
         set_red()
         while True:
             if is_pressed():
