@@ -5,7 +5,7 @@ import click
 from click import secho, echo
 from colorama import Fore
 
-from kazu.config import APPConfig, RunConfig, _InternalConfig
+from kazu.config import APPConfig, RunConfig, _InternalConfig, load_run_config, load_app_config
 from kazu.constant import QUIT
 
 
@@ -22,9 +22,9 @@ def export_default_app_config(ctx: click.Context, _, path: Path):
     if path:
         path.parent.mkdir(exist_ok=True, parents=True)
         with open(path, "w") as fp:
-            APPConfig.dump_config(fp, APPConfig())
+            APPConfig.dump_config(fp, load_app_config(path))
         secho(
-            f"Exported DEFAULT app config file at {path.as_posix()}.",
+            f"Exported app config file at {path.as_posix()}.",
             fg="yellow",
             bold=True,
         )
@@ -44,8 +44,9 @@ def export_default_run_config(ctx: click.Context, _, path: Path):
     if path:
         path.parent.mkdir(exist_ok=True, parents=True)
         with open(path, mode="w") as fp:
-            RunConfig.dump_config(fp, RunConfig())
-        secho(f"Exported DEFAULT run config file at {path.absolute().as_posix()}", fg="yellow")
+            RunConfig.dump_config(fp, load_run_config(path))
+        secho(f"Exported run config file at {path.absolute().as_posix()}", fg="yellow")
+
         ctx.exit(0)
 
 
