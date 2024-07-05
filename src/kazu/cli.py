@@ -1169,7 +1169,13 @@ def view_profile(port: int, flamegraph: Path, profile: Path, **_):
 @main.command("record")
 @click.help_option("-h", "--help")
 @click.pass_obj
-@click.option("-d", "-output-dir", type=click.Path(file_okay=False, dir_okay=True, path_type=Path), default="./record")
+@click.option(
+    "-o",
+    "--output-dir",
+    type=click.Path(file_okay=False, dir_okay=True, path_type=Path),
+    default="./record",
+    show_default=True,
+)
 @click.option("-i", "interval", type=click.FLOAT, default=0.1, show_default=True)
 @click.option(
     "-r",
