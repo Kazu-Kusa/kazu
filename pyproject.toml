@@ -19,6 +19,7 @@ dependencies = [
     "pyserial>=3.5",
     "plantuml>=0.3.0",
     "six>=1.16.0",
+    "pandas>=2.2.2",
 ]
 requires-python = "==3.11.*"
 readme = "README.md"

@@ -55,3 +55,25 @@ def get_local_ip() -> str | None:
     finally:
         s.close()
     return local_ip
+
+
+def get_timestamp() -> str:
+    """
+    Returns a string representing the current timestamp in the format "YYYY-MM-DD-HH-MM-SS-ms".
+
+    :return: A string representing the current timestamp.
+    :rtype: str
+    """
+    import datetime
+
+    # 获取当前时间
+    now = datetime.datetime.now()
+
+    # 定义日期时间格式，包括毫秒
+    timestamp_format = "%Y-%m-%d-%H-%M-%S-%f"
+
+    # 格式化时间戳为字符串，去除最后三位微秒（保留毫秒）
+    timestamp_str = now.strftime(timestamp_format)[:-3]
+
+    # 返回格式化后的字符串
+    return timestamp_str

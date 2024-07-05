@@ -35,6 +35,7 @@ from kazu.config import (
 from kazu.constant import Env, RunMode, QUIT
 from kazu.logger import _logger
 from kazu.signal_light import sig_light_registry
+from kazu.static import get_timestamp
 from kazu.visualize import print_colored_toml
 
 
@@ -1163,3 +1164,88 @@ def view_profile(port: int, flamegraph: Path, profile: Path, **_):
             if line == QUIT:
                 break
         process.kill()
+
+
+@main.command("record")
+@click.help_option("-h", "--help")
+@click.pass_obj
+@click.option("-d", "-output-dir", type=click.Path(file_okay=False, dir_okay=True, path_type=Path), default="./record")
+@click.option("-i", "interval", type=click.FLOAT, default=0.1, show_default=True)
+@click.option(
+    "-r",
+    "--run-config-path",
+    show_default=True,
+    default=None,
+    help=f"config file path, also can receive env {Env.KAZU_RUN_CONFIG_PATH}",
+    type=click.Path(dir_okay=False, readable=True, path_type=Path),
+    envvar=Env.KAZU_RUN_CONFIG_PATH,
+)
+def record_data(conf: _InternalConfig, output_dir: Path, interval: float, run_config_path: Path):
+    """
+    Record data
+    """
+    from kazu.hardwares import sensors, screen
+    from signal_light import set_all_black, sig_light_registry, Color
+    from kazu.judgers import Breakers
+    from pandas import DataFrame
+
+    with sig_light_registry as reg:
+        set_red = reg.register_all("Record|Start Recording", Color.RED)
+        set_white = reg.register_all("Record|Waiting for Recording", Color.WHITE)
+
+    run_config = load_run_config(run_config_path)
+    is_pressed = Breakers.make_reboot_button_pressed_breaker(conf.app_config, run_config)
+
+    sensors.adc_io_open()
+    screen.open(2)
+
+    recorded_df = {}
+    recording_container: List[Tuple[int, ...]] = []
+
+    sensor_conf = conf.app_config.sensor
+
+    def _conv_to_df(data_container: List[Tuple[int, ...]]):
+        pack = list(zip(*data_container))
+        temp_df = DataFrame(
+            {
+                "Timestamp": pack[-1],
+                "EDGE_FL": pack[sensor_conf.edge_fl_index],
+                "EDGE_FR": pack[sensor_conf.edge_fr_index],
+                "EDGE_RL": pack[sensor_conf.edge_rl_index],
+                "EDGE_RR": pack[sensor_conf.edge_rr_index],
+                "LEFT": pack[sensor_conf.left_adc_index],
+                "RIGHT": pack[sensor_conf.right_adc_index],
+                "FRONT": pack[sensor_conf.front_adc_index],
+                "BACK": pack[sensor_conf.rb_adc_index],
+                "GRAY": pack[sensor_conf.gray_adc_index],
+            }
+        )
+        return temp_df
+
+    try:
+        secho("Press the reboot button to start recording", fg="green", bold=True)
+        while True:
+            set_white()
+            if is_pressed():
+                secho("Start recording|Salvo 1", fg="red", bold=True)
+                break
+
+        set_red()
+        while True:
+            if is_pressed():
+                secho(f"Start recording|Salvo {len(recorded_df)+1}", fg="red", bold=True)
+                recorded_df[f"record_{get_timestamp()}"] = _conv_to_df(recording_container)
+                recording_container.clear()
+                continue
+            recording_container.append(sensors.adc_all_channels() + (get_timestamp(),))
+            sleep(interval)
+    except KeyboardInterrupt:
+        _logger.info(f"Record interrupted, Exiting...")
+    finally:
+        _logger.info(f"Recorded Salvo count: {len(recorded_df)}")
+        for k, v in recorded_df.items():
+            v.to_csv(output_dir / f"{k}.csv", index=False)
+        _logger.info(f"Recorded data saved to {output_dir}")
+        set_all_black()
+        screen.close()
+        sensors.adc_io_close()

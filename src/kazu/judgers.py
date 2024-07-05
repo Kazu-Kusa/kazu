@@ -760,3 +760,43 @@ class Breakers:
             function_name="surrounding_breaker_with_cam",
         )
         return surr_full_breaker
+
+    @staticmethod
+    @lru_cache(maxsize=None)
+    def make_reboot_button_pressed_breaker(app_config: APPConfig, run_config: RunConfig) -> Callable[[], int]:
+        """
+        Generates a function that acts as a breaker for the reboot button pressed.
+
+        Args:
+            app_config (APPConfig): The application configuration.
+            run_config (RunConfig): The run configuration.
+
+        Returns:
+            Callable[[], int]: A function that takes no arguments and returns an integer.
+
+        This function uses the `lru_cache` decorator to cache the result of the function.
+        It also registers a context getter for the ADC pack.
+        The function constructs a source code string based on the provided configuration.
+        If the debug log level is set to "DEBUG", an additional line of code is added to log the scan code.
+        Finally, the function constructs and returns an inlined function using the `menta.construct_inlined_function` method.
+        The inlined function has two usages: one for the ADC sampler and one for the IO sampler.
+        The judging source is constructed based on the provided configuration.
+        The function name is set to "reboot_button_pressed_breaker".
+        """
+
+        return menta.construct_inlined_function(
+            usages=[
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.io_level_idx,
+                    required_data_indexes=[
+                        app_config.sensor.reboot_button_index,  # s0
+                    ],
+                ),
+            ],
+            judging_source=[
+                f"ret=s0=={run_config.boot.button_io_activate_case_value}",
+            ],
+            return_type=int,
+            return_raw=False,
+            function_name="reboot_button_pressed_breaker",
+        )
