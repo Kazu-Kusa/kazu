@@ -943,12 +943,16 @@ def breaker_test(ctx: click.Context, conf: _InternalConfig, run_config_path: Pat
         ("Fence", (_make_display_pack(Breakers.make_std_fence_breaker(*config_pack), FenceCodeSign))),
         ("FrontE", (_make_display_pack(Breakers.make_std_edge_front_breaker(*config_pack), Activation))),
         ("RearE", (_make_display_pack(Breakers.make_std_edge_rear_breaker(*config_pack), Activation))),
-        ("SAlign", (_make_display_pack(Breakers.make_std_stage_align_breaker(*config_pack), Activation))),
+        ("SAlignT", (_make_display_pack(Breakers.make_std_stage_align_breaker(*config_pack), Activation))),
         ("SAlignM", (_make_display_pack(Breakers.make_stage_align_breaker_mpu(*config_pack), Activation))),
-        ("Align", (_make_display_pack(Breakers.make_align_direction_breaker(*config_pack), Activation))),
+        ("DAlignM", (_make_display_pack(Breakers.make_align_direction_breaker_mpu(*config_pack), Activation))),
+        ("DAlignT", (_make_display_pack(Breakers.make_std_align_direction_breaker(*config_pack), Activation))),
         ("TTFront", (_make_display_pack(Breakers.make_std_turn_to_front_breaker(*config_pack), Activation))),
         ("ATK", (_make_display_pack(Breakers.make_std_atk_breaker(*config_pack), Activation))),
         ("ATKE", (_make_display_pack(Breakers.make_atk_breaker_with_edge_sensors(*config_pack), Activation))),
+        ("NSTG", (_make_display_pack(Breakers.make_is_on_stage_breaker(*config_pack), Activation))),
+        ("SDAWAY", (_make_display_pack(Breakers.make_back_stage_side_away_breaker(*config_pack), Activation))),
+        ("LRBLK", (_make_display_pack(Breakers.make_lr_sides_blocked_breaker(*config_pack), Activation))),
     ]
 
     if use_screen:
