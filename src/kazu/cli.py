@@ -1247,7 +1247,10 @@ def record_data(conf: _InternalConfig, output_dir: Path, interval: float, run_co
         while True:
             recording_container.append(sensors.adc_all_channels() + (get_timestamp(),))
             if is_pressed():
-                secho(f"Start recording|Salvo {len(recorded_df)+1}", fg="red", bold=True)
+                while True:
+                    if not is_pressed():
+                        secho(f"Start recording|Salvo {len(recorded_df)+1}", fg="red", bold=True)
+                    break
                 recorded_df[f"record_{get_timestamp()}"] = _conv_to_df(recording_container)
                 recording_container.clear()
                 continue
@@ -1256,6 +1259,7 @@ def record_data(conf: _InternalConfig, output_dir: Path, interval: float, run_co
         _logger.info(f"Record interrupted, Exiting...")
     finally:
         _logger.info(f"Recorded Salvo count: {len(recorded_df)}")
+        output_dir.mkdir(exist_ok=True, parents=True)
         for k, v in recorded_df.items():
             v.to_csv(output_dir / f"{k}.csv", index=False)
         _logger.info(f"Recorded data saved to {output_dir}")
