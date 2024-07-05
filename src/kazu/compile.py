@@ -1,3 +1,4 @@
+from functools import lru_cache
 from typing import Callable, List, Tuple, TypeVar, Optional
 
 from mentabotix import (
@@ -908,7 +909,7 @@ def make_scan_handler(
     if conf.check_gray_adc_before_scan:
         check_gray_adc_breaker = Breakers.make_check_gray_adc_for_scan_breaker(app_config, run_config)
         composer.add(MovingState.halt()).add(
-            MovingTransition(0, breaker=check_gray_adc_breaker, to_states={True: MovingState.halt()})
+            MovingTransition(0, breaker=check_gray_adc_breaker, to_states={True: make_salvo_end_state()})
         )
     if conf.check_edge_before_scan:
         check_edge_breaker = Breakers.make_std_edge_full_breaker(app_config, run_config)
@@ -922,7 +923,7 @@ def make_scan_handler(
             return bool(check_edge_breaker())
 
         composer.add(MovingState.halt(), register_case=False).add(
-            MovingTransition(0, breaker=boolean_full_edge_breaker, to_states={True: MovingState.halt()})
+            MovingTransition(0, breaker=boolean_full_edge_breaker, to_states={True: make_salvo_end_state()})
         )
 
     states, transitions = (
@@ -1662,6 +1663,7 @@ def make_always_off_stage_battle_handler(
     return start_state, end_state, transition_pool
 
 
+@lru_cache(1)
 def make_salvo_end_state() -> MovingState:
     """
     创建并返回一个表示循环轮结束状态的移动状态。
