@@ -1191,7 +1191,7 @@ def record_data(conf: _InternalConfig, output_dir: Path, interval: float, run_co
     Record data
     """
     from kazu.hardwares import sensors, screen
-    from signal_light import set_all_black, sig_light_registry, Color
+    from kazu.signal_light import set_all_black, sig_light_registry, Color
     from kazu.judgers import Breakers
     from pandas import DataFrame
 
