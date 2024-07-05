@@ -423,7 +423,7 @@ def make_surrounding_handler(
 
     atk_breaker = (
         Breakers.make_atk_breaker_with_edge_sensors(app_config, run_config)
-        if surr_conf.atk_break_use_edge_sensors
+        if surr_conf.atk_break_use_edge_sensors and any([_logger.info("Using edge sensors to end the atk"), True])
         else Breakers.make_std_atk_breaker(app_config, run_config)
     )
 
@@ -907,11 +907,13 @@ def make_scan_handler(
     # ---------------------------------------------------------------------
     composer.init_container()
     if conf.check_gray_adc_before_scan:
+        _logger.debug("Checking gray ADC before scan")
         check_gray_adc_breaker = Breakers.make_check_gray_adc_for_scan_breaker(app_config, run_config)
         composer.add(MovingState.halt()).add(
             MovingTransition(0, breaker=check_gray_adc_breaker, to_states={True: make_salvo_end_state()})
         )
     if conf.check_edge_before_scan:
+        _logger.debug("Checking edge before scan")
         check_edge_breaker = Breakers.make_std_edge_full_breaker(app_config, run_config)
 
         def boolean_full_edge_breaker() -> bool:
@@ -961,7 +963,11 @@ def make_rand_turn_handler(
         if app_config.debug.use_siglight
         else None
     )
-    breaker = Breakers.make_std_turn_to_front_breaker(app_config, run_config) if conf.use_turn_to_front else None
+    breaker = (
+        Breakers.make_std_turn_to_front_breaker(app_config, run_config)
+        if conf.use_turn_to_front and any([_logger.info("RTurn uses TTF Breaker"), True])
+        else None
+    )
     half_turn_transition = MovingTransition(conf.half_turn_duration, breaker=breaker)
 
     states, transitions = composer.add(rand_lr_turn_state).add(half_turn_transition).add(end_state).export_structure()
@@ -1056,12 +1062,15 @@ def make_search_handler(
     pool = []
     w = []
     if run_config.search.use_gradient_move:
+        _logger.info(f"Using gradient move, weight: {run_config.search.gradient_move_weight}")
         pool.append(SearchCodesign.GRADIENT_MOVE)
         w.append(run_config.search.gradient_move_weight)
     if run_config.search.use_rand_turn:
+        _logger.info(f"Using random turn, weight: {run_config.search.rand_turn_weight}")
         pool.append(SearchCodesign.RAND_TURN)
         w.append(run_config.search.rand_turn_weight)
     if run_config.search.use_scan_move:
+        _logger.info(f"Using scan move, weight: {run_config.search.scan_move_weight}")
         pool.append(SearchCodesign.SCAN_MOVE)
         w.append(run_config.search.scan_move_weight)
 
@@ -1112,7 +1121,7 @@ def make_fence_handler(
 
     align_stage_breaker = (
         Breakers.make_stage_align_breaker_mpu(app_config, run_config)
-        if run_config.fence.use_mpu_align_stage
+        if run_config.fence.use_mpu_align_stage and any([_logger.info("Using MPU to align stage"), True])
         else Breakers.make_std_stage_align_breaker(app_config, run_config)
     )
     lr_blocked_breaker = Breakers.make_lr_sides_blocked_breaker(app_config, run_config)
@@ -1263,7 +1272,7 @@ def make_align_direction_handler(
             raise ValueError(f"Invalid align direction: {conf.direction_align_direction}")
     align_direction_breaker = (
         Breakers.make_align_direction_breaker_mpu(app_config, run_config)
-        if run_config.fence.use_mpu_align_direction
+        if run_config.fence.use_mpu_align_direction and any([_logger.info("Using MPU to align direction"), True])
         else Breakers.make_std_align_direction_breaker(app_config, run_config)
     )
     if aligned_state and not_aligned_state:
@@ -1322,6 +1331,7 @@ def make_back_to_stage_handler(
     )
     concat_state = None
     if run_config.backstage.use_is_on_stage_check:
+        _logger.info("Using is_on_stage_check to restrict the behavior.")
         is_on_stage_breaker = Breakers.make_is_on_stage_breaker(app_config, run_config)
         composer.add(
             MovingTransition(
@@ -1348,7 +1358,7 @@ def make_back_to_stage_handler(
 
     all_states, all_transitions = list(main_branch_states), list(main_branch_transitions)
     if run_config.backstage.use_is_on_stage_check and run_config.backstage.use_side_away_check:
-
+        _logger.info("Using is_on_stage_check and side_away_check to restrict the behavior.")
         side_away_breaker = Breakers.make_back_stage_side_away_breaker(app_config, run_config)
         extra_states, extra_transitions = (
             composer.init_container()
@@ -1574,18 +1584,21 @@ def make_on_stage_handler(
     transitions = []
     concat_state = start_state
     if conf.use_edge_component:
+        _logger.info("Using edge component.")
         edge_pack = make_edge_handler(
             app_config, run_config, start_state=concat_state, abnormal_exit=abnormal_exit.clone()
         )
         transitions.extend(edge_pack[-1])
         concat_state = edge_pack[1]
     if conf.use_surrounding_component:
+        _logger.info("Using surrounding component.")
         surr_pack = make_surrounding_handler(
             app_config, run_config, start_state=concat_state, abnormal_exit=abnormal_exit.clone()
         )
         transitions.extend(surr_pack[-1])
         concat_state = surr_pack[1]
     if conf.use_normal_component:
+        _logger.info("Using normal component.")
         search_pack = make_search_handler(
             app_config, run_config, start_state=concat_state, stop_state=abnormal_exit.clone()
         )

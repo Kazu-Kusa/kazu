@@ -181,6 +181,7 @@ class Breakers:
         """
         activate = run_config.surrounding.io_encounter_object_value
         if run_config.surrounding.turn_to_front_use_front_sensor:
+            _logger.info("Using front sensor for turn to front detection")
             return menta.construct_inlined_function(
                 usages=[
                     SamplerUsage(

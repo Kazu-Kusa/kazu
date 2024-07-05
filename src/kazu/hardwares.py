@@ -95,11 +95,13 @@ def inited_tag_detector(app_config: APPConfig, retry_interval: float = 0.5) -> T
     if success:
         _logger.info("Camera is successfully opened !")
     else:
-        _logger.error("Failed to open Camera !, retrying ...")
+        _logger.error("Failed to open Camera ! retrying ...")
         sleep(retry_interval)
         success, _ = tag_detector.camera_device.read()
-        if not success:
+        if success:
 
+            _logger.info("Camera is successfully opened !")
+        else:
             _logger.critical(f"Failed to open Camera-{app_config.vision.camera_device_id}")
             _logger.warning("Camera will not be used.")
             app_config.vision.use_camera = False
