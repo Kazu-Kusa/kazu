@@ -1100,6 +1100,7 @@ def make_fence_handler(
 
     start_state = start_state or continues_state.clone()
     stop_state = stop_state or MovingState.halt()
+    transitions_pool: List[MovingTransition] = []
     if app_config.debug.log_level == "DEBUG":
 
         def _log_state():
@@ -1115,7 +1116,11 @@ def make_fence_handler(
     )
     lr_blocked_breaker = Breakers.make_lr_sides_blocked_breaker(app_config, run_config)
 
-    back_stage_pack = make_back_to_stage_handler(app_config, run_config, stop_state)
+    back_stage_states, back_stage_transitions, _, back_stage_trans_all = make_back_to_stage_handler(
+        app_config, run_config, stop_state
+    )
+    transitions_pool.extend(back_stage_trans_all)
+    back_stage_pack = (back_stage_states, back_stage_transitions)
     rand_move_pack = make_rand_walk_handler(app_config, run_config, stop_state)
 
     rand_move_head_state = rand_move_pack[0][0]
@@ -1141,8 +1146,6 @@ def make_fence_handler(
     align_stage_transition = MovingTransition(
         conf.max_stage_align_duration, breaker=align_stage_breaker, to_states={False: rand_move_head_state}
     )
-
-    transitions_pool: List[MovingTransition] = []
 
     case_reg = CaseRegistry(FenceCodeSign)
 
@@ -1278,7 +1281,7 @@ def make_align_direction_handler(
 
 def make_back_to_stage_handler(
     app_config: APPConfig, run_config: RunConfig, end_state: MovingState = None, **_
-) -> Tuple[List[MovingState], List[MovingTransition]]:
+) -> Tuple[List[MovingState], List[MovingTransition], List[MovingState], List[MovingTransition]]:
     """
     Creates a state machine handler for moving back to the stage.
 
@@ -1296,12 +1299,13 @@ def make_back_to_stage_handler(
     small_advance_transition = MovingTransition(run_config.backstage.small_advance_duration)
     stab_trans = MovingTransition(run_config.backstage.time_to_stabilize)
     # waiting for a booting signal, and dash on to the stage once received
+
     (
         small_advance.after_exiting.append(sig_light_registry.register_all("BStage|Small move", Color.GREEN))
         if app_config.debug.use_siglight
         else None
     )
-    states, transitions = (
+    (
         composer.init_container()
         .add(small_advance)
         .add(small_advance_transition)
@@ -1310,18 +1314,56 @@ def make_back_to_stage_handler(
         .add(MovingState.straight(-run_config.boot.dash_speed))
         .add(MovingTransition(run_config.boot.dash_duration))
         .add(MovingState.halt())
-        .add(stab_trans.clone())
-        .add(
+    )
+    concat_state = None
+    if run_config.backstage.use_is_on_stage_check:
+        is_on_stage_breaker = Breakers.make_is_on_stage_breaker(app_config, run_config)
+        composer.add(
+            MovingTransition(
+                run_config.backstage.time_to_stabilize,
+                breaker=is_on_stage_breaker,
+                to_states={False: (concat_state := MovingState.halt())},
+            )
+        )
+
+    else:
+        composer.add(stab_trans.clone())
+
+    main_branch_states, main_branch_transitions = (
+        composer.add(
             MovingState.rand_dir_turn(
                 controller, run_config.boot.turn_speed, turn_left_prob=run_config.boot.turn_left_prob
-            )
+            ),
+            register_case=True,
         )
         .add(MovingTransition(run_config.backstage.full_turn_duration))
         .add(end_state)
         .export_structure()
     )
 
-    return states, transitions
+    all_states, all_transitions = list(main_branch_states), list(main_branch_transitions)
+    if run_config.backstage.use_is_on_stage_check and run_config.backstage.use_side_away_check:
+
+        side_away_breaker = Breakers.make_back_stage_side_away_breaker(app_config, run_config)
+        extra_states, extra_transitions = (
+            composer.init_container()
+            .add(concat_state)
+            .add(
+                MovingTransition(
+                    0,
+                    breaker=side_away_breaker,
+                    to_states={False: end_state},
+                )
+            )
+            .add(MovingState(run_config.backstage.exit_side_away_speed), register_case=True)
+            .add(MovingTransition(run_config.backstage.exit_side_away_duration))
+            .add(end_state)
+            .export_structure()
+        )
+        all_states.extend(extra_states)
+        all_transitions.extend(extra_transitions)
+
+    return main_branch_states, main_branch_transitions, all_states, all_transitions
 
 
 def make_reboot_handler(

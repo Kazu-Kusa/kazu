@@ -244,13 +244,20 @@ class BackStageConfig(BaseModel):
     dash_speed: int = 7000
     dash_duration: float = 0.55
 
-    turn_speed: int = 4000
+    turn_speed: int = 2600
     full_turn_duration: float = 0.35
     turn_left_prob: float = 0.5
 
+    use_is_on_stage_check: bool = True
+    use_side_away_check: bool = True
+
+    side_away_degree_tolerance: float = 35
+    exit_side_away_speed: int = 1300
+    exit_side_away_duration: float = 0.6
+
 
 class StageConfig(BaseModel):
-    gray_adc_upper_threshold: int = 2850
+    gray_adc_off_stage_upper_threshold: int = 2850
     gray_io_off_stage_case_value: int = 0
 
 

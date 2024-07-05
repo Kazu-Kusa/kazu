@@ -4,7 +4,7 @@ from typing import Callable, Tuple
 from mentabotix import SamplerUsage
 
 from kazu.config import APPConfig, RunConfig, ContextVar, TagGroup
-from kazu.constant import EdgeWeights, Attitude, ScanWeights, StageWeight, SurroundingWeights, FenceWeights
+from kazu.constant import EdgeWeights, Attitude, ScanWeights, StageWeight, SurroundingWeights, FenceWeights, Axis
 from kazu.hardwares import controller, menta, SamplerIndexes, tag_detector
 from kazu.logger import _logger
 from kazu.static import make_query_table
@@ -622,7 +622,7 @@ class Breakers:
                     ],
                 ),
             ],
-            judging_source=f"ret={StageWeight.STAGE}*(s0<{conf.gray_adc_upper_threshold})"
+            judging_source=f"ret={StageWeight.STAGE}*(s0<{conf.gray_adc_off_stage_upper_threshold})"
             f"+{StageWeight.REBOOT}*(s1=={run_config.boot.button_io_activate_case_value})",
             return_type=int,
             return_raw=False,
@@ -663,7 +663,7 @@ class Breakers:
                 ),
             ],
             judging_source=[  # true ret is reserved to emulate the performance consumption
-                f"true_ret={StageWeight.STAGE}*(s0<{conf.gray_adc_upper_threshold})"
+                f"true_ret={StageWeight.STAGE}*(s0<{conf.gray_adc_off_stage_upper_threshold})"
                 f"+{StageWeight.REBOOT}*(s1=={run_config.boot.button_io_activate_case_value})",
                 "ret=0",
             ],
@@ -881,4 +881,72 @@ class Breakers:
             return_type=bool,
             return_raw=False,
             function_name="check_gray_adc_for_scan_breaker",
+        )
+
+    @staticmethod
+    @lru_cache(maxsize=None)
+    def make_is_on_stage_breaker(app_config: APPConfig, run_config: RunConfig) -> Callable[[], bool]:
+        """
+        Generates a function that acts as a breaker for the stage.
+
+        Args:
+            app_config (APPConfig): The application configuration.
+            run_config (RunConfig): The run configuration.
+
+        Returns:
+            Callable[[], int]: A function that takes no arguments and returns an integer.
+
+        This function uses the `lru_cache` decorator to cache the result of the function.
+        It also registers a context getter for the ADC pack.
+        The function constructs a source code string based on the provided configuration.
+        If the debug log level is set to "DEBUG", an additional line of code is added to log the scan code.
+        Finally, the function constructs and returns an inlined function using the `menta.construct_inlined_function` method.
+        The inlined function has two usages: one for the ADC sampler and one for the IO sampler.
+        The judging source is constructed based on the provided configuration.
+        The function name is set to "is_on_stage_breaker".
+        """
+
+        return menta.construct_inlined_function(
+            usages=[
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.adc_all, required_data_indexes=[app_config.sensor.gray_adc_index]
+                ),
+            ],
+            judging_source=[
+                f"ret=s0<{run_config.stage.gray_adc_off_stage_upper_threshold}",
+            ],
+            return_type=bool,
+            return_raw=False,
+            function_name="is_on_stage_breaker",
+        )
+
+    @staticmethod
+    @lru_cache(maxsize=None)
+    def make_back_stage_side_away_breaker(app_config: APPConfig, run_config: RunConfig) -> Callable[[], bool]:
+        """
+        Generates a function that acts as a breaker for the stage.
+
+        Args:
+            app_config (APPConfig): The application configuration.
+            run_config (RunConfig): The run configuration.
+
+        Returns:
+            Callable[[], int]: A function that takes no arguments and returns an integer.
+
+        This function uses the `lru_cache` decorator to cache the result of the function.
+        It also registers a context getter for the ADC pack.
+        The function constructs a source code string based on the provided configuration.
+        If the debug log level is set to "DEBUG", an additional line of code is added to log the scan code.
+        Finally, the function constructs and returns an inlined function using the `menta.construct_inlined_function` method.
+        The inlined function has two usages: one for the ADC sampler and one for the IO sampler.
+        The judging source is constructed based on the provided configuration.
+        The function name is set to "back_stage_side_away_breaker".
+        """
+
+        return menta.construct_inlined_function(
+            usages=[SamplerUsage(used_sampler_index=SamplerIndexes.acc_all, required_data_indexes=[Axis.z])],
+            judging_source=[f"ret=abs(1-s0)>{run_config.backstage.side_away_degree_tolerance}"],
+            return_type=bool,
+            return_raw=False,
+            function_name="back_stage_side_away_breaker",
         )
