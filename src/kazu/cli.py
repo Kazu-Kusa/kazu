@@ -1248,7 +1248,7 @@ def record_data(conf: _InternalConfig, output_dir: Path, interval: float, run_co
             if is_pressed():
                 while is_pressed():
                     pass
-                secho(f"Start recording|Salvo {len(recorded_df)+1}", fg="red", bold=True)
+                secho(f"Start recording|Salvo {len(recorded_df)+2}", fg="red", bold=True)
                 recorded_df[f"record_{get_timestamp()}"] = _conv_to_df(recording_container)
                 recording_container.clear()
                 continue
