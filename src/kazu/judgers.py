@@ -481,7 +481,7 @@ class Breakers:
 
     @staticmethod
     @lru_cache(maxsize=None)
-    def make_align_direction_breaker(app_config: APPConfig, run_config: RunConfig) -> Callable[[], int]:
+    def make_align_direction_breaker_mpu(app_config: APPConfig, run_config: RunConfig) -> Callable[[], bool]:
         """
         Generates a function that determines whether the alignment of a direction has breached the specified yaw tolerance.
 
@@ -514,6 +514,60 @@ class Breakers:
             return_type=bool,
             return_raw=False,
             function_name="align_direction_breaker",
+        )
+
+    @staticmethod
+    @lru_cache(maxsize=None)
+    def make_std_align_direction_breaker(app_config: APPConfig, run_config: RunConfig) -> Callable[[], bool]:
+        """
+        Creates a function that checks if the alignment direction is correct based on the sensor and run configurations.
+
+        Parameters:
+        - app_config (APPConfig): The application configuration object, containing sensor indices and other settings.
+        - run_config (RunConfig): The runtime configuration object, including threshold values.
+
+        Returns:
+        - Callable[[], bool]: A function that takes no arguments and returns a boolean indicating if the alignment direction is correct.
+
+        Notes:
+        - The function uses the `construct_inlined_function` method from the `menta` module to create an inlined function.
+        - The function uses the `usages` parameter to specify the required sampler usage.
+        - The function uses the `judging_source` parameter to specify the logic for checking the alignment direction.
+        - The function uses the `return_type` parameter to specify the return type of the function.
+        - The function uses the `function_name` parameter to specify the name of the function.
+        """
+        conf = app_config.sensor
+        fconf = run_config.fence
+        activate = fconf.io_encounter_fence_value
+        return menta.construct_inlined_function(
+            usages=[
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.adc_all,
+                    required_data_indexes=[
+                        conf.front_adc_index,  # s0
+                        conf.rb_adc_index,  # s1
+                        conf.left_adc_index,  # s2
+                        conf.right_adc_index,  # s3
+                    ],
+                ),
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.io_all,
+                    required_data_indexes=[
+                        conf.fl_io_index,  # s4
+                        conf.fr_io_index,  # s5
+                        conf.rl_io_index,  # s6
+                        conf.rr_io_index,  # s7
+                    ],
+                ),
+            ],
+            judging_source=(
+                f"ret=((s0>{fconf.front_adc_lower_threshold} or (s4==s5=={activate})) "
+                f"+ (s1>{fconf.rear_adc_lower_threshold} or (s6==s7=={activate})) "
+                f"+ s2>{fconf.left_adc_lower_threshold} "
+                f"+ s3>{fconf.right_adc_lower_threshold})==2"
+            ),
+            return_type=bool,
+            function_name="std_align_direction_breaker",
         )
 
     @staticmethod
@@ -807,7 +861,7 @@ class Breakers:
 
     @staticmethod
     @lru_cache(maxsize=None)
-    def make_reboot_button_pressed_breaker(app_config: APPConfig, run_config: RunConfig) -> Callable[[], int]:
+    def make_reboot_button_pressed_breaker(app_config: APPConfig, run_config: RunConfig) -> Callable[[], bool]:
         """
         Generates a function that acts as a breaker for the reboot button pressed.
 
@@ -840,7 +894,7 @@ class Breakers:
             judging_source=[
                 f"ret=s0=={run_config.boot.button_io_activate_case_value}",
             ],
-            return_type=int,
+            return_type=bool,
             return_raw=False,
             function_name="reboot_button_pressed_breaker",
         )

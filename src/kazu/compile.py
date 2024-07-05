@@ -1112,7 +1112,7 @@ def make_fence_handler(
 
     align_stage_breaker = (
         Breakers.make_stage_align_breaker_mpu(app_config, run_config)
-        if run_config.fence.use_mpu_align
+        if run_config.fence.use_mpu_align_stage
         else Breakers.make_std_stage_align_breaker(app_config, run_config)
     )
     lr_blocked_breaker = Breakers.make_lr_sides_blocked_breaker(app_config, run_config)
@@ -1261,7 +1261,11 @@ def make_align_direction_handler(
             align_state = MovingState.turn("r", conf.direction_align_speed)
         case _:
             raise ValueError(f"Invalid align direction: {conf.direction_align_direction}")
-    align_direction_breaker = Breakers.make_align_direction_breaker(app_config, run_config)
+    align_direction_breaker = (
+        Breakers.make_align_direction_breaker_mpu(app_config, run_config)
+        if run_config.fence.use_mpu_align_direction
+        else Breakers.make_std_align_direction_breaker(app_config, run_config)
+    )
     if aligned_state and not_aligned_state:
         branch = {True: aligned_state, False: not_aligned_state}
     elif aligned_state:

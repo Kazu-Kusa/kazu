@@ -191,7 +191,8 @@ class fenceConfig(BaseModel):
     io_encounter_fence_value: int = 0
     max_yaw_tolerance: float = 20.0
 
-    use_mpu_align: bool = False
+    use_mpu_align_stage: bool = False
+    use_mpu_align_direction: bool = False
 
     stage_align_speed: int = 850
     max_stage_align_duration: float = 4.5
