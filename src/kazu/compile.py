@@ -904,10 +904,29 @@ def make_scan_handler(
     transitions_pool.extend(transitions)
     case_reg.register(ScanCodesign.O_O_X_X, head_state)
     # ---------------------------------------------------------------------
+    composer.init_container()
+    if conf.check_gray_adc_before_scan:
+        check_gray_adc_breaker = Breakers.make_check_gray_adc_for_scan_breaker(app_config, run_config)
+        composer.add(MovingState.halt()).add(
+            MovingTransition(0, breaker=check_gray_adc_breaker, to_states={True: MovingState.halt()})
+        )
+    if conf.check_edge_before_scan:
+        check_edge_breaker = Breakers.make_std_edge_full_breaker(app_config, run_config)
+
+        def boolean_full_edge_breaker() -> bool:
+            """
+            converts the  edge breaker to a boolean edge breaker
+            Returns:
+
+            """
+            return bool(check_edge_breaker())
+
+        composer.add(MovingState.halt(), register_case=False).add(
+            MovingTransition(0, breaker=boolean_full_edge_breaker, to_states={True: MovingState.halt()})
+        )
 
     states, transitions = (
-        composer.init_container()
-        .add(scan_state)
+        composer.add(scan_state, register_case=False)
         .add(MovingTransition(conf.scan_duration, breaker=scan_breaker, to_states=case_reg.export()))
         .export_structure()
     )

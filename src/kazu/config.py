@@ -136,6 +136,10 @@ class ScanConfig(BaseModel):
     full_turn_duration: float = 0.45
     half_turn_duration: float = 0.225
 
+    check_edge_before_scan: bool = True
+    check_gray_adc_before_scan: bool = True
+    gray_adc_lower_threshold: int = 3200
+
 
 class RandTurn(BaseModel):
 

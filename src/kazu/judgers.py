@@ -844,3 +844,41 @@ class Breakers:
             return_raw=False,
             function_name="reboot_button_pressed_breaker",
         )
+
+    @staticmethod
+    @lru_cache(maxsize=None)
+    def make_check_gray_adc_for_scan_breaker(app_config: APPConfig, run_config: RunConfig) -> Callable[[], bool]:
+        """
+        Generates a function that acts as a breaker for the gray ADC data.
+
+        Args:
+            app_config (APPConfig): The application configuration.
+            run_config (RunConfig): The run configuration.
+
+        Returns:
+            Callable[[], int]: A function that takes no arguments and returns an integer.
+
+        This function uses the `lru_cache` decorator to cache the result of the function.
+        It also registers a context getter for the ADC pack.
+        The function constructs a source code string based on the provided configuration.
+        If the debug log level is set to "DEBUG", an additional line of code is added to log the scan code.
+        Finally, the function constructs and returns an inlined function using the `menta.construct_inlined_function` method.
+        The inlined function has two usages: one for the ADC sampler and one for the IO sampler.
+        The judging source is constructed based on the provided configuration.
+        The function name is set to "check_gray_adc_for_scan_breaker".
+        """
+
+        return menta.construct_inlined_function(
+            usages=[
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.adc_all,
+                    required_data_indexes=[app_config.sensor.gray_adc_index],  # s0
+                ),
+            ],
+            judging_source=[
+                f"ret=s0<{run_config.search.scan_move.gray_adc_lower_threshold}",
+            ],
+            return_type=bool,
+            return_raw=False,
+            function_name="check_gray_adc_for_scan_breaker",
+        )
