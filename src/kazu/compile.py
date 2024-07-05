@@ -941,7 +941,8 @@ def make_rand_turn_handler(
         if app_config.debug.use_siglight
         else None
     )
-    half_turn_transition = MovingTransition(conf.half_turn_duration)
+    breaker = Breakers.make_std_turn_to_front_breaker(app_config, run_config) if conf.use_turn_to_front else None
+    half_turn_transition = MovingTransition(conf.half_turn_duration, breaker=breaker)
 
     states, transitions = composer.add(rand_lr_turn_state).add(half_turn_transition).add(end_state).export_structure()
     return states, transitions

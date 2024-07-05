@@ -180,29 +180,46 @@ class Breakers:
         An inlined function that assesses the braking state of the rear wheels based on sensor data.
         """
         activate = run_config.surrounding.io_encounter_object_value
-        return menta.construct_inlined_function(
-            usages=[
-                SamplerUsage(
-                    used_sampler_index=SamplerIndexes.io_all,
-                    required_data_indexes=[
-                        app_config.sensor.fl_io_index,  # s0
-                        app_config.sensor.fr_io_index,  # s1
-                    ],
-                ),
-                SamplerUsage(
-                    used_sampler_index=SamplerIndexes.adc_all,
-                    required_data_indexes=[
-                        app_config.sensor.front_adc_index,  # s2
-                    ],
-                ),
-            ],
-            judging_source=f"ret=bool(s0=={activate} "
-            f"or s1=={activate} "
-            f"or s2>{run_config.surrounding.front_adc_lower_threshold})",
-            return_type=bool,
-            return_raw=False,
-            function_name="std_turn_to_front_breaker",
-        )
+        if run_config.surrounding.turn_to_front_use_front_sensor:
+            return menta.construct_inlined_function(
+                usages=[
+                    SamplerUsage(
+                        used_sampler_index=SamplerIndexes.io_all,
+                        required_data_indexes=[
+                            app_config.sensor.fl_io_index,  # s0
+                            app_config.sensor.fr_io_index,  # s1
+                        ],
+                    ),
+                    SamplerUsage(
+                        used_sampler_index=SamplerIndexes.adc_all,
+                        required_data_indexes=[
+                            app_config.sensor.front_adc_index,  # s2
+                        ],
+                    ),
+                ],
+                judging_source=f"ret=bool(s0=={activate} "
+                f"or s1=={activate} "
+                f"or s2>{run_config.surrounding.front_adc_lower_threshold})",
+                return_type=bool,
+                return_raw=False,
+                function_name="std_turn_to_front_breaker",
+            )
+        else:
+            return menta.construct_inlined_function(
+                usages=[
+                    SamplerUsage(
+                        used_sampler_index=SamplerIndexes.io_all,
+                        required_data_indexes=[
+                            app_config.sensor.gray_io_left_index,  # s0
+                            app_config.sensor.gray_io_right_index,  # s1
+                        ],
+                    ),
+                ],
+                judging_source=f"ret=s0=={activate} or s1=={activate}",
+                return_type=bool,
+                return_raw=False,
+                function_name="std_turn_to_front_breaker",
+            )
 
     @staticmethod
     @lru_cache(maxsize=None)

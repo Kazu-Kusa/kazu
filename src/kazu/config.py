@@ -97,6 +97,8 @@ class SurroundingConfig(BaseModel):
     turn_speed: int = 4000
     turn_left_prob: float = 0.5
 
+    turn_to_front_use_front_sensor: bool = False
+
     rand_turn_speeds: List[int] = [2100, 3000, 5000]
     rand_turn_speed_weights: List[float] = [2, 3, 1]
 
@@ -137,10 +139,12 @@ class ScanConfig(BaseModel):
 
 class RandTurn(BaseModel):
 
-    turn_speed: int = 3500
+    turn_speed: int = 2300
     turn_left_prob: float = 0.5
-    full_turn_duration: float = 0.45
-    half_turn_duration: float = 0.225
+    full_turn_duration: float = 0.25
+    half_turn_duration: float = 0.15
+
+    use_turn_to_front: bool = True
 
 
 class SearchConfig(BaseModel):
