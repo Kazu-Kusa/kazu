@@ -1,3 +1,3 @@
 __all__ = []
 __command__ = "kazu"
-__version__ = "0.3.2.1"
+__version__ = "0.3.3"

@@ -49,8 +49,8 @@ class TagGroup(BaseModel):
 
 
 class EdgeConfig(BaseModel):
-    lower_threshold: Tuple[float, float, float, float] = (1800, 1750, 1750, 1800)
-    upper_threshold: Tuple[float, float, float, float] = (2100, 2270, 2270, 2100)
+    lower_threshold: Tuple[float, float, float, float] = (1740, 1650, 1650, 1740)
+    upper_threshold: Tuple[float, float, float, float] = (2100, 2470, 2470, 2100)
 
     fallback_speed: int = 2600
     fallback_duration: float = 0.2
@@ -108,7 +108,7 @@ class SurroundingConfig(BaseModel):
 
 class GradientConfig(BaseModel):
 
-    max_speed: int = 3000
+    max_speed: int = 2800
     min_speed: int = 500
     lower_bound: int = 2900
     upper_bound: int = 3700
@@ -158,7 +158,7 @@ class SearchConfig(BaseModel):
     gradient_move: GradientConfig = GradientConfig()
 
     use_scan_move: bool = True
-    scan_move_weight: float = 0.96
+    scan_move_weight: float = 1.96
     scan_move: ScanConfig = ScanConfig()
 
     use_rand_turn: bool = True
@@ -252,7 +252,7 @@ class BackStageConfig(BaseModel):
     use_is_on_stage_check: bool = True
     use_side_away_check: bool = True
 
-    side_away_degree_tolerance: float = 18.0
+    side_away_degree_tolerance: float = 10.0
     exit_side_away_speed: int = 1300
     exit_side_away_duration: float = 0.6
 
