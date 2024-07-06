@@ -1,4 +1,5 @@
 from functools import lru_cache
+from math import cos
 from typing import Callable, Tuple
 
 from mentabotix import SamplerUsage
@@ -1000,7 +1001,7 @@ class Breakers:
 
         return menta.construct_inlined_function(
             usages=[SamplerUsage(used_sampler_index=SamplerIndexes.acc_all, required_data_indexes=[Axis.z])],
-            judging_source=[f"ret=abs(1-s0)>{run_config.backstage.side_away_degree_tolerance}"],
+            judging_source=[f"ret=abs(1-s0)>{cos(run_config.backstage.side_away_degree_tolerance)}"],
             return_type=bool,
             return_raw=False,
             function_name="back_stage_side_away_breaker",
