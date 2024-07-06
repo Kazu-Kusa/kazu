@@ -252,7 +252,7 @@ class BackStageConfig(BaseModel):
     use_is_on_stage_check: bool = True
     use_side_away_check: bool = True
 
-    side_away_degree_tolerance: float = 35
+    side_away_degree_tolerance: float = 18.0
     exit_side_away_speed: int = 1300
     exit_side_away_duration: float = 0.6
 
