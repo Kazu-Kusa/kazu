@@ -576,7 +576,8 @@ class Breakers:
                         f"+ (s1>{fconf.rear_adc_lower_threshold} or (s6==s7=={activate})) "
                         f"+ s2>{fconf.left_adc_lower_threshold} "
                         f"+ s3>{fconf.right_adc_lower_threshold}",
-                        "_logger.debug(f'{code}')" "ret=code==2",
+                        "_logger.debug(f'{code}')",
+                        "ret=code==2",
                     ]
                 )
             ),
