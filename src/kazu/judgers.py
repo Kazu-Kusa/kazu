@@ -564,21 +564,21 @@ class Breakers:
             ],
             judging_source=(
                 (
-                    f"ret=((s0>{fconf.front_adc_lower_threshold} or (s4==s5=={activate})) "
-                    f"+ (s1>{fconf.rear_adc_lower_threshold} or (s6==s7=={activate})) "
-                    f"+ s2>{fconf.left_adc_lower_threshold} "
-                    f"+ s3>{fconf.right_adc_lower_threshold})==2"
-                )
-                if not app_config.debug.log_level == "DEBUG"
-                else (
                     [
                         f"code=(s0>{fconf.front_adc_lower_threshold} or (s4==s5=={activate})) "
                         f"+ (s1>{fconf.rear_adc_lower_threshold} or (s6==s7=={activate})) "
-                        f"+ s2>{fconf.left_adc_lower_threshold} "
-                        f"+ s3>{fconf.right_adc_lower_threshold}",
-                        "_logger.debug(f'{code}')",
+                        f"+ (s2>{fconf.left_adc_lower_threshold})"
+                        f"+ (s3>{fconf.right_adc_lower_threshold})",
+                        "_logger.debug(f'AlignD: {code}')",
                         "ret=code==2",
                     ]
+                )
+                if app_config.debug.log_level == "DEBUG"
+                else (
+                    f"ret=((s0>{fconf.front_adc_lower_threshold} or (s4==s5=={activate})) "
+                    f"+ (s1>{fconf.rear_adc_lower_threshold} or (s6==s7=={activate})) "
+                    f"+ (s2>{fconf.left_adc_lower_threshold})"
+                    f"+ (s3>{fconf.right_adc_lower_threshold})==2)"
                 )
             ),
             return_type=bool,
