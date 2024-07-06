@@ -1325,29 +1325,26 @@ def make_back_to_stage_handler(
         .add(small_advance_transition)
         .add(MovingState.halt())
         .add(stab_trans.clone())
-        .add(MovingState.straight(-run_config.boot.dash_speed))
-        .add(MovingTransition(run_config.boot.dash_duration))
-        .add(MovingState.halt())
+        .add(MovingState.straight(-run_config.backstage.dash_speed))
     )
     concat_state = None
     if run_config.backstage.use_is_on_stage_check:
         _logger.info("Using is_on_stage_check to restrict the behavior.")
         is_on_stage_breaker = Breakers.make_is_on_stage_breaker(app_config, run_config)
-        composer.add(
-            MovingTransition(
-                run_config.backstage.time_to_stabilize,
-                breaker=is_on_stage_breaker,
-                to_states={False: (concat_state := MovingState.halt())},
-            )
-        )
 
+        dash_trans = MovingTransition(
+            run_config.backstage.dash_duration,
+            breaker=is_on_stage_breaker,
+            to_states={False: (concat_state := MovingState.halt())},
+        )
     else:
-        composer.add(stab_trans.clone())
+        dash_trans = MovingTransition(run_config.backstage.dash_duration)
+    (composer.add(dash_trans).add(MovingState.halt(), register_case=True).add(stab_trans.clone()))
 
     main_branch_states, main_branch_transitions = (
         composer.add(
             MovingState.rand_dir_turn(
-                controller, run_config.boot.turn_speed, turn_left_prob=run_config.boot.turn_left_prob
+                controller, run_config.backstage.turn_speed, turn_left_prob=run_config.backstage.turn_left_prob
             ),
             register_case=True,
         )
