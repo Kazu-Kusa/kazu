@@ -58,7 +58,7 @@ class EdgeConfig(BaseModel):
     advance_speed: int = 2400
     advance_duration: float = 0.35
 
-    turn_speed: int = 4000
+    turn_speed: int = 2900
     full_turn_duration: float = 0.45
     half_turn_duration: float = 0.225
 
@@ -83,23 +83,23 @@ class SurroundingConfig(BaseModel):
     atk_break_use_edge_sensors: bool = True
 
     atk_speed_enemy_car: int = 2300
-    atk_speed_enemy_box: int = 1600
-    atk_speed_neutral_box: int = 1300
-    fallback_speed_ally_box: int = 4000
-    fallback_speed_edge: int = 3000
+    atk_speed_enemy_box: int = 2500
+    atk_speed_neutral_box: int = 2500
+    fallback_speed_ally_box: int = 2900
+    fallback_speed_edge: int = 2400
 
-    atk_enemy_car_duration: float = 5.1
-    atk_enemy_box_duration: float = 5.1
-    atk_neutral_box_duration: float = 5.1
+    atk_enemy_car_duration: float = 4.2
+    atk_enemy_box_duration: float = 3.6
+    atk_neutral_box_duration: float = 3.6
     fallback_duration_ally_box: float = 0.3
     fallback_duration_edge: float = 0.2
 
-    turn_speed: int = 4000
+    turn_speed: int = 2900
     turn_left_prob: float = 0.5
 
     turn_to_front_use_front_sensor: bool = False
 
-    rand_turn_speeds: List[int] = [2100, 3000, 5000]
+    rand_turn_speeds: List[int] = [1600, 2100, 3000]
     rand_turn_speed_weights: List[float] = [2, 3, 1]
 
     full_turn_duration: float = 0.45
@@ -116,21 +116,21 @@ class GradientConfig(BaseModel):
 
 class ScanConfig(BaseModel):
 
-    front_max_tolerance: int = 500
-    rear_max_tolerance: int = 600
-    left_max_tolerance: int = 500
-    right_max_tolerance: int = 500
+    front_max_tolerance: int = 760
+    rear_max_tolerance: int = 760
+    left_max_tolerance: int = 760
+    right_max_tolerance: int = 760
 
     io_encounter_object_value: int = 0
 
     scan_speed: int = 300
-    scan_duration: float = 3.5
+    scan_duration: float = 4.5
     scan_turn_left_prob: float = 0.5
 
     fall_back_speed: int = 3250
     fall_back_duration: float = 0.2
 
-    turn_speed: int = 4350
+    turn_speed: int = 2700
     turn_left_prob: float = 0.5
 
     full_turn_duration: float = 0.45
@@ -138,7 +138,7 @@ class ScanConfig(BaseModel):
 
     check_edge_before_scan: bool = True
     check_gray_adc_before_scan: bool = True
-    gray_adc_lower_threshold: int = 3200
+    gray_adc_lower_threshold: int = 3100
 
 
 class RandTurn(BaseModel):
@@ -162,7 +162,7 @@ class SearchConfig(BaseModel):
     scan_move: ScanConfig = ScanConfig()
 
     use_rand_turn: bool = True
-    rand_turn_weight: float = 0.01
+    rand_turn_weight: float = 0.05
     rand_turn: RandTurn = RandTurn()
 
 
@@ -229,9 +229,9 @@ class BootConfig(BaseModel):
     right_threshold: int = 1100
 
     dash_speed: int = 7000
-    dash_duration: float = 0.45
+    dash_duration: float = 0.55
 
-    turn_speed: int = 4000
+    turn_speed: int = 2150
     full_turn_duration: float = 0.45
     turn_left_prob: float = 0.5
 
