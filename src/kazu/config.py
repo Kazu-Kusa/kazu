@@ -49,7 +49,7 @@ class TagGroup(BaseModel):
 
 
 class EdgeConfig(BaseModel):
-    lower_threshold: Tuple[float, float, float, float] = (1740, 1650, 1650, 1740)
+    lower_threshold: Tuple[float, float, float, float] = (1740, 1819, 1819, 1740)
     upper_threshold: Tuple[float, float, float, float] = (2100, 2470, 2470, 2100)
 
     fallback_speed: int = 2600
@@ -58,7 +58,7 @@ class EdgeConfig(BaseModel):
     advance_speed: int = 2400
     advance_duration: float = 0.35
 
-    turn_speed: int = 2900
+    turn_speed: int = 2800
     full_turn_duration: float = 0.45
     half_turn_duration: float = 0.225
 
@@ -258,7 +258,7 @@ class BackStageConfig(BaseModel):
 
 
 class StageConfig(BaseModel):
-    gray_adc_off_stage_upper_threshold: int = 2850
+    gray_adc_off_stage_upper_threshold: int = 2730
     gray_io_off_stage_case_value: int = 0
 
 
