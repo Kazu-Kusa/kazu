@@ -249,7 +249,7 @@ class BackStageConfig(BaseModel):
     full_turn_duration: float = 0.35
     turn_left_prob: float = 0.5
 
-    use_is_on_stage_check: bool = True
+    use_is_on_stage_check: bool = False
     use_side_away_check: bool = True
 
     side_away_degree_tolerance: float = 10.0
