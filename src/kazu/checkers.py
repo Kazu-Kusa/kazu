@@ -8,7 +8,7 @@ from kazu.logger import _logger
 
 def check_motor(controller: CloseLoopController) -> bool:
     _logger.info("Start checking motor communication channel.")
-    if controller.serial_client.is_connected:
+    if controller.seriald.is_open:
         _logger.info("Motor communication channel is ready.")
         return True
     else:
