@@ -1,4 +1,4 @@
-from toml import load
+from tomlkit import load
 
 
 with open("pyproject.toml", "r") as fp:

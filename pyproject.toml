@@ -12,7 +12,6 @@ dependencies = [
     "coloredlogs>=15.0.1",
     "pydantic>=2.7.4",
     "click>=8.1.7",
-    "toml>=0.10.2",
     "terminaltables>=3.1.10",
     "colorama>=0.4.6",
     "upicvision>=0.1.0.6",
@@ -20,6 +19,7 @@ dependencies = [
     "plantuml>=0.3.0",
     "six>=1.16.0",
     "pandas>=2.2.2",
+    "tomlkit>=0.13.2",
 ]
 requires-python = "==3.11.*"
 readme = "README.md"

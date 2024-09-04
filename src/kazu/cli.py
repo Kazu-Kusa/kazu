@@ -125,7 +125,7 @@ def configure(
 
     app_config = config.app_config
     if kv is None:
-        from toml import dumps
+        from tomlkit import dumps
 
         secho(f"Config file at {Path(config.app_config_file_path).absolute().as_posix()}", fg="green", bold=True)
         print_colored_toml(dumps(APPConfig.model_dump(app_config)))

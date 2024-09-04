@@ -4,8 +4,8 @@ from typing import Tuple, List, Self, Literal, TextIO, Any, Dict
 
 from click import secho
 from colorama import Fore
-from pydantic import BaseModel
-from toml import load, dump
+from pydantic import BaseModel, Field
+from tomlkit import load, dump
 from upic import TagDetector
 
 from kazu.logger import _logger
@@ -26,7 +26,6 @@ class CounterHashable(BaseModel):
 
 
 class TagGroup(BaseModel):
-
     team_color: Literal["yellow", "blue"] | str
     enemy_tag: Literal[1, 2] = None
     allay_tag: Literal[1, 2] = None
@@ -49,221 +48,233 @@ class TagGroup(BaseModel):
 
 
 class EdgeConfig(BaseModel):
-    lower_threshold: Tuple[float, float, float, float] = (1740, 1819, 1819, 1740)
-    upper_threshold: Tuple[float, float, float, float] = (2100, 2470, 2470, 2100)
+    lower_threshold: Tuple[float, float, float, float] = Field(
+        default=(1740, 1819, 1819, 1740), description="Lower threshold values for edge detection."
+    )
+    upper_threshold: Tuple[float, float, float, float] = Field(
+        default=(2100, 2470, 2470, 2100), description="Upper threshold values for edge detection."
+    )
 
-    fallback_speed: int = 2600
-    fallback_duration: float = 0.2
+    fallback_speed: int = Field(default=2600, description="Speed when falling back.")
+    fallback_duration: float = Field(default=0.2, description="Duration of the fallback action.")
 
-    advance_speed: int = 2400
-    advance_duration: float = 0.35
+    advance_speed: int = Field(default=2400, description="Speed when advancing.")
+    advance_duration: float = Field(default=0.35, description="Duration of the advance action.")
 
-    turn_speed: int = 2800
-    full_turn_duration: float = 0.45
-    half_turn_duration: float = 0.225
+    turn_speed: int = Field(default=2800, description="Speed when turning.")
+    full_turn_duration: float = Field(default=0.45, description="Duration of a full turn.")
+    half_turn_duration: float = Field(default=0.225, description="Duration of a half turn.")
 
-    turn_left_prob: float = 0.5
+    turn_left_prob: float = Field(default=0.5, description="Probability of turning left.")
 
-    drift_speed: int = 1500
-    drift_duration: float = 0.13
+    drift_speed: int = Field(default=1500, description="Speed when drifting.")
+    drift_duration: float = Field(default=0.13, description="Duration of the drift action.")
 
-    use_gray_io: bool = True
+    use_gray_io: bool = Field(default=True, description="Whether to use gray IO for detection.")
 
 
 class SurroundingConfig(BaseModel):
-    io_encounter_object_value: int = 0
+    io_encounter_object_value: int = Field(default=0, description="IO value when encountering an object.")
 
-    left_adc_lower_threshold: int = 1000
-    right_adc_lower_threshold: int = 1000
+    left_adc_lower_threshold: int = Field(default=1000, description="ADC lower threshold for the left sensor.")
+    right_adc_lower_threshold: int = Field(default=1000, description="ADC lower threshold for the right sensor.")
 
-    front_adc_lower_threshold: int = 1000
-    back_adc_lower_threshold: int = 1100
+    front_adc_lower_threshold: int = Field(default=1000, description="ADC lower threshold for the front sensor.")
+    back_adc_lower_threshold: int = Field(default=1100, description="ADC lower threshold for the back sensor.")
 
-    atk_break_front_lower_threshold: int = 1500
-    atk_break_use_edge_sensors: bool = True
+    atk_break_front_lower_threshold: int = Field(
+        default=1500, description="Front ADC lower threshold for attack break."
+    )
+    atk_break_use_edge_sensors: bool = Field(default=True, description="Whether to use edge sensors for attack break.")
 
-    atk_speed_enemy_car: int = 2300
-    atk_speed_enemy_box: int = 2500
-    atk_speed_neutral_box: int = 2500
-    fallback_speed_ally_box: int = 2900
-    fallback_speed_edge: int = 2400
+    atk_speed_enemy_car: int = Field(default=2300, description="Attack speed for enemy car.")
+    atk_speed_enemy_box: int = Field(default=2500, description="Attack speed for enemy box.")
+    atk_speed_neutral_box: int = Field(default=2500, description="Attack speed for neutral box.")
+    fallback_speed_ally_box: int = Field(default=2900, description="Fallback speed for ally box.")
+    fallback_speed_edge: int = Field(default=2400, description="Fallback speed for edge.")
 
-    atk_enemy_car_duration: float = 4.2
-    atk_enemy_box_duration: float = 3.6
-    atk_neutral_box_duration: float = 3.6
-    fallback_duration_ally_box: float = 0.3
-    fallback_duration_edge: float = 0.2
+    atk_enemy_car_duration: float = Field(default=4.2, description="Duration of attack on enemy car.")
+    atk_enemy_box_duration: float = Field(default=3.6, description="Duration of attack on enemy box.")
+    atk_neutral_box_duration: float = Field(default=3.6, description="Duration of attack on neutral box.")
+    fallback_duration_ally_box: float = Field(default=0.3, description="Duration of fallback for ally box.")
+    fallback_duration_edge: float = Field(default=0.2, description="Duration of fallback for edge.")
 
-    turn_speed: int = 2900
-    turn_left_prob: float = 0.5
+    turn_speed: int = Field(default=2900, description="Speed when turning.")
+    turn_left_prob: float = Field(default=0.5, description="Probability of turning left.")
 
-    turn_to_front_use_front_sensor: bool = False
+    turn_to_front_use_front_sensor: bool = Field(
+        default=False, description="Whether to use the front sensor for turning to front."
+    )
 
-    rand_turn_speeds: List[int] = [1600, 2100, 3000]
-    rand_turn_speed_weights: List[float] = [2, 3, 1]
+    rand_turn_speeds: List[int] = Field(default=[1600, 2100, 3000], description="Random turn speeds.")
+    rand_turn_speed_weights: List[float] = Field(default=[2, 3, 1], description="Weights for random turn speeds.")
 
-    full_turn_duration: float = 0.45
-    half_turn_duration: float = 0.225
+    full_turn_duration: float = Field(default=0.45, description="Duration of a full turn.")
+    half_turn_duration: float = Field(default=0.225, description="Duration of a half turn.")
 
 
 class GradientConfig(BaseModel):
-
-    max_speed: int = 2800
-    min_speed: int = 500
-    lower_bound: int = 2900
-    upper_bound: int = 3700
+    max_speed: int = Field(default=2800, description="Maximum speed for gradient move.")
+    min_speed: int = Field(default=500, description="Minimum speed for gradient move.")
+    lower_bound: int = Field(default=2900, description="Lower bound for gradient move.")
+    upper_bound: int = Field(default=3700, description="Upper bound for gradient move.")
 
 
 class ScanConfig(BaseModel):
 
-    front_max_tolerance: int = 760
-    rear_max_tolerance: int = 760
-    left_max_tolerance: int = 760
-    right_max_tolerance: int = 760
+    front_max_tolerance: int = Field(default=760, description="Maximum tolerance for the front sensor.")
+    rear_max_tolerance: int = Field(default=760, description="Maximum tolerance for the rear sensor.")
+    left_max_tolerance: int = Field(default=760, description="Maximum tolerance for the left sensor.")
+    right_max_tolerance: int = Field(default=760, description="Maximum tolerance for the right sensor.")
 
-    io_encounter_object_value: int = 0
+    io_encounter_object_value: int = Field(default=0, description="IO value when encountering an object.")
 
-    scan_speed: int = 300
-    scan_duration: float = 4.5
-    scan_turn_left_prob: float = 0.5
+    scan_speed: int = Field(default=300, description="Speed for scanning.")
+    scan_duration: float = Field(default=4.5, description="Duration of the scan action.")
+    scan_turn_left_prob: float = Field(default=0.5, description="Probability of turning left during scan.")
 
-    fall_back_speed: int = 3250
-    fall_back_duration: float = 0.2
+    fall_back_speed: int = Field(default=3250, description="Speed for falling back.")
+    fall_back_duration: float = Field(default=0.2, description="Duration of the fall back action.")
 
-    turn_speed: int = 2700
-    turn_left_prob: float = 0.5
+    turn_speed: int = Field(default=2700, description="Speed when turning.")
+    turn_left_prob: float = Field(default=0.5, description="Probability of turning left.")
 
-    full_turn_duration: float = 0.45
-    half_turn_duration: float = 0.225
+    full_turn_duration: float = Field(default=0.45, description="Duration of a full turn.")
+    half_turn_duration: float = Field(default=0.225, description="Duration of a half turn.")
 
-    check_edge_before_scan: bool = True
-    check_gray_adc_before_scan: bool = True
-    gray_adc_lower_threshold: int = 3100
+    check_edge_before_scan: bool = Field(default=True, description="Whether to check edge before scanning.")
+    check_gray_adc_before_scan: bool = Field(default=True, description="Whether to check gray ADC before scanning.")
+    gray_adc_lower_threshold: int = Field(default=3100, description="Gray ADC lower threshold for scanning.")
 
 
 class RandTurn(BaseModel):
 
-    turn_speed: int = 2300
-    turn_left_prob: float = 0.5
-    full_turn_duration: float = 0.25
-    half_turn_duration: float = 0.15
+    turn_speed: int = Field(default=2300, description="Speed when turning.")
+    turn_left_prob: float = Field(default=0.5, description="Probability of turning left.")
+    full_turn_duration: float = Field(default=0.25, description="Duration of a full turn.")
+    half_turn_duration: float = Field(default=0.15, description="Duration of a half turn.")
 
-    use_turn_to_front: bool = True
+    use_turn_to_front: bool = Field(default=True, description="Whether to use turning to front.")
 
 
 class SearchConfig(BaseModel):
 
-    use_gradient_move: bool = True
-    gradient_move_weight: float = 100
-    gradient_move: GradientConfig = GradientConfig()
+    use_gradient_move: bool = Field(default=True, description="Whether to use gradient move.")
+    gradient_move_weight: float = Field(default=100, description="Weight for gradient move.")
+    gradient_move: GradientConfig = Field(default=GradientConfig(), description="Configuration for gradient move.")
 
-    use_scan_move: bool = True
-    scan_move_weight: float = 1.96
-    scan_move: ScanConfig = ScanConfig()
+    use_scan_move: bool = Field(default=True, description="Whether to use scan move.")
+    scan_move_weight: float = Field(default=1.96, description="Weight for scan move.")
+    scan_move: ScanConfig = Field(default=ScanConfig(), description="Configuration for scan move.")
 
-    use_rand_turn: bool = True
-    rand_turn_weight: float = 0.05
-    rand_turn: RandTurn = RandTurn()
+    use_rand_turn: bool = Field(default=True, description="Whether to use random turn.")
+    rand_turn_weight: float = Field(default=0.05, description="Weight for random turn.")
+    rand_turn: RandTurn = Field(default=RandTurn(), description="Configuration for random turn.")
 
 
 class RandWalk(BaseModel):
 
-    use_straight: bool = True
-    straight_weight: float = 2
+    use_straight: bool = Field(default=True, description="Whether to use straight movement.")
+    straight_weight: float = Field(default=2, description="Weight for straight movement.")
 
-    rand_straight_speeds: List[int] = [-800, -500, 500, 800]
-    rand_straight_speed_weights: List[float] = [1, 3, 3, 1]
+    rand_straight_speeds: List[int] = Field(default=[-800, -500, 500, 800], description="Random straight speeds.")
+    rand_straight_speed_weights: List[float] = Field(
+        default=[1, 3, 3, 1], description="Weights for random straight speeds."
+    )
 
-    use_turn: bool = True
-    turn_weight: float = 1
-    rand_turn_speeds: List[int] = [-1200, -800, 800, 1200]
-    rand_turn_speed_weights: List[float] = [1, 3, 3, 1]
+    use_turn: bool = Field(default=True, description="Whether to use turning.")
+    turn_weight: float = Field(default=1, description="Weight for turning.")
+    rand_turn_speeds: List[int] = Field(default=[-1200, -800, 800, 1200], description="Random turn speeds.")
+    rand_turn_speed_weights: List[float] = Field(default=[1, 3, 3, 1], description="Weights for random turn speeds.")
 
-    walk_duration: float = 0.3
+    walk_duration: float = Field(default=0.3, description="Duration of walking.")
 
 
-class fenceConfig(BaseModel):
-    front_adc_lower_threshold: int = 900
-    rear_adc_lower_threshold: int = 1100
-    left_adc_lower_threshold: int = 900
-    right_adc_lower_threshold: int = 900
+class FenceConfig(BaseModel):
+    front_adc_lower_threshold: int = Field(default=900, description="Front ADC lower threshold.")
+    rear_adc_lower_threshold: int = Field(default=1100, description="Rear ADC lower threshold.")
+    left_adc_lower_threshold: int = Field(default=900, description="Left ADC lower threshold.")
+    right_adc_lower_threshold: int = Field(default=900, description="Right ADC lower threshold.")
 
-    io_encounter_fence_value: int = 0
-    max_yaw_tolerance: float = 20.0
+    io_encounter_fence_value: int = Field(default=0, description="IO value when encountering a fence.")
+    max_yaw_tolerance: float = Field(default=20.0, description="Maximum yaw tolerance.")
 
-    use_mpu_align_stage: bool = False
-    use_mpu_align_direction: bool = False
+    use_mpu_align_stage: bool = Field(default=False, description="Whether to use MPU for aligning stage.")
+    use_mpu_align_direction: bool = Field(default=False, description="Whether to use MPU for aligning direction.")
 
-    stage_align_speed: int = 850
-    max_stage_align_duration: float = 4.5
-    stage_align_direction: Literal["l", "r", "rand"] = "rand"
+    stage_align_speed: int = Field(default=850, description="Speed for aligning stage.")
+    max_stage_align_duration: float = Field(default=4.5, description="Maximum duration for aligning stage.")
+    stage_align_direction: Literal["l", "r", "rand"] = Field(
+        default="rand", description="Direction for aligning stage."
+    )
 
-    direction_align_speed: int = 850
-    max_direction_align_duration: float = 4.5
-    direction_align_direction: Literal["l", "r", "rand"] = "rand"
+    direction_align_speed: int = Field(default=850, description="Speed for aligning direction.")
+    max_direction_align_duration: float = Field(default=4.5, description="Maximum duration for aligning direction.")
+    direction_align_direction: Literal["l", "r", "rand"] = Field(
+        default="rand", description="Direction for aligning direction."
+    )
 
-    exit_corner_speed: int = 1200
-    max_exit_corner_duration: float = 1.5
+    exit_corner_speed: int = Field(default=1200, description="Speed for exiting corner.")
+    max_exit_corner_duration: float = Field(default=1.5, description="Maximum duration for exiting corner.")
 
-    rand_walk: RandWalk = RandWalk()
+    rand_walk: RandWalk = Field(default=RandWalk(), description="Configuration for random walk.")
 
 
 class StrategyConfig(BaseModel):
-    use_edge_component: bool = True
-    use_surrounding_component: bool = True
-    use_normal_component: bool = True
+    use_edge_component: bool = Field(default=True, description="Whether to use edge component.")
+    use_surrounding_component: bool = Field(default=True, description="Whether to use surrounding component.")
+    use_normal_component: bool = Field(default=True, description="Whether to use normal component.")
 
 
 class PerformanceConfig(BaseModel):
-    checking_duration: float = 0.0
+    checking_duration: float = Field(default=0.0, description="Duration for checking.")
 
 
 class BootConfig(BaseModel):
-    button_io_activate_case_value: int = 0
+    button_io_activate_case_value: int = Field(default=0, description="Button IO value for activating case.")
 
-    time_to_stabilize: float = 0.1
+    time_to_stabilize: float = Field(default=0.1, description="Time to stabilize after activation.")
 
-    max_holding_duration: float = 180.0
+    max_holding_duration: float = Field(default=180.0, description="Maximum holding duration.")
 
-    left_threshold: int = 1100
-    right_threshold: int = 1100
+    left_threshold: int = Field(default=1100, description="Threshold for left sensor.")
+    right_threshold: int = Field(default=1100, description="Threshold for right sensor.")
 
-    dash_speed: int = 7000
-    dash_duration: float = 0.55
+    dash_speed: int = Field(default=7000, description="Speed for dashing.")
+    dash_duration: float = Field(default=0.55, description="Duration for dashing.")
 
-    turn_speed: int = 2150
-    full_turn_duration: float = 0.45
-    turn_left_prob: float = 0.5
+    turn_speed: int = Field(default=2150, description="Speed for turning.")
+    full_turn_duration: float = Field(default=0.45, description="Duration for a full turn.")
+    turn_left_prob: float = Field(default=0.5, description="Probability of turning left.")
 
 
 class BackStageConfig(BaseModel):
-    time_to_stabilize: float = 0.1
+    time_to_stabilize: float = Field(default=0.1, description="Time to stabilize after activation.")
 
-    small_advance_speed: int = 1500
-    small_advance_duration: float = 0.6
+    small_advance_speed: int = Field(default=1500, description="Speed for small advance.")
+    small_advance_duration: float = Field(default=0.6, description="Duration for small advance.")
 
-    dash_speed: int = 7000
-    dash_duration: float = 0.55
+    dash_speed: int = Field(default=7000, description="Speed for dashing.")
+    dash_duration: float = Field(default=0.55, description="Duration for dashing.")
 
-    turn_speed: int = 2600
-    full_turn_duration: float = 0.35
-    turn_left_prob: float = 0.5
+    turn_speed: int = Field(default=2600, description="Speed for turning.")
+    full_turn_duration: float = Field(default=0.35, description="Duration for a full turn.")
+    turn_left_prob: float = Field(default=0.5, description="Probability of turning left.")
 
-    use_is_on_stage_check: bool = False
-    use_side_away_check: bool = True
+    use_is_on_stage_check: bool = Field(default=False, description="Whether to check if on stage.")
+    use_side_away_check: bool = Field(default=True, description="Whether to check side away.")
 
-    side_away_degree_tolerance: float = 10.0
-    exit_side_away_speed: int = 1300
-    exit_side_away_duration: float = 0.6
+    side_away_degree_tolerance: float = Field(default=10.0, description="Degree tolerance for side away.")
+    exit_side_away_speed: int = Field(default=1300, description="Speed for exiting side away.")
+    exit_side_away_duration: float = Field(default=0.6, description="Duration for exiting side away.")
 
 
 class StageConfig(BaseModel):
-    gray_adc_off_stage_upper_threshold: int = 2730
-    gray_io_off_stage_case_value: int = 0
+    gray_adc_off_stage_upper_threshold: int = Field(default=2730, description="Upper threshold for gray ADC off stage.")
+    gray_io_off_stage_case_value: int = Field(default=0, description="IO value for gray off stage.")
 
 
 class RunConfig(CounterHashable):
-
     strategy: StrategyConfig = StrategyConfig()
     boot: BootConfig = BootConfig()
     backstage: BackStageConfig = BackStageConfig()
@@ -271,7 +282,7 @@ class RunConfig(CounterHashable):
     edge: EdgeConfig = EdgeConfig()
     surrounding: SurroundingConfig = SurroundingConfig()
     search: SearchConfig = SearchConfig()
-    fence: fenceConfig = fenceConfig()
+    fence: FenceConfig = FenceConfig()
 
     perf: PerformanceConfig = PerformanceConfig()
 
@@ -307,7 +318,6 @@ class RunConfig(CounterHashable):
 
 
 class ContextVar(Enum):
-
     prev_salvo_speed: int = auto()
 
     is_aligned: bool = auto()
@@ -340,56 +350,62 @@ class ContextVar(Enum):
 
 
 class MotionConfig(BaseModel):
-    motor_fr: Tuple[int, int] = (1, 1)
-    motor_fl: Tuple[int, int] = (2, 1)
-    motor_rr: Tuple[int, int] = (3, 1)
-    motor_rl: Tuple[int, int] = (4, 1)
-    port: str = "/dev/ttyUSB0"
+    motor_fr: Tuple[int, int] = Field(default=(1, 1), description="Front-right motor configuration.")
+    motor_fl: Tuple[int, int] = Field(default=(2, 1), description="Front-left motor configuration.")
+    motor_rr: Tuple[int, int] = Field(default=(3, 1), description="Rear-right motor configuration.")
+    motor_rl: Tuple[int, int] = Field(default=(4, 1), description="Rear-left motor configuration.")
+    port: str = Field(default="/dev/ttyUSB0", description="Serial port for communication.")
 
 
 class VisionConfig(BaseModel):
-    team_color: Literal["yellow", "blue"] = "blue"
-    resolution_multiplier: float = 1.0
-    use_camera: bool = True
-    camera_device_id: int = 0
+    team_color: Literal["yellow", "blue"] = Field(default="blue", description="Team color for vision.")
+    resolution_multiplier: float = Field(default=1.0, description="Resolution multiplier for camera.")
+    use_camera: bool = Field(default=True, description="Whether to use the camera.")
+    camera_device_id: int = Field(default=0, description="Camera device ID.")
 
 
 class DebugConfig(BaseModel):
-    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
-    use_siglight: bool = True
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(
+        default="INFO", description="Log level for debugging."
+    )
+    use_siglight: bool = Field(default=True, description="Whether to use signal light.")
 
 
 class SensorConfig(BaseModel):
+    gyro_fsr: Literal[250, 500, 1000, 2000] = Field(
+        default=1000, description="Gyroscope full scale range, allows [250, 500, 1000, 2000]."
+    )
+    accel_fsr: Literal[2, 4, 8, 16] = Field(
+        default=8, description="Accelerometer full scale range, allows [2, 4, 8, 16]."
+    )
 
-    gyro_fsr: Literal[250, 500, 1000, 2000] = 1000
-    accel_fsr: Literal[2, 4, 8, 16] = 8
+    adc_min_sample_interval: int = Field(default=5, description="Minimum ADC sample interval.")
 
-    adc_min_sample_interval: int = 5
+    edge_fl_index: int = Field(default=3, description="Index for front-left edge sensor.")
+    edge_fr_index: int = Field(default=0, description="Index for front-right edge sensor.")
+    edge_rl_index: int = Field(default=2, description="Index for rear-left edge sensor.")
+    edge_rr_index: int = Field(default=1, description="Index for rear-right edge sensor.")
 
-    edge_fl_index: int = 3
-    edge_fr_index: int = 0
-    edge_rl_index: int = 2
-    edge_rr_index: int = 1
+    left_adc_index: int = Field(default=6, description="Index for left ADC sensor.")
+    right_adc_index: int = Field(default=4, description="Index for right ADC sensor.")
 
-    left_adc_index: int = 6
-    right_adc_index: int = 4
+    front_adc_index: int = Field(default=5, description="Index for front ADC sensor.")
+    rb_adc_index: int = Field(default=7, description="Index for rear-back ADC sensor.")
 
-    front_adc_index: int = 5
-    rb_adc_index: int = 7
+    gray_adc_index: int = Field(default=8, description="Index for gray ADC sensor.")
 
-    gray_adc_index: int = 8
     # ---------IO----------
 
-    gray_io_left_index: int = 1
-    gray_io_right_index: int = 0
+    gray_io_left_index: int = Field(default=1, description="Index for left gray IO sensor.")
+    gray_io_right_index: int = Field(default=0, description="Index for right gray IO sensor.")
 
-    fl_io_index: int = 5
-    fr_io_index: int = 2
+    fl_io_index: int = Field(default=5, description="Index for front-left IO sensor.")
+    fr_io_index: int = Field(default=2, description="Index for front-right IO sensor.")
 
-    rl_io_index: int = 4
-    rr_io_index: int = 3
+    rl_io_index: int = Field(default=4, description="Index for rear-left IO sensor.")
+    rr_io_index: int = Field(default=3, description="Index for rear-right IO sensor.")
 
-    reboot_button_index: int = 6
+    reboot_button_index: int = Field(default=6, description="Index for reboot button.")
 
 
 class APPConfig(CounterHashable):
