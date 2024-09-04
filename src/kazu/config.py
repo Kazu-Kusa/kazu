@@ -1,11 +1,13 @@
 from enum import Enum, auto
 from pathlib import Path
-from typing import Tuple, List, Self, Literal, TextIO, Any, Dict
+from typing import Tuple, List, Self, Literal, TextIO, Any, Dict, Type, Optional
 
 from click import secho
 from colorama import Fore
-from pydantic import BaseModel, Field
-from tomlkit import load, dump
+from pydantic import BaseModel, Field, NonNegativeInt, PositiveFloat, PositiveInt, NonNegativeFloat
+from pydantic.fields import FieldInfo
+from toml import dump
+from tomlkit import load, document, comment, dumps, TOMLDocument, table, nl
 from upic import TagDetector
 
 from kazu.logger import _logger
@@ -49,26 +51,27 @@ class TagGroup(BaseModel):
 
 class EdgeConfig(BaseModel):
     lower_threshold: Tuple[float, float, float, float] = Field(
-        default=(1740, 1819, 1819, 1740), description="Lower threshold values for edge detection."
+        default=(1740, 1819, 1819, 1740),
+        description="Lower threshold values for edge detection.",
     )
     upper_threshold: Tuple[float, float, float, float] = Field(
         default=(2100, 2470, 2470, 2100), description="Upper threshold values for edge detection."
     )
 
-    fallback_speed: int = Field(default=2600, description="Speed when falling back.")
-    fallback_duration: float = Field(default=0.2, description="Duration of the fallback action.")
+    fallback_speed: PositiveInt = Field(default=2600, description="Speed when falling back.")
+    fallback_duration: PositiveFloat = Field(default=0.2, description="Duration of the fallback action.")
 
-    advance_speed: int = Field(default=2400, description="Speed when advancing.")
-    advance_duration: float = Field(default=0.35, description="Duration of the advance action.")
+    advance_speed: PositiveInt = Field(default=2400, description="Speed when advancing.")
+    advance_duration: PositiveFloat = Field(default=0.35, description="Duration of the advance action.")
 
-    turn_speed: int = Field(default=2800, description="Speed when turning.")
-    full_turn_duration: float = Field(default=0.45, description="Duration of a full turn.")
-    half_turn_duration: float = Field(default=0.225, description="Duration of a half turn.")
+    turn_speed: PositiveInt = Field(default=2800, description="Speed when turning.")
+    full_turn_duration: PositiveFloat = Field(default=0.45, description="Duration of a full turn.")
+    half_turn_duration: PositiveFloat = Field(default=0.225, description="Duration of a half turn.")
 
-    turn_left_prob: float = Field(default=0.5, description="Probability of turning left.")
+    turn_left_prob: float = Field(default=0.5, description="Probability of turning left.", ge=0, le=1.0)
 
-    drift_speed: int = Field(default=1500, description="Speed when drifting.")
-    drift_duration: float = Field(default=0.13, description="Duration of the drift action.")
+    drift_speed: PositiveInt = Field(default=1500, description="Speed when drifting.")
+    drift_duration: PositiveFloat = Field(default=0.13, description="Duration of the drift action.")
 
     use_gray_io: bool = Field(default=True, description="Whether to use gray IO for detection.")
 
@@ -76,83 +79,96 @@ class EdgeConfig(BaseModel):
 class SurroundingConfig(BaseModel):
     io_encounter_object_value: int = Field(default=0, description="IO value when encountering an object.")
 
-    left_adc_lower_threshold: int = Field(default=1000, description="ADC lower threshold for the left sensor.")
-    right_adc_lower_threshold: int = Field(default=1000, description="ADC lower threshold for the right sensor.")
+    left_adc_lower_threshold: int = Field(
+        default=1000, description="ADC lower threshold for the left sensor.", gt=0, lt=4096
+    )
+    right_adc_lower_threshold: int = Field(
+        default=1000, description="ADC lower threshold for the right sensor.", gt=0, lt=4096
+    )
 
-    front_adc_lower_threshold: int = Field(default=1000, description="ADC lower threshold for the front sensor.")
-    back_adc_lower_threshold: int = Field(default=1100, description="ADC lower threshold for the back sensor.")
+    front_adc_lower_threshold: int = Field(
+        default=1000, description="ADC lower threshold for the front sensor.", gt=0, lt=4096
+    )
+    back_adc_lower_threshold: int = Field(
+        default=1100, description="ADC lower threshold for the back sensor.", gt=0, lt=4096
+    )
 
     atk_break_front_lower_threshold: int = Field(
-        default=1500, description="Front ADC lower threshold for attack break."
+        default=1500, description="Front ADC lower threshold for attack break.", gt=0, lt=4096
     )
+
     atk_break_use_edge_sensors: bool = Field(default=True, description="Whether to use edge sensors for attack break.")
 
-    atk_speed_enemy_car: int = Field(default=2300, description="Attack speed for enemy car.")
-    atk_speed_enemy_box: int = Field(default=2500, description="Attack speed for enemy box.")
-    atk_speed_neutral_box: int = Field(default=2500, description="Attack speed for neutral box.")
-    fallback_speed_ally_box: int = Field(default=2900, description="Fallback speed for ally box.")
-    fallback_speed_edge: int = Field(default=2400, description="Fallback speed for edge.")
+    atk_speed_enemy_car: PositiveInt = Field(default=2300, description="Attack speed for enemy car.")
+    atk_speed_enemy_box: PositiveInt = Field(default=2500, description="Attack speed for enemy box.")
+    atk_speed_neutral_box: PositiveInt = Field(default=2500, description="Attack speed for neutral box.")
+    fallback_speed_ally_box: PositiveInt = Field(default=2900, description="Fallback speed for ally box.")
+    fallback_speed_edge: PositiveInt = Field(default=2400, description="Fallback speed for edge.")
 
-    atk_enemy_car_duration: float = Field(default=4.2, description="Duration of attack on enemy car.")
-    atk_enemy_box_duration: float = Field(default=3.6, description="Duration of attack on enemy box.")
-    atk_neutral_box_duration: float = Field(default=3.6, description="Duration of attack on neutral box.")
-    fallback_duration_ally_box: float = Field(default=0.3, description="Duration of fallback for ally box.")
-    fallback_duration_edge: float = Field(default=0.2, description="Duration of fallback for edge.")
+    atk_enemy_car_duration: PositiveFloat = Field(default=4.2, description="Duration of attack on enemy car.")
+    atk_enemy_box_duration: PositiveFloat = Field(default=3.6, description="Duration of attack on enemy box.")
+    atk_neutral_box_duration: PositiveFloat = Field(default=3.6, description="Duration of attack on neutral box.")
+    fallback_duration_ally_box: PositiveFloat = Field(default=0.3, description="Duration of fallback for ally box.")
+    fallback_duration_edge: PositiveFloat = Field(default=0.2, description="Duration of fallback for edge.")
 
-    turn_speed: int = Field(default=2900, description="Speed when turning.")
-    turn_left_prob: float = Field(default=0.5, description="Probability of turning left.")
+    turn_speed: NonNegativeInt = Field(default=2900, description="Speed when turning.")
+    turn_left_prob: float = Field(default=0.5, description="Probability of turning left.", ge=0, le=1.0)
 
     turn_to_front_use_front_sensor: bool = Field(
         default=False, description="Whether to use the front sensor for turning to front."
     )
 
-    rand_turn_speeds: List[int] = Field(default=[1600, 2100, 3000], description="Random turn speeds.")
+    rand_turn_speeds: List[NonNegativeInt] = Field(default=[1600, 2100, 3000], description="Random turn speeds.")
     rand_turn_speed_weights: List[float] = Field(default=[2, 3, 1], description="Weights for random turn speeds.")
 
-    full_turn_duration: float = Field(default=0.45, description="Duration of a full turn.")
-    half_turn_duration: float = Field(default=0.225, description="Duration of a half turn.")
+    full_turn_duration: PositiveFloat = Field(default=0.45, description="Duration of a full turn.")
+    half_turn_duration: PositiveFloat = Field(default=0.225, description="Duration of a half turn.")
 
 
 class GradientConfig(BaseModel):
-    max_speed: int = Field(default=2800, description="Maximum speed for gradient move.")
-    min_speed: int = Field(default=500, description="Minimum speed for gradient move.")
-    lower_bound: int = Field(default=2900, description="Lower bound for gradient move.")
-    upper_bound: int = Field(default=3700, description="Upper bound for gradient move.")
+    max_speed: PositiveInt = Field(default=2800, description="Maximum speed for gradient move.")
+    min_speed: NonNegativeInt = Field(default=500, description="Minimum speed for gradient move.")
+    lower_bound: int = Field(default=2900, description="Lower bound for gradient move.", gt=0, lt=4096)
+    upper_bound: int = Field(default=3700, description="Upper bound for gradient move.", gt=0, lt=4096)
 
 
 class ScanConfig(BaseModel):
 
-    front_max_tolerance: int = Field(default=760, description="Maximum tolerance for the front sensor.")
-    rear_max_tolerance: int = Field(default=760, description="Maximum tolerance for the rear sensor.")
-    left_max_tolerance: int = Field(default=760, description="Maximum tolerance for the left sensor.")
-    right_max_tolerance: int = Field(default=760, description="Maximum tolerance for the right sensor.")
+    front_max_tolerance: int = Field(default=760, description="Maximum tolerance for the front sensor.", gt=0, lt=4096)
+    rear_max_tolerance: int = Field(default=760, description="Maximum tolerance for the rear sensor.", gt=0, lt=4096)
+    left_max_tolerance: int = Field(default=760, description="Maximum tolerance for the left sensor.", gt=0, lt=4096)
+    right_max_tolerance: int = Field(default=760, description="Maximum tolerance for the right sensor.", gt=0, lt=4096)
 
     io_encounter_object_value: int = Field(default=0, description="IO value when encountering an object.")
 
-    scan_speed: int = Field(default=300, description="Speed for scanning.")
-    scan_duration: float = Field(default=4.5, description="Duration of the scan action.")
-    scan_turn_left_prob: float = Field(default=0.5, description="Probability of turning left during scan.")
+    scan_speed: PositiveInt = Field(default=300, description="Speed for scanning.")
+    scan_duration: PositiveFloat = Field(default=4.5, description="Duration of the scan action.")
+    scan_turn_left_prob: float = Field(
+        default=0.5, description="Probability of turning left during scan.", ge=0, le=1.0
+    )
 
-    fall_back_speed: int = Field(default=3250, description="Speed for falling back.")
+    fall_back_speed: PositiveInt = Field(default=3250, description="Speed for falling back.")
     fall_back_duration: float = Field(default=0.2, description="Duration of the fall back action.")
 
-    turn_speed: int = Field(default=2700, description="Speed when turning.")
-    turn_left_prob: float = Field(default=0.5, description="Probability of turning left.")
+    turn_speed: PositiveInt = Field(default=2700, description="Speed when turning.")
+    turn_left_prob: float = Field(default=0.5, description="Probability of turning left.", ge=0, le=1.0)
 
-    full_turn_duration: float = Field(default=0.45, description="Duration of a full turn.")
-    half_turn_duration: float = Field(default=0.225, description="Duration of a half turn.")
+    full_turn_duration: PositiveFloat = Field(default=0.45, description="Duration of a full turn.")
+    half_turn_duration: PositiveFloat = Field(default=0.225, description="Duration of a half turn.")
 
     check_edge_before_scan: bool = Field(default=True, description="Whether to check edge before scanning.")
     check_gray_adc_before_scan: bool = Field(default=True, description="Whether to check gray ADC before scanning.")
-    gray_adc_lower_threshold: int = Field(default=3100, description="Gray ADC lower threshold for scanning.")
+    gray_adc_lower_threshold: int = Field(
+        default=3100, description="Gray ADC lower threshold for scanning.", gt=0, lt=4096
+    )
 
 
 class RandTurn(BaseModel):
 
-    turn_speed: int = Field(default=2300, description="Speed when turning.")
-    turn_left_prob: float = Field(default=0.5, description="Probability of turning left.")
-    full_turn_duration: float = Field(default=0.25, description="Duration of a full turn.")
-    half_turn_duration: float = Field(default=0.15, description="Duration of a half turn.")
+    turn_speed: PositiveInt = Field(default=2300, description="Speed when turning.")
+    turn_left_prob: float = Field(default=0.5, description="Probability of turning left.", ge=0, le=1.0)
+    full_turn_duration: PositiveFloat = Field(default=0.25, description="Duration of a full turn.")
+    half_turn_duration: PositiveFloat = Field(default=0.15, description="Duration of a half turn.")
 
     use_turn_to_front: bool = Field(default=True, description="Whether to use turning to front.")
 
@@ -160,22 +176,21 @@ class RandTurn(BaseModel):
 class SearchConfig(BaseModel):
 
     use_gradient_move: bool = Field(default=True, description="Whether to use gradient move.")
-    gradient_move_weight: float = Field(default=100, description="Weight for gradient move.")
-    gradient_move: GradientConfig = Field(default=GradientConfig(), description="Configuration for gradient move.")
-
+    gradient_move_weight: PositiveFloat = Field(default=100, description="Weight for gradient move.")
     use_scan_move: bool = Field(default=True, description="Whether to use scan move.")
-    scan_move_weight: float = Field(default=1.96, description="Weight for scan move.")
-    scan_move: ScanConfig = Field(default=ScanConfig(), description="Configuration for scan move.")
-
+    scan_move_weight: PositiveFloat = Field(default=1.96, description="Weight for scan move.")
     use_rand_turn: bool = Field(default=True, description="Whether to use random turn.")
-    rand_turn_weight: float = Field(default=0.05, description="Weight for random turn.")
+    rand_turn_weight: PositiveFloat = Field(default=0.05, description="Weight for random turn.")
+
+    gradient_move: GradientConfig = Field(default=GradientConfig(), description="Configuration for gradient move.")
+    scan_move: ScanConfig = Field(default=ScanConfig(), description="Configuration for scan move.")
     rand_turn: RandTurn = Field(default=RandTurn(), description="Configuration for random turn.")
 
 
 class RandWalk(BaseModel):
 
     use_straight: bool = Field(default=True, description="Whether to use straight movement.")
-    straight_weight: float = Field(default=2, description="Weight for straight movement.")
+    straight_weight: PositiveFloat = Field(default=2, description="Weight for straight movement.")
 
     rand_straight_speeds: List[int] = Field(default=[-800, -500, 500, 800], description="Random straight speeds.")
     rand_straight_speed_weights: List[float] = Field(
@@ -187,7 +202,7 @@ class RandWalk(BaseModel):
     rand_turn_speeds: List[int] = Field(default=[-1200, -800, 800, 1200], description="Random turn speeds.")
     rand_turn_speed_weights: List[float] = Field(default=[1, 3, 3, 1], description="Weights for random turn speeds.")
 
-    walk_duration: float = Field(default=0.3, description="Duration of walking.")
+    walk_duration: PositiveFloat = Field(default=0.3, description="Duration of walking.")
 
 
 class FenceConfig(BaseModel):
@@ -197,25 +212,28 @@ class FenceConfig(BaseModel):
     right_adc_lower_threshold: int = Field(default=900, description="Right ADC lower threshold.")
 
     io_encounter_fence_value: int = Field(default=0, description="IO value when encountering a fence.")
-    max_yaw_tolerance: float = Field(default=20.0, description="Maximum yaw tolerance.")
+    max_yaw_tolerance: PositiveFloat = Field(default=20.0, description="Maximum yaw tolerance.")
 
     use_mpu_align_stage: bool = Field(default=False, description="Whether to use MPU for aligning stage.")
     use_mpu_align_direction: bool = Field(default=False, description="Whether to use MPU for aligning direction.")
 
-    stage_align_speed: int = Field(default=850, description="Speed for aligning stage.")
-    max_stage_align_duration: float = Field(default=4.5, description="Maximum duration for aligning stage.")
+    stage_align_speed: PositiveInt = Field(default=850, description="Speed for aligning stage.")
+    max_stage_align_duration: PositiveFloat = Field(default=4.5, description="Maximum duration for aligning stage.")
     stage_align_direction: Literal["l", "r", "rand"] = Field(
-        default="rand", description="Direction for aligning stage."
+        default="rand", description='Turn direction for aligning stage, allow ["l", "r", "rand"].'
     )
 
-    direction_align_speed: int = Field(default=850, description="Speed for aligning direction.")
-    max_direction_align_duration: float = Field(default=4.5, description="Maximum duration for aligning direction.")
+    direction_align_speed: PositiveInt = Field(default=850, description="Speed for aligning direction.")
+    max_direction_align_duration: PositiveFloat = Field(
+        default=4.5, description="Maximum duration for aligning direction."
+    )
     direction_align_direction: Literal["l", "r", "rand"] = Field(
-        default="rand", description="Direction for aligning direction."
+        default="rand",
+        description='Turn direction for aligning the parallel or vertical direction to the stage,  allow ["l", "r", "rand"].',
     )
 
-    exit_corner_speed: int = Field(default=1200, description="Speed for exiting corner.")
-    max_exit_corner_duration: float = Field(default=1.5, description="Maximum duration for exiting corner.")
+    exit_corner_speed: PositiveInt = Field(default=1200, description="Speed for exiting corner.")
+    max_exit_corner_duration: PositiveFloat = Field(default=1.5, description="Maximum duration for exiting corner.")
 
     rand_walk: RandWalk = Field(default=RandWalk(), description="Configuration for random walk.")
 
@@ -227,46 +245,46 @@ class StrategyConfig(BaseModel):
 
 
 class PerformanceConfig(BaseModel):
-    checking_duration: float = Field(default=0.0, description="Duration for checking.")
+    checking_duration: NonNegativeFloat = Field(default=0.0, description="Duration for checking.")
 
 
 class BootConfig(BaseModel):
     button_io_activate_case_value: int = Field(default=0, description="Button IO value for activating case.")
 
-    time_to_stabilize: float = Field(default=0.1, description="Time to stabilize after activation.")
+    time_to_stabilize: PositiveFloat = Field(default=0.1, description="Time to stabilize after activation.")
 
-    max_holding_duration: float = Field(default=180.0, description="Maximum holding duration.")
+    max_holding_duration: PositiveFloat = Field(default=180.0, description="Maximum holding duration.")
 
     left_threshold: int = Field(default=1100, description="Threshold for left sensor.")
     right_threshold: int = Field(default=1100, description="Threshold for right sensor.")
 
-    dash_speed: int = Field(default=7000, description="Speed for dashing.")
-    dash_duration: float = Field(default=0.55, description="Duration for dashing.")
+    dash_speed: PositiveInt = Field(default=7000, description="Speed for dashing.")
+    dash_duration: PositiveFloat = Field(default=0.55, description="Duration for dashing.")
 
-    turn_speed: int = Field(default=2150, description="Speed for turning.")
-    full_turn_duration: float = Field(default=0.45, description="Duration for a full turn.")
-    turn_left_prob: float = Field(default=0.5, description="Probability of turning left.")
+    turn_speed: PositiveInt = Field(default=2150, description="Speed for turning.")
+    full_turn_duration: PositiveFloat = Field(default=0.45, description="Duration for a full turn.")
+    turn_left_prob: float = Field(default=0.5, description="Probability of turning left.", gt=0, lt=1.0)
 
 
 class BackStageConfig(BaseModel):
-    time_to_stabilize: float = Field(default=0.1, description="Time to stabilize after activation.")
+    time_to_stabilize: PositiveFloat = Field(default=0.1, description="Time to stabilize after activation.")
 
-    small_advance_speed: int = Field(default=1500, description="Speed for small advance.")
-    small_advance_duration: float = Field(default=0.6, description="Duration for small advance.")
+    small_advance_speed: PositiveInt = Field(default=1500, description="Speed for small advance.")
+    small_advance_duration: PositiveFloat = Field(default=0.6, description="Duration for small advance.")
 
-    dash_speed: int = Field(default=7000, description="Speed for dashing.")
-    dash_duration: float = Field(default=0.55, description="Duration for dashing.")
+    dash_speed: PositiveInt = Field(default=7000, description="Speed for dashing.")
+    dash_duration: PositiveFloat = Field(default=0.55, description="Duration for dashing.")
 
-    turn_speed: int = Field(default=2600, description="Speed for turning.")
-    full_turn_duration: float = Field(default=0.35, description="Duration for a full turn.")
-    turn_left_prob: float = Field(default=0.5, description="Probability of turning left.")
+    turn_speed: PositiveInt = Field(default=2600, description="Speed for turning.")
+    full_turn_duration: PositiveFloat = Field(default=0.35, description="Duration for a full turn.")
+    turn_left_prob: float = Field(default=0.5, description="Probability of turning left.", gt=0, lt=1.0)
 
     use_is_on_stage_check: bool = Field(default=False, description="Whether to check if on stage.")
     use_side_away_check: bool = Field(default=True, description="Whether to check side away.")
 
-    side_away_degree_tolerance: float = Field(default=10.0, description="Degree tolerance for side away.")
-    exit_side_away_speed: int = Field(default=1300, description="Speed for exiting side away.")
-    exit_side_away_duration: float = Field(default=0.6, description="Duration for exiting side away.")
+    side_away_degree_tolerance: PositiveFloat = Field(default=10.0, description="Degree tolerance for side away.")
+    exit_side_away_speed: PositiveInt = Field(default=1300, description="Speed for exiting side away.")
+    exit_side_away_duration: PositiveFloat = Field(default=0.6, description="Duration for exiting side away.")
 
 
 class StageConfig(BaseModel):
@@ -303,28 +321,49 @@ class RunConfig(CounterHashable):
         return cls.model_validate(load(fp))
 
     @classmethod
-    def dump_config(cls, fp: TextIO, config: Self) -> None:
+    def dump_config(cls, fp: TextIO, config: Self, with_desc: bool = True) -> None:
         """
         Dump the configuration data to a file object.
 
         Args:
-            fp (TextIOWrapper): The file object to write the configuration data to.
-            config (Self): The configuration data to be dumped.
-
+            fp (TextIO): The file object to write the configuration data to.
+            config (Config): The configuration data to be dumped.
+            with_desc (bool): Whether to add descriptions to the dump file.
         Returns:
             None
         """
-        dump(cls.model_dump(config), fp)
+        if with_desc:
+            # Extract description and raw data from the config
+            desc_pack: Dict[str, Tuple[str | None, Dict | None]] = extract_description(config)
+            raw_data = cls.model_dump(config)
+
+            # Create a new TOML document
+            data: TOMLDocument = document()
+            import kazu
+            import datetime
+
+            data.add(comment(f"Exported by Kazu-v{kazu.__version__} at {datetime.datetime.now()}"))
+            # Recursive function to inject descriptions into the TOML document
+
+            # Inject the descriptions into the TOML document
+            inject_description_into_toml(desc_pack, data, raw_data)
+
+            fp.write(dumps(data))
+
+        else:
+            # If no description is needed, just use the raw data
+            pure_data = cls.model_dump(config)
+            dump(pure_data, fp)
 
 
 class ContextVar(Enum):
-    prev_salvo_speed: int = auto()
+    prev_salvo_speed: NonNegativeInt = auto()
 
     is_aligned: bool = auto()
 
     recorded_pack: tuple = auto()
 
-    gradient_speed: int = auto()
+    gradient_speed: NonNegativeInt = auto()
 
     @property
     def default(self) -> Any:
@@ -358,7 +397,9 @@ class MotionConfig(BaseModel):
 
 
 class VisionConfig(BaseModel):
-    team_color: Literal["yellow", "blue"] = Field(default="blue", description="Team color for vision.")
+    team_color: Literal["yellow", "blue"] = Field(
+        default="blue", description='Team color for vision, allow ["yellow", "blue"]'
+    )
     resolution_multiplier: float = Field(default=1.0, description="Resolution multiplier for camera.")
     use_camera: bool = Field(default=True, description="Whether to use the camera.")
     camera_device_id: int = Field(default=0, description="Camera device ID.")
@@ -366,7 +407,7 @@ class VisionConfig(BaseModel):
 
 class DebugConfig(BaseModel):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(
-        default="INFO", description="Log level for debugging."
+        default="INFO", description='Log level for debugging, allow ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"].'
     )
     use_siglight: bool = Field(default=True, description="Whether to use signal light.")
 
@@ -428,21 +469,107 @@ class APPConfig(CounterHashable):
         Raises:
             ValidationError: If the loaded configuration data fails validation.
         """
-        return cls.model_validate(load(fp))
+
+        import toml
+
+        return cls.model_validate(toml.load(fp))
 
     @classmethod
-    def dump_config(cls, fp: TextIO, config: Self) -> None:
+    def dump_config(cls, fp: TextIO, config: Self, with_desc: bool = True) -> None:
         """
         Dump the configuration data to a file object.
 
         Args:
-            fp (TextIOWrapper): The file object to write the configuration data to.
-            config (Self): The configuration data to be dumped.
-
+            fp (TextIO): The file object to write the configuration data to.
+            config (Config): The configuration data to be dumped.
+            with_desc (bool): Whether to add descriptions to the dump file.
         Returns:
             None
         """
-        dump(cls.model_dump(config), fp)
+        if with_desc:
+            # Extract description and raw data from the config
+            desc_pack: Dict[str, Tuple[str | None, Dict | None]] = extract_description(config)
+            raw_data = cls.model_dump(config)
+
+            # Create a new TOML document
+            data: TOMLDocument = document()
+            import kazu
+            import datetime
+
+            data.add(comment(f"Exported by Kazu-v{kazu.__version__} at {datetime.datetime.now().timestamp()}"))
+
+            # Recursive function to inject descriptions into the TOML document
+
+            # Inject the descriptions into the TOML document
+            inject_description_into_toml(desc_pack, data, raw_data)
+
+            fp.write(dumps(data))
+
+        else:
+            # If no description is needed, just use the raw data
+            pure_data = cls.model_dump(config)
+            dump(pure_data, fp)
+
+
+def inject_description_into_toml(
+    desc_pack: Dict[str, Tuple[str | None, Dict | None]],
+    toml_doc: TOMLDocument,
+    raw_data: Dict[str, Any],
+    path: List[str] = None,
+):
+    """
+    Injects descriptions into a TOML document.
+
+    This function recursively iterates through a dictionary containing description information and sub-model fields.
+    It adds these descriptions as comments to the TOML document. If the current item is a sub-model (i.e., contains
+    sub-fields), it recursively calls itself to handle the sub-model fields. For non-sub-model items, it adds the
+    description as a comment and retrieves the corresponding value from the raw data to add to the TOML document.
+
+    Parameters:
+    - desc_pack: A dictionary where keys are field names and values are tuples containing the description of the field
+      and sub-model fields (if any).
+    - toml_doc: A TOMLDocument object representing the TOML document to be modified.
+    - raw_data: A dictionary containing the source data from which to retrieve values.
+    - path: A list representing the current path of the field being processed. Defaults to an empty list, used for
+      recursive calls to build the complete path.
+
+    Returns:
+    No return value; the function modifies the provided `toml_doc` parameter directly.
+    """
+
+    def _nested_get(k_list: List[str], _dict: dict) -> Any:
+        cur = _dict.get(k_list.pop(0))
+        for k in k_list:
+            cur = cur.get(k)
+
+        return cur
+
+    # Initialize the path if not provided
+    if path is None:
+        path = []
+
+    # Iterate through the dictionary of description information and sub-model fields
+    for key, (desc, sub_model_fields) in desc_pack.items():
+        # Build the complete path for the current item
+        cur_path = path + [key]
+
+        # If the current item is a sub-model, add the description (if any) to the TOML document and create a new table
+        # to handle the sub-model fields
+        if sub_model_fields:
+            toml_doc.add(comment("#" * 76 + " #"))
+            if desc:
+                toml_doc.add(comment(desc))
+                toml_doc.add(nl())
+            toml_doc[key] = (sub_table := table())
+            # Recursively call itself to handle the sub-model fields
+            inject_description_into_toml(sub_model_fields, sub_table, raw_data, cur_path)
+            toml_doc.add(nl())
+
+        else:
+            # If the current item is not a sub-model, add the description
+            toml_doc.add(comment(desc))
+            # Retrieve the corresponding value from the raw data and add it to the TOML document
+            toml_doc[key] = _nested_get(cur_path, raw_data)
 
 
 class _InternalConfig(BaseModel):
@@ -491,3 +618,53 @@ def load_app_config(app_config_path: Path | None) -> APPConfig:
         with open(app_config_path, "w", encoding="utf-8") as fp:
             APPConfig.dump_config(fp, app_config)
     return app_config
+
+
+def extract_description(model: Type[BaseModel]) -> Dict[str, Any]:
+    """
+    Recursively extracts description information from a given model.
+
+    This function first extracts the information of all fields in the model (including field names and related info).
+    It then iterates through each field, processing its information. For each field, if the associated model is None,
+    it packs the field's description and None value into the result dictionary. Otherwise, it packs the field's
+    description and the recursively extracted sub-model description information into the result dictionary.
+    The function returns a dictionary where keys are field names and values are tuples containing the field's
+    description and its associated model description (or None).
+
+    Parameters:
+        model: Type[BaseModel] - A class that inherits from BaseModel, representing some data structure or schema.
+
+    Returns:
+        Dict[str, Any] - A dictionary containing field names and their descriptions along with the associated model
+                       description (or None).
+    """
+
+    def _extract(model_field: FieldInfo) -> Tuple[str, Optional[Type[BaseModel]]]:
+
+        ano = model_field.annotation
+
+        is_model = False
+
+        try:
+            is_model = issubclass(ano, BaseModel)
+        except:
+            pass
+
+        return model_field.description, ano if is_model else None
+
+    # Extract all fields and their related information from the model
+    temp = {f_name: _extract(info) for f_name, info in model.model_fields.items()}
+    # Initialize the final container dictionary to store processed field descriptions and related info
+    fi_container = {}
+    # Iterate through preprocessed field information
+    for f_name, pack in temp.items():
+        # Unpack the field information, including description and possible sub-model
+        desc, model = pack
+        # If the field does not have an associated sub-model, store the description and None value
+        if model is None:
+            fi_container[f_name] = pack
+        else:
+            # If the field has an associated sub-model, store the description and recursively extracted sub-model info
+            fi_container[f_name] = desc, extract_description(model)
+
+    return fi_container
