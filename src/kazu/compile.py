@@ -1325,7 +1325,7 @@ def make_back_to_stage_handler(
         .add(small_advance_transition)
         .add(MovingState.halt())
         .add(stab_trans.clone())
-        .add(MovingState.straight(-run_config.backstage.dash_speed))
+        .add(dash_state := MovingState.straight(-run_config.backstage.dash_speed))
     )
     concat_state = None
     if run_config.backstage.use_is_on_stage_check:
@@ -1333,14 +1333,22 @@ def make_back_to_stage_handler(
         is_on_stage_breaker = Breakers.make_is_on_stage_breaker(app_config, run_config)
 
         dash_trans = MovingTransition(
-            run_config.backstage.dash_duration,
+            run_config.backstage.dash_duration * run_config.backstage.check_start_percent,
+        )  # during which the detection is disabled
+
+        checking_dash_trans = MovingTransition(
+            run_config.backstage.dash_duration * (1 - run_config.backstage.check_start_percent),
             breaker=is_on_stage_breaker,
             to_states={False: (concat_state := MovingState.halt())},
         )
+        (composer.add(dash_trans).add(dash_state.clone()).add(checking_dash_trans))
     else:
         dash_trans = MovingTransition(run_config.backstage.dash_duration)
-    (composer.add(dash_trans).add(MovingState.halt(), register_case=True).add(stab_trans.clone()))
+        (composer.add(dash_trans))
 
+    composer.add(MovingState.halt(), register_case=True).add(stab_trans.clone())
+
+    # turn_section
     main_branch_states, main_branch_transitions = (
         composer.add(
             MovingState.rand_dir_turn(

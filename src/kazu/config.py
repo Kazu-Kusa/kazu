@@ -6,8 +6,8 @@ from click import secho
 from colorama import Fore
 from pydantic import BaseModel, Field, NonNegativeInt, PositiveFloat, PositiveInt, NonNegativeFloat
 from pydantic.fields import FieldInfo
-from toml import dump
-from tomlkit import load, document, comment, dumps, TOMLDocument, table, nl
+from toml import dump, load
+from tomlkit import document, comment, dumps, TOMLDocument, table, nl
 from upic import TagDetector
 
 from kazu.logger import _logger
@@ -263,7 +263,7 @@ class BootConfig(BaseModel):
 
     turn_speed: PositiveInt = Field(default=2150, description="Speed for turning.")
     full_turn_duration: PositiveFloat = Field(default=0.45, description="Duration for a full turn.")
-    turn_left_prob: float = Field(default=0.5, description="Probability of turning left.", gt=0, lt=1.0)
+    turn_left_prob: float = Field(default=0.5, description="Probability of turning left.", ge=0, le=1.0)
 
 
 class BackStageConfig(BaseModel):
@@ -277,10 +277,17 @@ class BackStageConfig(BaseModel):
 
     turn_speed: PositiveInt = Field(default=2600, description="Speed for turning.")
     full_turn_duration: PositiveFloat = Field(default=0.35, description="Duration for a full turn.")
-    turn_left_prob: float = Field(default=0.5, description="Probability of turning left.", gt=0, lt=1.0)
+    turn_left_prob: float = Field(default=0.5, description="Probability of turning left.", ge=0, le=1.0)
 
-    use_is_on_stage_check: bool = Field(default=False, description="Whether to check if on stage.")
-    use_side_away_check: bool = Field(default=True, description="Whether to check side away.")
+    use_is_on_stage_check: bool = Field(default=True, description="Whether to check if on stage.")
+    use_side_away_check: bool = Field(
+        default=True, description="Whether to check side away after the is_on_stage check."
+    )
+    check_start_percent: PositiveFloat = Field(
+        default=0.9,
+        description="defining when does the is_on_stage check being brought on during the dashing. DO NOT set it too small!",
+        lt=1.0,
+    )
 
     side_away_degree_tolerance: PositiveFloat = Field(default=10.0, description="Degree tolerance for side away.")
     exit_side_away_speed: PositiveInt = Field(default=1300, description="Speed for exiting side away.")
