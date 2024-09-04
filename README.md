@@ -103,5 +103,5 @@ In addition, you can change the appconfig values in the config file by directly 
 ## TODO
 
 - [ ] divide stage cases into 3 categories: on stage, off stage, and fuzzy
-- [ ] add back stage success checker
+- [x] add back stage success checker
 
