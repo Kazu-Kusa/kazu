@@ -492,8 +492,8 @@ def read_sensors(ctx: click.Context, conf: _InternalConfig, interval: float, dev
     help="Destination path of the generated files",
 )
 @click.option(
-    "-c",
-    "--run-config",
+    "-r",
+    "--run-config-path",
     show_default=True,
     default=None,
     help=f"config file path, also can receive env {Env.KAZU_RUN_CONFIG_PATH}",
@@ -501,7 +501,7 @@ def read_sensors(ctx: click.Context, conf: _InternalConfig, interval: float, dev
     envvar=Env.KAZU_RUN_CONFIG_PATH,
 )
 @click.option(
-    "-r",
+    "-e",
     "--render",
     show_default=True,
     is_flag=True,
@@ -511,7 +511,7 @@ def read_sensors(ctx: click.Context, conf: _InternalConfig, interval: float, dev
 def visualize(
     conf: _InternalConfig,
     destination: Path,
-    run_config: Optional[Path],
+    run_config_path: Optional[Path],
     render: bool,
     packname: Tuple[str, ...],
 ):
@@ -541,7 +541,7 @@ def visualize(
     destination.mkdir(parents=True, exist_ok=True)
     secho(f"Destination directory: {destination.absolute().as_posix()}", fg="yellow")
     app_config = conf.app_config
-    run_config = load_run_config(run_config)
+    run_config_path = load_run_config(run_config_path)
 
     handlers = {
         "edge": make_edge_handler,
@@ -568,7 +568,7 @@ def visualize(
         # 这里简化处理，实际可能需要根据handler的不同调用不同的导出方法
         handler_func: Callable = handlers.get(f_name)
         with sig_light_registry:
-            (*_, handler_data) = handler_func(app_config=app_config, run_config=run_config)
+            (*_, handler_data) = handler_func(app_config=app_config, run_config=run_config_path)
         filename = f_name + ".puml"
         destination_filename = (destination / filename).as_posix()
 
