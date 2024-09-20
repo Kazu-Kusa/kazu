@@ -84,7 +84,7 @@ jobs:
         run: |
           eval $(pdm venv activate)
           mkdir -p diagrams
-          kazu viz all -r -d diagrams
+          kazu viz all -e -d diagrams
           tar -zcvf diagrams.tar.gz diagrams
         shell: bash
       - name: Create GitHub Release
