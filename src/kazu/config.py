@@ -295,7 +295,12 @@ class BackStageConfig(BaseModel):
 
 
 class StageConfig(BaseModel):
-    gray_adc_off_stage_upper_threshold: int = Field(default=2730, description="Upper threshold for gray ADC off stage.")
+    gray_adc_off_stage_upper_threshold: int = Field(default=2630, description="Upper threshold for gray ADC off stage.")
+    gray_adc_on_stage_lower_threshold: int = Field(default=2830, description="Lower threshold for gray ADC on stage.")
+    unclear_zone_tolerance:int = Field(default=90, description="Tolerance for judging if the car is on stage in unclear zone state.")
+    unclear_zone_turn_speed: PositiveInt = Field(default=1500, description="Speed for turning in unclear zone.")
+    unclear_zone_turn_duration: PositiveFloat = Field(default=0.6, description="Duration for turning in unclear zone.")
+    unclear_zone_turn_left_prob: float = Field(default=0.5, description="Probability of turning left.", ge=0, le=1.0)
     gray_io_off_stage_case_value: int = Field(default=0, description="IO value for gray off stage.")
 
 
@@ -372,6 +377,7 @@ class ContextVar(Enum):
 
     gradient_speed: NonNegativeInt = auto()
 
+    unclear_zone_gray:int=auto()
     @property
     def default(self) -> Any:
         """
@@ -380,7 +386,8 @@ class ContextVar(Enum):
         Returns:
             Any: The default value for the context variable.
         """
-        defaults = {"prev_salvo_speed": (0, 0, 0, 0), "is_aligned": False, "recorded_pack": (), "gradient_speed": 0}
+        defaults = {"prev_salvo_speed": (0, 0, 0, 0), "is_aligned": False, "recorded_pack": (), "gradient_speed": 0,
+                    "unclear_zone_gray":0}
         assert self.name in defaults, "should always find a default value!"
         return defaults.get(self.name)
 

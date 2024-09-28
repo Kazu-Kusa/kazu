@@ -434,6 +434,6 @@ kazu viz -r ./run_config.toml
 
 ## TODO
 
-- [ ] divide stage cases into 3 categories: on stage, off stage, and fuzzy
+- [x] divide stage cases into 3 categories: on stage, off stage, and unclear
 - [x] add back stage success checker
 

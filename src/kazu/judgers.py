@@ -692,7 +692,9 @@ class Breakers:
                     ],
                 ),
             ],
-            judging_source=f"ret={StageWeight.STAGE}*(s0<{conf.gray_adc_off_stage_upper_threshold})"
+            judging_source=
+            f"ret={StageWeight.STAGE}*(s0<={conf.gray_adc_off_stage_upper_threshold})"
+            f"+{StageWeight.UNCLEAR}*({conf.gray_adc_off_stage_upper_threshold}<s0<{conf.gray_adc_on_stage_lower_threshold})"
             f"+{StageWeight.REBOOT}*(s1=={run_config.boot.button_io_activate_case_value})",
             return_type=int,
             return_raw=False,

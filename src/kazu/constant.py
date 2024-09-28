@@ -248,14 +248,15 @@ class SurroundingCodeSign(IntEnum):
 class StageWeight:
     STAGE: int = 1
     REBOOT: int = 2
-
+    UNCLEAR:int =4
 
 class StageCodeSign(IntEnum):
     ON_STAGE = 0
     OFF_STAGE = StageWeight.STAGE
     ON_STAGE_REBOOT = StageWeight.REBOOT
     OFF_STAGE_REBOOT = StageWeight.STAGE + StageWeight.REBOOT
-
+    UNCLEAR_ZONE=StageWeight.UNCLEAR
+    UNCLEAR_ZONE_REBOOT=StageWeight.UNCLEAR+StageWeight.REBOOT
 
 class FenceCodeSign(IntEnum):
     """

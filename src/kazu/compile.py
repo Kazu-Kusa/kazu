@@ -1540,16 +1540,19 @@ def make_std_battle_handler(
         abnormal_exit=end_state.clone(),
     )
 
+    unclear_zone_start_state,_,unclear_zone_pack = make_unclear_zone_handler(app_config, run_config,normal_exit=end_state.clone())
+
     case_reg = CaseRegistry(StageCodeSign)
-    transition_pool = [*reboot_transitions_pack, *fence_pack, *stage_pack]
+    transition_pool = [*reboot_transitions_pack, *fence_pack, *stage_pack,*unclear_zone_pack]
 
     (
         case_reg.batch_register(
-            [StageCodeSign.ON_STAGE_REBOOT, StageCodeSign.OFF_STAGE_REBOOT],
+            [StageCodeSign.ON_STAGE_REBOOT, StageCodeSign.OFF_STAGE_REBOOT,StageCodeSign.UNCLEAR_ZONE_REBOOT],
             reboot_start_state,
         )
         .register(StageCodeSign.ON_STAGE, on_stage_start_state)
         .register(StageCodeSign.OFF_STAGE, fence_start_state)
+        .register(StageCodeSign.UNCLEAR_ZONE,unclear_zone_start_state)
     )
 
     check_trans = MovingTransition(
@@ -1701,3 +1704,72 @@ def make_salvo_end_state() -> MovingState:
     )
     end_state.before_entering.append(zero_salvo_speed_updater)
     return end_state
+
+
+
+def make_unclear_zone_handler(
+        app_config: APPConfig,
+        run_config: RunConfig,
+        normal_exit:Optional[MovingState]=None
+) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
+    """
+    Generate a handler for the unclear zone.
+
+    Args:
+        app_config: Application configuration containing sensor information.
+        run_config: Runtime configuration with operational parameters.
+        normal_exit: Optional normal exit state. Defaults to None.
+
+    Returns:
+        A tuple containing: initial state, normal exit state, and a list of moving transitions.
+    """
+
+    # Get stage configuration from runtime config
+    conf = run_config.stage
+
+    # Create the initial state: random direction turn
+    start_state = MovingState.rand_dir_turn(controller, turn_speed=conf.unclear_zone_turn_speed,
+                                            turn_left_prob=conf.unclear_zone_turn_left_prob)
+
+    # Create the normal exit state: halt movement
+    normal_exit = normal_exit or MovingState.halt()
+
+    # Register context executor to update gray value
+    updater = controller.register_context_executor(
+        menta.construct_inlined_function(
+            usages=[SamplerUsage(used_sampler_index=SamplerIndexes.adc_all,
+                                required_data_indexes=[app_config.sensor.gray_adc_index])],  # Specify ADC sample index
+            judging_source="ret=s0",  # Gray value stored in s0
+            return_type=int,
+            function_name="get_unclear_zone_gray"
+        ),
+        output_keys=[ContextVar.unclear_zone_gray.name],
+        function_name="update_unclear_zone_gray"
+    )
+
+    # Register context getter for gray value
+    getter = controller.register_context_getter(ContextVar.unclear_zone_gray.name)
+
+    # Construct function to judge if in unclear zone
+    judge = menta.construct_inlined_function(
+        usages=[SamplerUsage(used_sampler_index=SamplerIndexes.adc_all,
+                            required_data_indexes=[app_config.sensor.gray_adc_index])],
+        extra_context={"getter": getter},
+        judging_source=f"ret=abs(s0-getter())>{conf.unclear_zone_tolerance}",  # Check if gray value difference exceeds tolerance
+        return_type=bool,
+        function_name="judge_unclear_zone"
+    )
+
+    # Append updater to actions after exiting initial state
+    start_state.after_exiting.append(updater)
+
+    # Build state transition structure
+    [_, transitions] = (composer
+                        .init_container()
+                        .add(start_state)
+                        .add(MovingTransition(conf.unclear_zone_turn_duration, breaker=judge))  # Add transition condition
+                        .add(normal_exit)
+                        .export_structure())
+
+    # Return initial state, normal exit state, and transition list
+    return start_state, normal_exit, transitions
