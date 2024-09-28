@@ -1,7 +1,7 @@
 [project]
 name = "kazu"
-version = "0.3.4.2.dev0"
-description = "Default template for PDM package"
+version = "0.3.5"
+description = "Wheeled bot controlling cli tool"
 authors = [
     { name = "Whth", email = "88489697+Whth@users.noreply.github.com" },
 ]
