@@ -28,18 +28,18 @@ class Axis:
 @dataclass(frozen=True)
 class Env:
     """
-    KAZU_CONFIG_PATH: str = "KAZU_CONFIG_PATH"
+    KAZU_CONFIG_PATH: str = "KAZU_CONFIG_PATH"  #这段代码定义了一个名为 KAZU_CONFIG_PATH 的变量，类型为 str（字符串），并将其赋值为 "KAZU_CONFIG_PATH"。
     """
 
-    KAZU_APP_CONFIG_PATH: str = "KAZU_APP_CONFIG_PATH"
-    KAZU_RUN_CONFIG_PATH: str = "KAZU_RUN_CONFIG_PATH"
-    KAZU_RUN_MODE: str = "KAZU_RUN_MODE"
+    KAZU_APP_CONFIG_PATH: str = "KAZU_APP_CONFIG_PATH"  # 这段代码定义了一个名为 KAZU_APP_CONFIG_PATH 的变量，类型为 str（字符串），并将其赋值为 "KAZU_APP_CONFIG_PATH
+    KAZU_RUN_CONFIG_PATH: str = "KAZU_RUN_CONFIG_PATH"  # 这段代码定义了一个名为 KAZU_RUN_CONFIG_PATH 的变量，类型为 str（字符串），并将其赋值为 "KAZU_RUN_CONFIG_PATH
+    KAZU_RUN_MODE: str = "KAZU_RUN_MODE"    # 这段代码定义了一个名为 KAZU_RUN_MODE 的变量，类型为 str（字符串），并将其赋值为 "KAZU_RUN_MODE
 
 
 @dataclass(frozen=True)
 class RunMode:
     """
-    run modes that suit for most use cases
+    run modes that suit for most use cases  # 这段代码定义了一个名为 RunMode 的数据类，其中包含了一些运行模式，用于适应大多数使用场景。
 
     Attributes:
         AFG: [A]LWAYS O[F]F STA[G]E

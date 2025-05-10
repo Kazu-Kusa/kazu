@@ -1,7 +1,7 @@
 from types import MappingProxyType
 from typing import TypeAlias, Callable, Dict, Tuple, Optional, Self
 
-from colorama import Fore
+from colorama import Fore   #ÐÅºÅµÆ
 from pyuptech import Color
 from terminaltables import SingleTable
 

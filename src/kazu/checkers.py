@@ -6,7 +6,7 @@ from upic import TagDetector
 from kazu.logger import _logger
 
 
-def check_motor(controller: CloseLoopController) -> bool:
+def check_motor(controller: CloseLoopController) -> bool:   #定义了一个名为 check_motor 的函数，用于检查一个电机控制器的通信通道是否准备好
     _logger.info("Start checking motor communication channel.")
     if controller.seriald.is_open:
         _logger.info("Motor communication channel is ready.")
@@ -16,7 +16,7 @@ def check_motor(controller: CloseLoopController) -> bool:
         return False
 
 
-def check_camera(tag_detector: TagDetector) -> bool:
+def check_camera(tag_detector: TagDetector) -> bool:    #定义了一个名为 check_camera 的函数，用于检查一个相机检测器的通信通道是否准备好
 
     camera: VideoCapture = tag_detector.camera_device
     _logger.info("Start checking camera device.")
@@ -29,7 +29,7 @@ def check_camera(tag_detector: TagDetector) -> bool:
         return False
 
 
-def check_adc(sensors: OnBoardSensors) -> bool:
+def check_adc(sensors: OnBoardSensors) -> bool:     #定义了一个名为 check_adc 的函数，用于检查一个模拟数字转换器（ADC）的通信通道是否准备好
     _logger.info("Start checking ADC device.")
     try:
         first = sensors.adc_all_channels()
@@ -44,7 +44,7 @@ def check_adc(sensors: OnBoardSensors) -> bool:
         return False
 
 
-def check_io(sensors: OnBoardSensors) -> bool:
+def check_io(sensors: OnBoardSensors) -> bool:  #定义了一个名为 check_io 的函数，用于检查一个输入输出（IO）设备的通信通道是否准备好
     _logger.info("Start checking IO device.")
     try:
         first = sensors.set_all_io_mode(0).io_all_channels()
@@ -61,7 +61,7 @@ def check_io(sensors: OnBoardSensors) -> bool:
         return False
 
 
-def check_mpu(sensors: OnBoardSensors) -> bool:
+def check_mpu(sensors: OnBoardSensors) -> bool:     #定义了一个名为 check_mpu 的函数，用于检查一个运动处理器单元（MPU）的通信通道是否准备好
     _logger.info("Start checking MPU device.")
 
     try:
@@ -80,7 +80,7 @@ def check_mpu(sensors: OnBoardSensors) -> bool:
         return False
 
 
-def check_power(sensors: OnBoardSensors) -> bool:
+def check_power(sensors: OnBoardSensors) -> bool:   #定义了一个名为 check_power 的函数，用于检查一个电源的通信通道是否准备好
     _logger.info("Start checking power supply.")
 
     try:

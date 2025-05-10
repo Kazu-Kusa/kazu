@@ -1,4 +1,4 @@
-import logging
+import logging  # 日志
 
 import coloredlogs
 from colorama import Style
