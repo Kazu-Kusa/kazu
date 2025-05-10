@@ -28,9 +28,9 @@ class CounterHashable(BaseModel):
 
 
 class TagGroup(BaseModel):
-    team_color: Literal["yellow", "blue"] | str
-    enemy_tag: Literal[1, 2] = None
-    allay_tag: Literal[1, 2] = None
+    team_color: Literal["yellow", "blue", "online"] | str
+    enemy_tag: Literal[0, 1, 2] = None
+    allay_tag: Literal[0, 1, 2] = None
     neutral_tag: Literal[0] = 0
     default_tag: int = TagDetector.Config.default_tag_id
 
@@ -38,6 +38,9 @@ class TagGroup(BaseModel):
         super().__init__(**data)
 
         match self.team_color:
+            case "online":
+                self.enemy_tag = 1
+                self.allay_tag = 0
             case "yellow":
                 self.enemy_tag = 1
                 self.allay_tag = 2
