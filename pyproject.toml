@@ -1,6 +1,6 @@
 [project]
 name = "kazu"
-version = "0.3.5"
+version = "0.3.7"
 description = "Wheeled bot controlling cli tool"
 authors = [
     { name = "Whth", email = "88489697+Whth@users.noreply.github.com" },
