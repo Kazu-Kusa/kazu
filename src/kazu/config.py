@@ -414,8 +414,8 @@ class MotionConfig(BaseModel):
 
 
 class VisionConfig(BaseModel):
-    team_color: Literal["yellow", "blue"] = Field(
-        default="blue", description='Team color for vision, allow ["yellow", "blue"]'
+    team_color: Literal["yellow", "blue","online"] = Field(
+        default="blue", description='Team color for vision, allow ["yellow", "blue","online"]'
     )
     resolution_multiplier: float = Field(default=1.0, description="Resolution multiplier for camera.")
     use_camera: bool = Field(default=True, description="Whether to use the camera.")
