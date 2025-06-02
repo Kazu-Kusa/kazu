@@ -182,7 +182,7 @@ class SearchConfig(BaseModel):
     gradient_move_weight: PositiveFloat = Field(default=100, description="Weight for gradient move.")
     use_scan_move: bool = Field(default=True, description="Whether to use scan move.")
     scan_move_weight: PositiveFloat = Field(default=1.96, description="Weight for scan move.")
-    use_rand_turn: bool = Field(default=True, description="Whether to use random turn.")
+    use_rand_turn: bool = Field(default=False, description="Whether to use random turn.")
     rand_turn_weight: PositiveFloat = Field(default=0.05, description="Weight for random turn.")
 
     gradient_move: GradientConfig = Field(default=GradientConfig(), description="Configuration for gradient move.")
@@ -414,7 +414,7 @@ class MotionConfig(BaseModel):
 
 
 class VisionConfig(BaseModel):
-    team_color: Literal["yellow", "blue","online"] = Field(
+    team_color: Literal["yellow", "blue", "online"] = Field(
         default="blue", description='Team color for vision, allow ["yellow", "blue","online"]'
     )
     resolution_multiplier: float = Field(default=1.0, description="Resolution multiplier for camera.")
