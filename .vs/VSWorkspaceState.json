@@ -1,7 +1,9 @@
 {
   "ExpandedNodes": [
-    ""
+    "",
+    "\\src",
+    "\\src\\kazu"
   ],
-  "SelectedNode": "\\README.md",
+  "SelectedNode": "\\src\\kazu\\config.py",
   "PreviewInSolutionExplorer": false
 }

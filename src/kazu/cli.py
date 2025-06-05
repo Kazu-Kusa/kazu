@@ -193,7 +193,7 @@ def configure(
     "-t",
     "--team-color",
     default=None,
-    type=click.Choice(["blue", "yellow"]),
+    type=click.Choice(["blue", "yellow", "online"]),
     help="Change allay team color temporarily.",
     callback=team_color_callback,
 )
