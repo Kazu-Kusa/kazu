@@ -1,0 +1,77 @@
+# Exported by Kazu-v0.3.9 at 1749137568.888119
+# ############################################################################ #
+
+[motion]
+# Front-right motor configuration.
+motor_fr = [1, 1]
+# Front-left motor configuration.
+motor_fl = [2, 1]
+# Rear-right motor configuration.
+motor_rr = [3, 1]
+# Rear-left motor configuration.
+motor_rl = [4, 1]
+# Serial port for communication.
+port = "/dev/ttyUSB0"
+
+# ############################################################################ #
+
+[vision]
+# Team color for vision, allow ["yellow", "blue","online"]
+team_color = "blue"
+# Resolution multiplier for camera.
+resolution_multiplier = 1.0
+# Whether to use the camera.
+use_camera = true
+# Camera device ID.
+camera_device_id = 0
+
+# ############################################################################ #
+
+[debug]
+# Log level for debugging, allow ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"].
+log_level = "INFO"
+# Whether to use signal light.
+use_siglight = true
+
+# ############################################################################ #
+
+[sensor]
+# Gyroscope full scale range, allows [250, 500, 1000, 2000].
+gyro_fsr = 1000
+# Accelerometer full scale range, allows [2, 4, 8, 16].
+accel_fsr = 8
+# Minimum ADC sample interval.
+adc_min_sample_interval = 5
+# Index for front-left edge sensor.
+edge_fl_index = 3
+# Index for front-right edge sensor.
+edge_fr_index = 0
+# Index for rear-left edge sensor.
+edge_rl_index = 2
+# Index for rear-right edge sensor.
+edge_rr_index = 1
+# Index for left ADC sensor.
+left_adc_index = 6
+# Index for right ADC sensor.
+right_adc_index = 4
+# Index for front ADC sensor.
+front_adc_index = 5
+# Index for rear-back ADC sensor.
+rb_adc_index = 7
+# Index for gray ADC sensor.
+gray_adc_index = 8
+# Index for left gray IO sensor.
+gray_io_left_index = 1
+# Index for right gray IO sensor.
+gray_io_right_index = 0
+# Index for front-left IO sensor.
+fl_io_index = 5
+# Index for front-right IO sensor.
+fr_io_index = 2
+# Index for rear-left IO sensor.
+rl_io_index = 4
+# Index for rear-right IO sensor.
+rr_io_index = 3
+# Index for reboot button.
+reboot_button_index = 6
+
