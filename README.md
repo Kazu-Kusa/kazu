@@ -426,6 +426,7 @@ walk_duration = 0.3
 [perf]
 # Duration for checking.
 checking_duration = 0.0
+```
 
 You can make some tweak by reading the comment over each config item. After that you can feed the run config to the `kazu` as below.
 
