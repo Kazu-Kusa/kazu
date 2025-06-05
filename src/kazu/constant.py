@@ -1,7 +1,6 @@
 from dataclasses import dataclass
-from enum import IntEnum, auto, Enum
+from enum import Enum, IntEnum, auto
 from typing import List, Tuple
-
 
 QUIT: str = "q"
 
@@ -27,9 +26,7 @@ class Axis:
 
 @dataclass(frozen=True)
 class Env:
-    """
-    KAZU_CONFIG_PATH: str = "KAZU_CONFIG_PATH"
-    """
+    """KAZU_CONFIG_PATH: str = "KAZU_CONFIG_PATH"."""
 
     KAZU_APP_CONFIG_PATH: str = "KAZU_APP_CONFIG_PATH"
     KAZU_RUN_CONFIG_PATH: str = "KAZU_RUN_CONFIG_PATH"
@@ -38,8 +35,7 @@ class Env:
 
 @dataclass(frozen=True)
 class RunMode:
-    """
-    run modes that suit for most use cases
+    """run modes that suit for most use cases.
 
     Attributes:
         AFG: [A]LWAYS O[F]F STA[G]E
@@ -64,7 +60,6 @@ class RunMode:
 
 @dataclass(frozen=True)
 class EdgeWeights:
-
     FL: int = 1
     FR: int = 2
     RL: int = 4
@@ -112,12 +107,11 @@ class SurroundingWeights:
 
 
 class EdgeCodeSign(IntEnum):
-    """
-    fl           fr
+    """fl           fr
         O-----O
            |
         O-----O
-    rl           rr
+    rl           rr.
 
     Notes:
         Usually the bigger the number, the more likely it is to be an edge
@@ -147,14 +141,13 @@ class EdgeCodeSign(IntEnum):
 
 
 class SurroundingCodeSign(IntEnum):
-    """
-    fl           fr
+    """fl           fr
         O-----O
            |
         O-----O
     rl           rr
     Notes:
-        Usually the bigger the number, the more dangerous the situation is
+        Usually the bigger the number, the more dangerous the situation is.
     """
 
     # region SURROUNDING KEYS
@@ -248,23 +241,24 @@ class SurroundingCodeSign(IntEnum):
 class StageWeight:
     STAGE: int = 1
     REBOOT: int = 2
-    UNCLEAR:int =4
+    UNCLEAR: int = 4
+
 
 class StageCodeSign(IntEnum):
     ON_STAGE = 0
     OFF_STAGE = StageWeight.STAGE
     ON_STAGE_REBOOT = StageWeight.REBOOT
     OFF_STAGE_REBOOT = StageWeight.STAGE + StageWeight.REBOOT
-    UNCLEAR_ZONE=StageWeight.UNCLEAR
-    UNCLEAR_ZONE_REBOOT=StageWeight.UNCLEAR+StageWeight.REBOOT
+    UNCLEAR_ZONE = StageWeight.UNCLEAR
+    UNCLEAR_ZONE_REBOOT = StageWeight.UNCLEAR + StageWeight.REBOOT
+
 
 class FenceCodeSign(IntEnum):
-    """
-          front:0
+    """front:0
           O-----O
     left:2   |   right:3
           O-----O
-          rear:1
+          rear:1.
 
     Notes:
         Usually the bigger the number, the more likely it is to be an edge

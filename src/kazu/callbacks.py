@@ -2,20 +2,21 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 import click
-from click import secho, echo
+from click import echo, secho
 from colorama import Fore
 
-from kazu.config import APPConfig, RunConfig, _InternalConfig, load_run_config, load_app_config
+from kazu.config import APPConfig, RunConfig, _InternalConfig, load_app_config, load_run_config
 from kazu.constant import QUIT
 
 
-def export_default_app_config(ctx: click.Context, _, path: Path):
-    """
-     Export the default application configuration to the specified path.
+def export_default_app_config(ctx: click.Context, _, path: Path) -> None:
+    """Export the default application configuration to the specified path.
+
     Args:
         ctx (click.Context): The click context object.
         _ (Any): Ignored parameter.
         path (str): The path to export the default application configuration to.
+
     Returns:
         None: If the path is not provided.
     """
@@ -31,15 +32,16 @@ def export_default_app_config(ctx: click.Context, _, path: Path):
         ctx.exit(0)
 
 
-def export_default_run_config(ctx: click.Context, _, path: Path):
-    """
-    Export the default run configuration to a file.
+def export_default_run_config(ctx: click.Context, _, path: Path) -> None:
+    """Export the default run configuration to a file.
+
     Args:
         ctx (click.Context): The click context object.
         _ (Any): A placeholder parameter.
         path (Path): The path to the file where the default run configuration will be exported.
+
     Returns:
-        None
+        None.
     """
     if path:
         path.parent.mkdir(exist_ok=True, parents=True)
@@ -51,31 +53,26 @@ def export_default_run_config(ctx: click.Context, _, path: Path):
 
 
 @click.pass_obj
-def disable_cam_callback(conf: _InternalConfig, ctx: click.Context, _, value: str):
-    """
-    Disable the camera.
-    """
+def disable_cam_callback(conf: _InternalConfig, ctx: click.Context, _, value: str) -> None:
+    """Disable the camera."""
     if value:
-
         secho("Disable camera", fg="red", bold=True)
         conf.app_config.vision.use_camera = False
 
 
 @click.pass_obj
-def disable_siglight_callback(conf: _InternalConfig, ctx: click.Context, _, value: str):
-    """
-    Disable the siglight.
-    """
+def disable_siglight_callback(conf: _InternalConfig, ctx: click.Context, _, value: str) -> None:
+    """Disable the siglight."""
     if value:
-
         secho("Disable siglight", fg="red", bold=True)
         conf.app_config.debug.use_siglight = False
 
 
-def _set_all_log_level(level: int | str):
-    import pyuptech
+def _set_all_log_level(level: int | str) -> None:
     import bdmc
     import mentabotix
+    import pyuptech
+
     from kazu.logger import set_log_level
 
     pyuptech.set_log_level(level)
@@ -85,36 +82,28 @@ def _set_all_log_level(level: int | str):
 
 
 @click.pass_obj
-def log_level_callback(conf: _InternalConfig, ctx: click.Context, _, value: str):
-    """
-    Change the log level.
-    """
+def log_level_callback(conf: _InternalConfig, ctx: click.Context, _, value: str) -> None:
+    """Change the log level."""
     if value:
-
         secho(f"Change log level to {value}", fg="magenta", bold=True)
         conf.app_config.debug.log_level = value
         _set_all_log_level(value)
 
 
 @click.pass_obj
-def team_color_callback(conf: _InternalConfig, ctx: click.Context, _, value: str):
-    """
-    Change the team color.
-    """
+def team_color_callback(conf: _InternalConfig, ctx: click.Context, _, value: str) -> None:
+    """Change the team color."""
     if value:
-
         secho(f"Change team color to {value}", fg=value, bold=True)
         conf.app_config.vision.team_color = value
 
 
-def bench_add_app(ctx: click.Context, _, add_up_to):
-    """
-    Benchmark the execution time of adding up to a given number.
-    """
+def bench_add_app(ctx: click.Context, _, add_up_to) -> None:
+    """Benchmark the execution time of adding up to a given number."""
     if add_up_to is not None:
         import timeit
 
-        def count_up():
+        def count_up() -> None:
             i = 0
             while i < add_up_to:
                 i += 1
@@ -124,13 +113,9 @@ def bench_add_app(ctx: click.Context, _, add_up_to):
         echo(f"Execution time of add up to {add_up_to}: {execution_time:.6f} s")
 
 
-def bench_aps(ctx: click.Context, _, add_up_per_second: bool):
-    """
-    Benchmark the execution time of adding up to a given number.
-    """
-
+def bench_aps(ctx: click.Context, _, add_up_per_second: bool) -> None:
+    """Benchmark the execution time of adding up to a given number."""
     if add_up_per_second:
-        import timeit
         from time import perf_counter_ns
 
         counter = 0
@@ -143,38 +128,31 @@ def bench_aps(ctx: click.Context, _, add_up_per_second: bool):
 
 
 @click.pass_obj
-def set_port_callback(conf: _InternalConfig, ctx, _, port: Optional[str]):
-    """
-    Set the port.
-    """
+def set_port_callback(conf: _InternalConfig, ctx, _, port: Optional[str]) -> None:
+    """Set the port."""
     if port is not None:
         conf.app_config.motion.port = port
         secho(f"Set serial port to {port}", fg="blue", bold=True)
 
 
 @click.pass_obj
-def set_camera_callback(conf: _InternalConfig, ctx, _, camera: Optional[int]):
-    """
-    Set the Camera device id.
-    """
+def set_camera_callback(conf: _InternalConfig, ctx, _, camera: Optional[int]) -> None:
+    """Set the Camera device id."""
     if camera is not None:
         conf.app_config.vision.camera_device_id = camera
         secho(f"Set camera device id to {camera}", fg="blue", bold=True)
 
 
 @click.pass_obj
-def set_res_multiplier_callback(conf: _InternalConfig, ctx, _, multiplier: Optional[int]):
-    """
-    Set the Camera device id.
-    """
+def set_res_multiplier_callback(conf: _InternalConfig, ctx, _, multiplier: Optional[int]) -> None:
+    """Set the Camera device id."""
     if multiplier is not None:
         conf.app_config.vision.camera_device_id = multiplier
         secho(f"Set camera resolution multiplier to {multiplier}", fg="blue", bold=True)
 
 
-def bench_sleep_precision(ctx, _, enable: bool):
-    """
-    Measure the precision of the sleep function by comparing intended sleep duration
+def bench_sleep_precision(ctx, _, enable: bool) -> None:
+    """Measure the precision of the sleep function by comparing intended sleep duration
     with the actual elapsed time using a high-resolution timer.
 
     Args:
@@ -188,6 +166,7 @@ def bench_sleep_precision(ctx, _, enable: bool):
     if not enable:
         return
     from time import perf_counter, sleep
+
     from terminaltables import SingleTable
 
     # Ensure termcolor is installed, if not, install it using pip: `pip install termcolor`
@@ -215,18 +194,17 @@ def bench_sleep_precision(ctx, _, enable: bool):
             precision_offset = actual_duration - intended_duration
 
             data_trunk.append(
-                [f"{intended_duration*1000:.3f}", f"{actual_duration*1000:.3f}", f"{precision_offset*1000:.3f}"]
+                [f"{intended_duration * 1000:.3f}", f"{actual_duration * 1000:.3f}", f"{precision_offset * 1000:.3f}"]
             )
-    data = [["Intended", "Actual", "Offset"]] + data_trunk
+    data = [["Intended", "Actual", "Offset"], *data_trunk]
     table = SingleTable(data)
     table.inner_column_border = False
     table.inner_heading_row_border = True
     secho(f"{table.table}", bold=True)
 
 
-def led_light_shell_callback(ctx: click.Context, _, shell):
-    """
-    Callback function for the LED light shell.
+def led_light_shell_callback(ctx: click.Context, _, shell) -> None:
+    """Callback function for the LED light shell.
 
     Args:
         ctx (click.Context): The click context.
@@ -251,13 +229,14 @@ def led_light_shell_callback(ctx: click.Context, _, shell):
     """
     if not shell:
         return
-    from kazu.hardwares import screen, sensors
     from pyuptech import Color
+
+    from kazu.hardwares import screen, sensors
 
     def _validate_cmd(cmd_string: str) -> Tuple[int, int, int] | None:
         cmd_tokens = cmd_string.split()
         length = len(cmd_tokens)
-        if length != 1 and length != 3:
+        if length not in {1, 3}:
             secho(f"Accept only 1 or 3 tokens, got {length}!", fg="red")
             return None
 
@@ -272,11 +251,10 @@ def led_light_shell_callback(ctx: click.Context, _, shell):
         try:
             numbers = list(map(_conv, cmd_tokens))
         except ValueError:
-            secho(f"Bad token(s), not accept!", fg="red")
+            secho("Bad token(s), not accept!", fg="red")
             return None
 
-        channels = (numbers[0],) * 3 if length == 1 else tuple(numbers)
-        return channels
+        return (numbers[0],) * 3 if length == 1 else tuple(numbers)
 
     sensors.adc_io_open()
     screen.open(2)
@@ -307,9 +285,8 @@ def led_light_shell_callback(ctx: click.Context, _, shell):
     ctx.exit(0)
 
 
-def bench_siglight_switch_freq(ctx: click.Context, _, enable):
-    """
-    Callback function for the bench_siglight_switch_freq shell. Will test to acquire the signal light switch freq per second
+def bench_siglight_switch_freq(ctx: click.Context, _, enable) -> None:
+    """Callback function for the bench_siglight_switch_freq shell. Will test to acquire the signal light switch freq per second
     Args:
         ctx:
         _:
@@ -321,10 +298,12 @@ def bench_siglight_switch_freq(ctx: click.Context, _, enable):
     if not enable:
         return
 
-    from kazu.signal_light import sig_light_registry
     from time import perf_counter
-    from kazu.hardwares import sensors, screen
+
     from pyuptech import Color
+
+    from kazu.hardwares import screen, sensors
+    from kazu.signal_light import sig_light_registry
 
     sensors.adc_io_open()
     screen.set_all_leds_same(Color.BLACK)

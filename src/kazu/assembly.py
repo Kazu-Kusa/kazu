@@ -3,10 +3,10 @@ from typing import List, Tuple
 from mentabotix.modules.botix import MovingTransition
 
 from kazu.compile import (
+    make_always_off_stage_battle_handler,
+    make_always_on_stage_battle_handler,
     make_reboot_handler,
     make_std_battle_handler,
-    make_always_on_stage_battle_handler,
-    make_always_off_stage_battle_handler,
 )
 from kazu.config import APPConfig, RunConfig
 from kazu.hardwares import tag_detector
@@ -14,8 +14,7 @@ from kazu.signal_light import sig_light_registry
 
 
 def assembly_AFG_schema(app_config: APPConfig, run_config: RunConfig) -> List[MovingTransition]:
-    """
-    Assembles the AFG schema by calling the `make_always_off_stage_battle_handler` function with the
+    """Assembles the AFG schema by calling the `make_always_off_stage_battle_handler` function with the
     given `app_config` and `run_config` parameters.
 
     Args:
@@ -29,8 +28,7 @@ def assembly_AFG_schema(app_config: APPConfig, run_config: RunConfig) -> List[Mo
 
 
 def assembly_ANG_schema(app_config: APPConfig, run_config: RunConfig) -> List[MovingTransition]:
-    """
-    Assembles the ANG battle schema based on application and runtime configurations.
+    """Assembles the ANG battle schema based on application and runtime configurations.
 
     Parameters:
         app_config (APPConfig): An object containing application runtime configuration details.
@@ -44,8 +42,7 @@ def assembly_ANG_schema(app_config: APPConfig, run_config: RunConfig) -> List[Mo
 
 
 def assembly_NGS_schema(app_config: APPConfig, run_config: RunConfig) -> List[MovingTransition]:
-    """
-    Assembles the NGS battle schema based on
+    """Assembles the NGS battle schema based on
     application and run configurations.
 
     Parameters:
@@ -55,7 +52,6 @@ def assembly_NGS_schema(app_config: APPConfig, run_config: RunConfig) -> List[Mo
     Returns:
         A list of MovingTransitions representing the assembled workflow stages and transitions.
     """
-
     # Creates a package of standard battle handling stages using the app and run configurations,
     # potentially including the tag group
     stage_pack = make_std_battle_handler(app_config, run_config)
@@ -67,8 +63,7 @@ def assembly_NGS_schema(app_config: APPConfig, run_config: RunConfig) -> List[Mo
 def assembly_FGS_schema(
     app_config: APPConfig, run_config: RunConfig
 ) -> Tuple[List[MovingTransition], List[MovingTransition]]:
-    """
-    Assembles the FGS  battle schema
+    """Assembles the FGS  battle schema.
 
     Based on the application configuration and runtime configuration, generates lists of moving transition effects
     for both the reboot scene and the off-stage-start scene.
@@ -81,7 +76,6 @@ def assembly_FGS_schema(
         Tuple[List[MovingTransition], List[MovingTransition]]: A tuple containing two lists.
       The first list represents moving transitions for the reboot scene, and the second for the full game scene.
     """
-
     # Generates standard battle handling routines, potentially utilizing the created tag group
     stage_pack = make_std_battle_handler(
         app_config,
@@ -97,8 +91,7 @@ def assembly_FGS_schema(
 
 
 def assembly_FGDL_schema(app_config: APPConfig, run_config: RunConfig) -> List[MovingTransition]:
-    """
-    Assembles the FGDL schema based on the provided application and run configurations.
+    """Assembles the FGDL schema based on the provided application and run configurations.
 
     Args:
         app_config (APPConfig): Configuration object for the application settings.
@@ -107,7 +100,6 @@ def assembly_FGDL_schema(app_config: APPConfig, run_config: RunConfig) -> List[M
     Returns:
         List[MovingTransition]: A list of MovingTransition objects representing the assembled schema.
     """
-
     # Generates a reboot handler pack using the application and run configurations
     reboot_pack = make_reboot_handler(app_config, run_config)
 

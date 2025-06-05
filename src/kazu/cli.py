@@ -1,38 +1,38 @@
 from enum import Enum
 from pathlib import Path
 from time import sleep
-from typing import Callable, Optional, Tuple, List, Type
+from typing import Callable, List, Optional, Tuple, Type
 
 import click
-from click import secho, echo, clear
+from click import clear, echo, secho
 from colorama import Fore
 
-from kazu import __version__, __command__
+from kazu import __command__, __version__
 from kazu.callbacks import (
-    export_default_app_config,
-    export_default_run_config,
-    disable_cam_callback,
-    team_color_callback,
     bench_add_app,
     bench_aps,
-    set_port_callback,
-    set_camera_callback,
-    log_level_callback,
-    set_res_multiplier_callback,
-    bench_sleep_precision,
-    led_light_shell_callback,
-    disable_siglight_callback,
     bench_siglight_switch_freq,
+    bench_sleep_precision,
+    disable_cam_callback,
+    disable_siglight_callback,
+    export_default_app_config,
+    export_default_run_config,
+    led_light_shell_callback,
+    log_level_callback,
+    set_camera_callback,
+    set_port_callback,
+    set_res_multiplier_callback,
+    team_color_callback,
 )
 from kazu.config import (
     DEFAULT_APP_CONFIG_PATH,
     APPConfig,
-    _InternalConfig,
     ContextVar,
-    load_run_config,
+    _InternalConfig,
     load_app_config,
+    load_run_config,
 )
-from kazu.constant import Env, RunMode, QUIT
+from kazu.constant import QUIT, Env, RunMode
 from kazu.logger import _logger
 from kazu.signal_light import sig_light_registry
 from kazu.static import get_timestamp
@@ -47,12 +47,12 @@ from kazu.visualize import print_colored_toml
     __version__,
     "-v",
     "--version",
-    message=f"""
-{Fore.MAGENTA}______ __                    
+    message=rf"""
+{Fore.MAGENTA}______ __
 ___  //_/_____ __________  __
 __  ,<  _  __ `/__  /_  / / /
-_  /| | / /_/ /__  /_/ /_/ / 
-/_/ |_| \__,_/ _____/\__,_/  
+_  /| | / /_/ /__  /_/ /_/ /
+/_/ |_| \__,_/ _____/\__,_/
 {Fore.RESET}
 {Fore.YELLOW}Kazu: A Dedicated Robots Control System
 {Fore.GREEN}Version: {__command__}-v{__version__}{Fore.RESET}
@@ -82,15 +82,11 @@ _  /| | / /_/ /__  /_/ /_/ /
     default=False,
     help="Disable signal light",
 )
-def main(
-    ctx: click.Context, app_config_path: Path, log_level: str, disable_siglight: bool
-):
-    """A Dedicated Robots Control System"""
+def main(ctx: click.Context, app_config_path: Path, log_level: str, disable_siglight: bool) -> None:
+    """A Dedicated Robots Control System."""
     app_config = load_app_config(app_config_path)
 
-    ctx.obj = _InternalConfig(
-        app_config=app_config, app_config_file_path=app_config_path
-    )
+    ctx.obj = _InternalConfig(app_config=app_config, app_config_file_path=app_config_path)
 
     log_level_callback(ctx=ctx, _=None, value=log_level)
     disable_siglight_callback(ctx=ctx, _=None, value=disable_siglight)
@@ -122,11 +118,8 @@ def configure(
     config: _InternalConfig,
     kv: Optional[Tuple[str, str]],
     **_,
-):
-    """
-    Configure KAZU
-    """
-
+) -> None:
+    """Configure KAZU."""
     app_config = config.app_config
     if kv is None:
         from tomlkit import dumps
@@ -221,18 +214,17 @@ def run(
     run_config_path: Path | None,
     mode: str,
     **_,
-):
-    """
-    Run command for the main group.
-    """
-    from kazu.compile import botix
+) -> None:
+    """Run command for the main group."""
     from bdmc import CMD
+
+    from kazu.compile import botix
 
     run_config = load_run_config(run_config_path)
 
     app_config = conf.app_config
 
-    from kazu.hardwares import inited_controller, sensors, inited_tag_detector
+    from kazu.hardwares import inited_controller, inited_tag_detector, sensors
     from kazu.signal_light import set_all_black
 
     sensors.adc_io_open().MPU6500_Open()
@@ -327,21 +319,20 @@ def run(
     type=click.Choice(devs := ["mot", "cam", "adc", "io", "mpu", "pow", "all"]),
     nargs=-1,
 )
-def test(conf: _InternalConfig, device: str, **_):
-    """
-    Check devices' normal functions
-    """
+def test(conf: _InternalConfig, device: str, **_) -> None:
+    """Check devices' normal functions."""
     app_config: APPConfig = conf.app_config
 
-    from kazu.checkers import (
-        check_io,
-        check_camera,
-        check_adc,
-        check_motor,
-        check_power,
-        check_mpu,
-    )
     from terminaltables import SingleTable
+
+    from kazu.checkers import (
+        check_adc,
+        check_camera,
+        check_io,
+        check_motor,
+        check_mpu,
+        check_power,
+    )
 
     def _shader(dev_name: str, success: bool) -> List[str]:
         return [
@@ -383,8 +374,7 @@ def test(conf: _InternalConfig, device: str, **_):
         table.append(_shader("CAMERA", check_camera(tag_detector)))
         tag_detector.release_camera()
     if "mot" in device:
-        from kazu.hardwares import inited_controller
-        from kazu.hardwares import sensors
+        from kazu.hardwares import inited_controller, sensors
 
         controller = inited_controller(app_config)
         table.append(_shader("MOTOR", check_motor(controller)))
@@ -416,18 +406,17 @@ def read_sensors(
     interval: float,
     device: str,
     use_screen: bool,
-):
-    """
-    Read sensors data and print to terminal
-    """
+) -> None:
+    """Read sensors data and print to terminal."""
     from pyuptech import (
-        make_mpu_table,
-        make_io_table,
-        make_adc_table,
-        adc_io_display_on_lcd,
         Color,
+        adc_io_display_on_lcd,
+        make_adc_table,
+        make_io_table,
+        make_mpu_table,
     )
-    from kazu.hardwares import sensors, screen
+
+    from kazu.hardwares import screen, sensors
 
     app_config: APPConfig = conf.app_config
     device = set(device) or ("all",)
@@ -553,26 +542,24 @@ def visualize(
     run_config_path: Optional[Path],
     render: bool,
     packname: Tuple[str, ...],
-):
-    """
-    Visualize State-Transition Diagram of KAZU with PlantUML
+) -> None:
+    """Visualize State-Transition Diagram of KAZU with PlantUML."""
+    from plantuml import PlantUML
 
-    """
     from kazu.compile import (
         botix,
-        make_edge_handler,
-        make_reboot_handler,
+        make_always_off_stage_battle_handler,
+        make_always_on_stage_battle_handler,
         make_back_to_stage_handler,
-        make_surrounding_handler,
+        make_edge_handler,
+        make_fence_handler,
+        make_rand_walk_handler,
+        make_reboot_handler,
         make_scan_handler,
         make_search_handler,
-        make_rand_walk_handler,
-        make_fence_handler,
         make_std_battle_handler,
-        make_always_on_stage_battle_handler,
-        make_always_off_stage_battle_handler,
+        make_surrounding_handler,
     )
-    from plantuml import PlantUML
 
     packname = packname or ("all",)
     puml_d = PlantUML(url="http://www.plantuml.com/plantuml/svg/")
@@ -607,9 +594,7 @@ def visualize(
         # 这里简化处理，实际可能需要根据handler的不同调用不同的导出方法
         handler_func: Callable = handlers.get(f_name)
         with sig_light_registry:
-            (*_, handler_data) = handler_func(
-                app_config=app_config, run_config=run_config_path
-            )
+            (*_, handler_data) = handler_func(app_config=app_config, run_config=run_config_path)
         filename = f_name + ".puml"
         destination_filename = (destination / filename).as_posix()
 
@@ -617,9 +602,7 @@ def visualize(
 
         if render:
             secho(f"Rendering {filename}", fg="green", bold=True)
-            puml_d.processes_file(
-                destination_filename, destination_filename.replace(".puml", ".svg")
-            )
+            puml_d.processes_file(destination_filename, destination_filename.replace(".puml", ".svg"))
         secho(f"Exported {filename}", fg="green", bold=True)
 
 
@@ -651,24 +634,22 @@ def control_motor(
     speeds: Optional[list[int]],
     shell: bool,
     **_,
-):
-    """
-    Control motor by sending command.
+) -> None:
+    """Control motor by sending command.
 
     move the bot at <SPEEDS> for <DURATION> seconds, then stop.
 
     Args:
-
         DURATION: (float)
 
         SPEEDS: (int) | (int,int) | (int,int,int,int)
     """
-    from kazu.compile import composer, botix
-    from kazu.hardwares import inited_controller
+    import threading
 
     from mentabotix import MovingState, MovingTransition
 
-    import threading
+    from kazu.compile import botix, composer
+    from kazu.hardwares import inited_controller
 
     controller = inited_controller(conf.app_config)
     if not controller.seriald.is_open:
@@ -681,7 +662,7 @@ def control_motor(
 
     supported_token_len = {2, 3, 5}
 
-    def _send_cmd(mov_duration, mov_speeds):
+    def _send_cmd(mov_duration, mov_speeds) -> None:
         try:
             states, transitions = (
                 composer.init_container()
@@ -701,7 +682,7 @@ def control_motor(
         )
         fi: Callable[[], None] = botix.compile(return_median=False)
 
-        def _bar():
+        def _bar() -> None:
             with click.progressbar(
                 range(int(mov_duration / 0.1)),
                 show_percent=True,
@@ -780,17 +761,15 @@ def control_motor(
     help="Check timeout, in seconds",
 )
 @click.pass_obj
-def list_ports(conf: _InternalConfig, check: bool, timeout: float):
-    """
-    List serial ports and check if they are in use.
-    """
+def list_ports(conf: _InternalConfig, check: bool, timeout: float) -> None:
+    """List serial ports and check if they are in use."""
     import serial
     from bdmc import find_serial_ports
-    from terminaltables import SingleTable
     from colorama import Fore, Style
+    from terminaltables import SingleTable
 
     def is_port_open(port_to_check):
-        """检查端口是否开放（未被占用）"""
+        """检查端口是否开放（未被占用）."""
         try:
             with serial.Serial(port_to_check, timeout=timeout):
                 return True, "Available."
@@ -829,10 +808,8 @@ def list_ports(conf: _InternalConfig, check: bool, timeout: float):
     show_default=True,
     callback=set_port_callback,
 )
-def stream_send_msg(ctx: click.Context, conf: _InternalConfig, **_):
-    """
-    Sending msg in streaming input mode.
-    """
+def stream_send_msg(ctx: click.Context, conf: _InternalConfig, **_) -> None:
+    """Sending msg in streaming input mode."""
     from kazu.hardwares import inited_controller
 
     con = inited_controller(conf.app_config)
@@ -845,8 +822,8 @@ def stream_send_msg(ctx: click.Context, conf: _InternalConfig, **_):
         return
     secho("Start reading thread", fg="green", bold=True)
 
-    def _ret_handler(msg: str):
-        print(f"\n{Fore.YELLOW}< {msg}{Fore.RESET}")
+    def _ret_handler(msg: str) -> None:
+        pass
 
     secho(f"Start streaming input, enter '{QUIT}' to quit", fg="green", bold=True)
 
@@ -874,14 +851,10 @@ def stream_send_msg(ctx: click.Context, conf: _InternalConfig, **_):
 @main.command("light")
 @click.help_option("-h", "--help")
 @click.pass_obj
-@click.option(
-    "-s", "--shell", is_flag=True, default=False, callback=led_light_shell_callback
-)
+@click.option("-s", "--shell", is_flag=True, default=False, callback=led_light_shell_callback)
 @click.option("-g", "--sig-lights", is_flag=True, default=False)
-def control_display(conf: _InternalConfig, sig_lights: bool, **_):
-    """
-    Control LED display.
-    """
+def control_display(conf: _InternalConfig, sig_lights: bool, **_) -> None:
+    """Control LED display."""
     if sig_lights:
         if not conf.app_config.debug.use_siglight:
             secho(
@@ -890,11 +863,12 @@ def control_display(conf: _InternalConfig, sig_lights: bool, **_):
                 bold=True,
             )
             conf.app_config.debug.use_siglight = True
+        from pyuptech import Color
+
         from kazu.compile import make_std_battle_handler
         from kazu.config import RunConfig
-        from kazu.signal_light import sig_light_registry
         from kazu.hardwares import screen, sensors
-        from pyuptech import Color
+        from kazu.signal_light import sig_light_registry
 
         sensors.adc_io_open()
         screen.open(2)
@@ -903,9 +877,7 @@ def control_display(conf: _InternalConfig, sig_lights: bool, **_):
 
         secho("Press 'Enter' to show next.", fg="yellow", bold=True)
         for color, purpose in sig_light_registry.mapping.items():
-            screen.fill_screen(Color.BLACK).print(
-                purpose
-            ).refresh().set_all_leds_single(*color)
+            screen.fill_screen(Color.BLACK).print(purpose).refresh().set_all_leds_single(*color)
 
             color_names = sig_light_registry.get_key_color_name_colorful(color)
             out_string = f"<{color_names[0]}, {color_names[1]}>"
@@ -952,12 +924,10 @@ def control_display(conf: _InternalConfig, sig_lights: bool, **_):
     show_default=True,
     help="Set the interval of the tag detector",
 )
-def tag_test(ctx: click.Context, conf: _InternalConfig, interval: float, **_):
-    """
-    Use tag detector to test tag ID detection.
-    """
-    from kazu.hardwares import inited_tag_detector
+def tag_test(ctx: click.Context, conf: _InternalConfig, interval: float, **_) -> None:
+    """Use tag detector to test tag ID detection."""
     from kazu.checkers import check_camera
+    from kazu.hardwares import inited_tag_detector
 
     detector = inited_tag_detector(conf.app_config)
     if not check_camera(detector):
@@ -1015,28 +985,24 @@ def breaker_test(
     run_config_path: Path,
     interval: float,
     use_screen: bool,
-):
-    """
-    Use breaker detector to test breaker detection.
-    """
-    from kazu.config import load_run_config
-    from kazu.judgers import Breakers
-    from kazu.constant import (
-        EdgeCodeSign,
-        SurroundingCodeSign,
-        ScanCodesign,
-        FenceCodeSign,
-        Activation,
-    )
-    from terminaltables import SingleTable
-    from kazu.hardwares import sensors, controller, screen
-    from kazu.config import ContextVar
+) -> None:
+    """Use breaker detector to test breaker detection."""
     from pyuptech import Color, FontSize
+    from terminaltables import SingleTable
+
+    from kazu.config import ContextVar, load_run_config
+    from kazu.constant import (
+        Activation,
+        EdgeCodeSign,
+        FenceCodeSign,
+        ScanCodesign,
+        SurroundingCodeSign,
+    )
+    from kazu.hardwares import controller, screen, sensors
+    from kazu.judgers import Breakers
 
     sensors.adc_io_open().MPU6500_Open()
-    controller.context.update(
-        {ContextVar.recorded_pack.name: sensors.adc_all_channels()}
-    )
+    controller.context.update({ContextVar.recorded_pack.name: sensors.adc_all_channels()})
     run_config = load_run_config(run_config_path)
     config_pack = conf.app_config, run_config
 
@@ -1056,99 +1022,51 @@ def breaker_test(
     displays = [
         (
             "Edge",
-            (
-                _make_display_pack(
-                    Breakers.make_std_edge_full_breaker(*config_pack), EdgeCodeSign
-                )
-            ),
+            (_make_display_pack(Breakers.make_std_edge_full_breaker(*config_pack), EdgeCodeSign)),
         ),
         (
             "Surr",
-            (
-                _make_display_pack(
-                    Breakers.make_surr_breaker(*config_pack), SurroundingCodeSign
-                )
-            ),
+            (_make_display_pack(Breakers.make_surr_breaker(*config_pack), SurroundingCodeSign)),
         ),
         (
             "Scan",
-            (
-                _make_display_pack(
-                    Breakers.make_std_scan_breaker(*config_pack), ScanCodesign
-                )
-            ),
+            (_make_display_pack(Breakers.make_std_scan_breaker(*config_pack), ScanCodesign)),
         ),
         (
             "Fence",
-            (
-                _make_display_pack(
-                    Breakers.make_std_fence_breaker(*config_pack), FenceCodeSign
-                )
-            ),
+            (_make_display_pack(Breakers.make_std_fence_breaker(*config_pack), FenceCodeSign)),
         ),
         (
             "FrontE",
-            (
-                _make_display_pack(
-                    Breakers.make_std_edge_front_breaker(*config_pack), Activation
-                )
-            ),
+            (_make_display_pack(Breakers.make_std_edge_front_breaker(*config_pack), Activation)),
         ),
         (
             "RearE",
-            (
-                _make_display_pack(
-                    Breakers.make_std_edge_rear_breaker(*config_pack), Activation
-                )
-            ),
+            (_make_display_pack(Breakers.make_std_edge_rear_breaker(*config_pack), Activation)),
         ),
         (
             "SAlignT",
-            (
-                _make_display_pack(
-                    Breakers.make_std_stage_align_breaker(*config_pack), Activation
-                )
-            ),
+            (_make_display_pack(Breakers.make_std_stage_align_breaker(*config_pack), Activation)),
         ),
         (
             "SAlignM",
-            (
-                _make_display_pack(
-                    Breakers.make_stage_align_breaker_mpu(*config_pack), Activation
-                )
-            ),
+            (_make_display_pack(Breakers.make_stage_align_breaker_mpu(*config_pack), Activation)),
         ),
         (
             "DAlignM",
-            (
-                _make_display_pack(
-                    Breakers.make_align_direction_breaker_mpu(*config_pack), Activation
-                )
-            ),
+            (_make_display_pack(Breakers.make_align_direction_breaker_mpu(*config_pack), Activation)),
         ),
         (
             "DAlignT",
-            (
-                _make_display_pack(
-                    Breakers.make_std_align_direction_breaker(*config_pack), Activation
-                )
-            ),
+            (_make_display_pack(Breakers.make_std_align_direction_breaker(*config_pack), Activation)),
         ),
         (
             "TTFront",
-            (
-                _make_display_pack(
-                    Breakers.make_std_turn_to_front_breaker(*config_pack), Activation
-                )
-            ),
+            (_make_display_pack(Breakers.make_std_turn_to_front_breaker(*config_pack), Activation)),
         ),
         (
             "ATK",
-            (
-                _make_display_pack(
-                    Breakers.make_std_atk_breaker(*config_pack), Activation
-                )
-            ),
+            (_make_display_pack(Breakers.make_std_atk_breaker(*config_pack), Activation)),
         ),
         (
             "ATKE",
@@ -1161,34 +1079,20 @@ def breaker_test(
         ),
         (
             "NSTG",
-            (
-                _make_display_pack(
-                    Breakers.make_is_on_stage_breaker(*config_pack), Activation
-                )
-            ),
+            (_make_display_pack(Breakers.make_is_on_stage_breaker(*config_pack), Activation)),
         ),
         (
             "SDAWAY",
-            (
-                _make_display_pack(
-                    Breakers.make_back_stage_side_away_breaker(*config_pack), Activation
-                )
-            ),
+            (_make_display_pack(Breakers.make_back_stage_side_away_breaker(*config_pack), Activation)),
         ),
         (
             "LRBLK",
-            (
-                _make_display_pack(
-                    Breakers.make_lr_sides_blocked_breaker(*config_pack), Activation
-                )
-            ),
+            (_make_display_pack(Breakers.make_lr_sides_blocked_breaker(*config_pack), Activation)),
         ),
     ]
 
     if use_screen:
-        screen.open(2).fill_screen(Color.BLACK).refresh().set_font_size(
-            FontSize.FONT_6X8
-        )
+        screen.open(2).fill_screen(Color.BLACK).refresh().set_font_size(FontSize.FONT_6X8)
     try:
         while 1:
             data.clear()
@@ -1198,7 +1102,7 @@ def breaker_test(
             click.clear()
             secho(table.table, bold=True)
             if use_screen:
-                for pack, start_y in zip(packs, range(0, 80, 8)):
+                for pack, start_y in zip(packs, range(0, 80, 8), strict=False):
                     screen.put_string(0, start_y, "|".join(map(str, pack)))
                 screen.refresh()
             sleep(interval)
@@ -1249,11 +1153,8 @@ def breaker_test(
     callback=bench_siglight_switch_freq,
     help="measure light switch freq",
 )
-def bench(**_):
-    """
-    Benchmarks
-    """
-
+def bench(**_) -> None:
+    """Benchmarks."""
     echo("bench test done!")
 
 
@@ -1308,17 +1209,15 @@ def trace(
     disable_view_profile: bool,
     port: int,
     **_,
-):
-    """
-    Trace the std battle using viztracer
-    """
-
-    from viztracer import VizTracer
+) -> None:
+    """Trace the std battle using viztracer."""
     from bdmc import CMD
-    from kazu.hardwares import inited_controller, sensors, inited_tag_detector
-    from kazu.signal_light import set_all_black
+    from viztracer import VizTracer
+
     from kazu.assembly import assembly_NGS_schema
     from kazu.compile import botix
+    from kazu.hardwares import inited_controller, inited_tag_detector, sensors
+    from kazu.signal_light import set_all_black
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -1349,14 +1248,13 @@ def trace(
     traver.save(output_path.as_posix())
 
     if not disable_view_profile:
-        from kazu.static import get_local_ip
         from subprocess import DEVNULL, Popen
+
+        from kazu.static import get_local_ip
 
         local_ip = get_local_ip()
         if local_ip is None:
-            secho(
-                "Cannot get local ip, vizviewer will not be opened", fg="red", bold=True
-            )
+            secho("Cannot get local ip, vizviewer will not be opened", fg="red", bold=True)
             return
         url = f"http://{local_ip}:{port}"
         with Popen(
@@ -1374,9 +1272,7 @@ def trace(
 
 @main.command("view")
 @click.help_option("-h", "--help")
-@click.argument(
-    "profile", type=click.Path(dir_okay=False, readable=True, path_type=Path)
-)
+@click.argument("profile", type=click.Path(dir_okay=False, readable=True, path_type=Path))
 @click.option(
     "-p",
     "--port",
@@ -1393,12 +1289,11 @@ def trace(
     default=False,
     show_default=True,
 )
-def view_profile(port: int, flamegraph: Path, profile: Path, **_):
-    """
-    View the profile using vizviewer
-    """
-    from kazu.static import get_local_ip
+def view_profile(port: int, flamegraph: Path, profile: Path, **_) -> None:
+    """View the profile using vizviewer."""
     from subprocess import DEVNULL, Popen
+
+    from kazu.static import get_local_ip
 
     local_ip = get_local_ip()
     if local_ip is None:
@@ -1447,25 +1342,20 @@ def view_profile(port: int, flamegraph: Path, profile: Path, **_):
     type=click.Path(dir_okay=False, readable=True, path_type=Path),
     envvar=Env.KAZU_RUN_CONFIG_PATH,
 )
-def record_data(
-    conf: _InternalConfig, output_dir: Path, interval: float, run_config_path: Path
-):
-    """
-    Record data
-    """
-    from kazu.hardwares import sensors, screen
-    from kazu.signal_light import set_all_black, sig_light_registry, Color
-    from kazu.judgers import Breakers
+def record_data(conf: _InternalConfig, output_dir: Path, interval: float, run_config_path: Path) -> None:
+    """Record data."""
     from pandas import DataFrame
+
+    from kazu.hardwares import screen, sensors
+    from kazu.judgers import Breakers
+    from kazu.signal_light import Color, set_all_black, sig_light_registry
 
     with sig_light_registry as reg:
         set_red = reg.register_all("Record|Start Recording", Color.RED)
         set_white = reg.register_all("Record|Waiting for Recording", Color.WHITE)
 
     run_config = load_run_config(run_config_path)
-    is_pressed = Breakers.make_reboot_button_pressed_breaker(
-        conf.app_config, run_config
-    )
+    is_pressed = Breakers.make_reboot_button_pressed_breaker(conf.app_config, run_config)
 
     sensors.adc_io_open()
     screen.open(2)
@@ -1476,7 +1366,7 @@ def record_data(
     sensor_conf = conf.app_config.sensor
 
     def _conv_to_df(data_container: List[Tuple[int, ...]]):
-        pack = list(zip(*data_container))
+        pack = list(zip(*data_container, strict=False))
         col_names = [
             "Timestamp",
             "EDGE_FL",
@@ -1518,17 +1408,13 @@ def record_data(
         secho("Start recording|Salvo 1", fg="red", bold=True)
         set_red()
         while True:
-            recording_container.append(sensors.adc_all_channels() + (get_timestamp(),))
+            recording_container.append((*sensors.adc_all_channels(), get_timestamp()))
             sleep(interval)
             if is_pressed():
                 while is_pressed():
                     pass
-                secho(
-                    f"Start recording|Salvo {len(recorded_df) + 2}", fg="red", bold=True
-                )
-                recorded_df[f"record_{get_timestamp()}"] = _conv_to_df(
-                    recording_container
-                )
+                secho(f"Start recording|Salvo {len(recorded_df) + 2}", fg="red", bold=True)
+                recorded_df[f"record_{get_timestamp()}"] = _conv_to_df(recording_container)
                 recording_container.clear()
                 continue
     except KeyboardInterrupt:

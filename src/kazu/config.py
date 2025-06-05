@@ -1,13 +1,14 @@
+import contextlib
 from enum import Enum, auto
 from pathlib import Path
-from typing import Tuple, List, Self, Literal, TextIO, Any, Dict, Type, Optional
+from typing import Any, Dict, List, Literal, Optional, Self, TextIO, Tuple, Type
 
 from click import secho
 from colorama import Fore
-from pydantic import BaseModel, Field, NonNegativeInt, PositiveFloat, PositiveInt, NonNegativeFloat
+from pydantic import BaseModel, Field, NonNegativeFloat, NonNegativeInt, PositiveFloat, PositiveInt
 from pydantic.fields import FieldInfo
 from toml import dump, load
-from tomlkit import document, comment, dumps, TOMLDocument, table, nl
+from tomlkit import TOMLDocument, comment, document, dumps, nl, table
 from upic import TagDetector
 
 from kazu.logger import _logger
@@ -16,7 +17,6 @@ DEFAULT_APP_CONFIG_PATH = f"{Path.home().as_posix()}/.kazu/config.toml"
 
 
 class CounterHashable(BaseModel):
-
     def __hash__(self) -> int:
         return id(self)
 
@@ -34,7 +34,7 @@ class TagGroup(BaseModel):
     neutral_tag: Literal[0] = 0
     default_tag: int = TagDetector.Config.default_tag_id
 
-    def __init__(self, /, **data: Any):
+    def __init__(self, /, **data: Any) -> None:
         super().__init__(**data)
 
         match self.team_color:
@@ -136,7 +136,6 @@ class GradientConfig(BaseModel):
 
 
 class ScanConfig(BaseModel):
-
     front_max_tolerance: int = Field(default=760, description="Maximum tolerance for the front sensor.", gt=0, lt=4096)
     rear_max_tolerance: int = Field(default=760, description="Maximum tolerance for the rear sensor.", gt=0, lt=4096)
     left_max_tolerance: int = Field(default=760, description="Maximum tolerance for the left sensor.", gt=0, lt=4096)
@@ -167,7 +166,6 @@ class ScanConfig(BaseModel):
 
 
 class RandTurn(BaseModel):
-
     turn_speed: PositiveInt = Field(default=2300, description="Speed when turning.")
     turn_left_prob: float = Field(default=0.5, description="Probability of turning left.", ge=0, le=1.0)
     full_turn_duration: PositiveFloat = Field(default=0.25, description="Duration of a full turn.")
@@ -177,7 +175,6 @@ class RandTurn(BaseModel):
 
 
 class SearchConfig(BaseModel):
-
     use_gradient_move: bool = Field(default=True, description="Whether to use gradient move.")
     gradient_move_weight: PositiveFloat = Field(default=100, description="Weight for gradient move.")
     use_scan_move: bool = Field(default=True, description="Whether to use scan move.")
@@ -191,7 +188,6 @@ class SearchConfig(BaseModel):
 
 
 class RandWalk(BaseModel):
-
     use_straight: bool = Field(default=True, description="Whether to use straight movement.")
     straight_weight: PositiveFloat = Field(default=2, description="Weight for straight movement.")
 
@@ -300,7 +296,9 @@ class BackStageConfig(BaseModel):
 class StageConfig(BaseModel):
     gray_adc_off_stage_upper_threshold: int = Field(default=2630, description="Upper threshold for gray ADC off stage.")
     gray_adc_on_stage_lower_threshold: int = Field(default=2830, description="Lower threshold for gray ADC on stage.")
-    unclear_zone_tolerance:int = Field(default=90, description="Tolerance for judging if the car is on stage in unclear zone state.")
+    unclear_zone_tolerance: int = Field(
+        default=90, description="Tolerance for judging if the car is on stage in unclear zone state."
+    )
     unclear_zone_turn_speed: PositiveInt = Field(default=1500, description="Speed for turning in unclear zone.")
     unclear_zone_turn_duration: PositiveFloat = Field(default=0.6, description="Duration for turning in unclear zone.")
     unclear_zone_turn_left_prob: float = Field(default=0.5, description="Probability of turning left.", ge=0, le=1.0)
@@ -321,8 +319,7 @@ class RunConfig(CounterHashable):
 
     @classmethod
     def read_config(cls, fp: TextIO) -> Self:
-        """
-        Reads a configuration from a file object and returns an instance of the class.
+        """Reads a configuration from a file object and returns an instance of the class.
 
         Args:
             fp (TextIOWrapper): A file object containing the configuration data.
@@ -337,13 +334,13 @@ class RunConfig(CounterHashable):
 
     @classmethod
     def dump_config(cls, fp: TextIO, config: Self, with_desc: bool = True) -> None:
-        """
-        Dump the configuration data to a file object.
+        """Dump the configuration data to a file object.
 
         Args:
             fp (TextIO): The file object to write the configuration data to.
             config (Config): The configuration data to be dumped.
             with_desc (bool): Whether to add descriptions to the dump file.
+
         Returns:
             None
         """
@@ -354,8 +351,9 @@ class RunConfig(CounterHashable):
 
             # Create a new TOML document
             data: TOMLDocument = document()
-            import kazu
             import datetime
+
+            import kazu
 
             data.add(comment(f"Exported by Kazu-v{kazu.__version__} at {datetime.datetime.now()}"))
             # Recursive function to inject descriptions into the TOML document
@@ -380,24 +378,28 @@ class ContextVar(Enum):
 
     gradient_speed: NonNegativeInt = auto()
 
-    unclear_zone_gray:int=auto()
+    unclear_zone_gray: int = auto()
+
     @property
     def default(self) -> Any:
-        """
-        Get the default value for the context variable.
+        """Get the default value for the context variable.
 
         Returns:
             Any: The default value for the context variable.
         """
-        defaults = {"prev_salvo_speed": (0, 0, 0, 0), "is_aligned": False, "recorded_pack": (), "gradient_speed": 0,
-                    "unclear_zone_gray":0}
+        defaults = {
+            "prev_salvo_speed": (0, 0, 0, 0),
+            "is_aligned": False,
+            "recorded_pack": (),
+            "gradient_speed": 0,
+            "unclear_zone_gray": 0,
+        }
         assert self.name in defaults, "should always find a default value!"
         return defaults.get(self.name)
 
     @staticmethod
     def export_context() -> Dict[str, Any]:
-        """
-        Export the context variables and their default values as a dictionary.
+        """Export the context variables and their default values as a dictionary.
 
         Returns:
             Dict[str, Any]: A dictionary containing the names of the context variables as keys and their default values as values.
@@ -474,8 +476,7 @@ class APPConfig(CounterHashable):
 
     @classmethod
     def read_config(cls, fp: TextIO) -> Self:
-        """
-        Reads a configuration from a file object and returns an instance of the class.
+        """Reads a configuration from a file object and returns an instance of the class.
 
         Args:
             fp (TextIOWrapper): A file object containing the configuration data.
@@ -486,20 +487,19 @@ class APPConfig(CounterHashable):
         Raises:
             ValidationError: If the loaded configuration data fails validation.
         """
-
         import toml
 
         return cls.model_validate(toml.load(fp))
 
     @classmethod
     def dump_config(cls, fp: TextIO, config: Self, with_desc: bool = True) -> None:
-        """
-        Dump the configuration data to a file object.
+        """Dump the configuration data to a file object.
 
         Args:
             fp (TextIO): The file object to write the configuration data to.
             config (Config): The configuration data to be dumped.
             with_desc (bool): Whether to add descriptions to the dump file.
+
         Returns:
             None
         """
@@ -510,8 +510,9 @@ class APPConfig(CounterHashable):
 
             # Create a new TOML document
             data: TOMLDocument = document()
-            import kazu
             import datetime
+
+            import kazu
 
             data.add(comment(f"Exported by Kazu-v{kazu.__version__} at {datetime.datetime.now().timestamp()}"))
 
@@ -532,10 +533,9 @@ def inject_description_into_toml(
     desc_pack: Dict[str, Tuple[str | None, Dict | None]],
     toml_doc: TOMLDocument,
     raw_data: Dict[str, Any],
-    path: List[str] = None,
-):
-    """
-    Injects descriptions into a TOML document.
+    path: List[str] | None = None,
+) -> None:
+    """Injects descriptions into a TOML document.
 
     This function recursively iterates through a dictionary containing description information and sub-model fields.
     It adds these descriptions as comments to the TOML document. If the current item is a sub-model (i.e., contains
@@ -568,7 +568,7 @@ def inject_description_into_toml(
     # Iterate through the dictionary of description information and sub-model fields
     for key, (desc, sub_model_fields) in desc_pack.items():
         # Build the complete path for the current item
-        cur_path = path + [key]
+        cur_path = [*path, key]
 
         # If the current item is a sub-model, add the description (if any) to the TOML document and create a new table
         # to handle the sub-model fields
@@ -595,8 +595,7 @@ class _InternalConfig(BaseModel):
 
 
 def load_run_config(run_config_path: Path | None) -> RunConfig:
-    """
-    A function that loads the run configuration based on the provided run_config_path.
+    """A function that loads the run configuration based on the provided run_config_path.
 
     Parameters:
         run_config_path (Path | None): The path to the run configuration file.
@@ -609,14 +608,13 @@ def load_run_config(run_config_path: Path | None) -> RunConfig:
         with open(r_conf) as fp:
             run_config_path: RunConfig = RunConfig.read_config(fp)
     else:
-        secho(f"Loading DEFAULT run config", fg="yellow", bold=True)
+        secho("Loading DEFAULT run config", fg="yellow", bold=True)
         run_config_path = RunConfig()
     return run_config_path
 
 
 def load_app_config(app_config_path: Path | None) -> APPConfig:
-    """
-    A function that loads the application configuration based on the provided app_config_path.
+    """A function that loads the application configuration based on the provided app_config_path.
 
     Parameters:
         app_config_path (Path | None): The path to the application configuration file.
@@ -638,8 +636,7 @@ def load_app_config(app_config_path: Path | None) -> APPConfig:
 
 
 def extract_description(model: Type[BaseModel]) -> Dict[str, Any]:
-    """
-    Recursively extracts description information from a given model.
+    """Recursively extracts description information from a given model.
 
     This function first extracts the information of all fields in the model (including field names and related info).
     It then iterates through each field, processing its information. For each field, if the associated model is None,
@@ -657,15 +654,12 @@ def extract_description(model: Type[BaseModel]) -> Dict[str, Any]:
     """
 
     def _extract(model_field: FieldInfo) -> Tuple[str, Optional[Type[BaseModel]]]:
-
         ano = model_field.annotation
 
         is_model = False
 
-        try:
+        with contextlib.suppress(Exception):
             is_model = issubclass(ano, BaseModel)
-        except:
-            pass
 
         return model_field.description, ano if is_model else None
 

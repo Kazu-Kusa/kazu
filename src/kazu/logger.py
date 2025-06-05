@@ -8,9 +8,8 @@ _logger = logging.getLogger("kazu")
 coloredlogs.install(logger=_logger, level=logging.DEBUG)
 
 
-def set_log_level(level: int | str):
-    """
-    设置日志级别
+def set_log_level(level: int | str) -> None:
+    """设置日志级别
     :param level: 日志级别
     :return:
     """
@@ -18,7 +17,7 @@ def set_log_level(level: int | str):
 
 
 def int_to_rgb(color_int):
-    """将整数颜色值转换为RGB元组"""
+    """将整数颜色值转换为RGB元组."""
     red = (color_int >> 16) & 0xFF
     green = (color_int >> 8) & 0xFF
     blue = color_int & 0xFF
@@ -26,20 +25,19 @@ def int_to_rgb(color_int):
 
 
 def colorful(string: str, r: int, g: int, b: int) -> str:
-    """生成带有指定RGB颜色的文本"""
+    """生成带有指定RGB颜色的文本."""
     # 构建ANSI转义序列
     return f"\033[38;2;{r};{g};{b}m{string}\033[0m{Style.RESET_ALL}"
 
 
 def colorful_int(string, color: int) -> str:
-    """color with a single 24-bit number"""
+    """Color with a single 24-bit number."""
     return colorful(string, *int_to_rgb(color))
 
 
 set_log_level(logging.INFO)
 
 if __name__ == "__main__":
-
     _logger.debug("This is a debug log.")
     _logger.info("This is a info log.")
     _logger.warning("This is a warning log.")

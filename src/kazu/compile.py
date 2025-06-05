@@ -1,10 +1,10 @@
 from functools import lru_cache
-from typing import Callable, List, Tuple, TypeVar, Optional
+from typing import Callable, List, Optional, Tuple, TypeVar
 
 from mentabotix import (
-    MovingChainComposer,
-    CaseRegistry,
     Botix,
+    CaseRegistry,
+    MovingChainComposer,
     MovingState,
     MovingTransition,
     SamplerUsage,
@@ -12,16 +12,16 @@ from mentabotix import (
 )
 from pyuptech import Color
 
-from kazu.config import APPConfig, RunConfig, ContextVar
+from kazu.config import APPConfig, ContextVar, RunConfig
 from kazu.constant import (
     EdgeCodeSign,
-    SurroundingCodeSign,
     FenceCodeSign,
     ScanCodesign,
     SearchCodesign,
     StageCodeSign,
+    SurroundingCodeSign,
 )
-from kazu.hardwares import controller, tag_detector, menta, SamplerIndexes, sensors
+from kazu.hardwares import SamplerIndexes, controller, menta, sensors, tag_detector
 from kazu.judgers import Breakers
 from kazu.logger import _logger
 from kazu.signal_light import sig_light_registry
@@ -41,8 +41,7 @@ def make_edge_handler(
     normal_exit: MovingState = None,
     abnormal_exit: MovingState = None,
 ) -> Tuple[MovingState, MovingState, MovingState, List[MovingTransition]]:
-    """
-    根据应用和运行配置创建边缘处理函数。
+    """根据应用和运行配置创建边缘处理函数。.
 
     Args:
         app_config (APPConfig):  应用配置，包含传感器和其它配置。
@@ -63,7 +62,7 @@ def make_edge_handler(
 
     if app_config.debug.log_level == "DEBUG":
 
-        def _log_state():
+        def _log_state() -> None:
             _logger.debug("Entering Edge State")
 
         start_state.after_exiting.append(_log_state)
@@ -387,8 +386,7 @@ def make_surrounding_handler(
     normal_exit: MovingState = None,
     abnormal_exit: MovingState = None,
 ) -> Tuple[MovingState, MovingState, MovingState, List[MovingTransition]]:
-    """
-    构造一个处理周围环境信息的策略处理器。
+    """构造一个处理周围环境信息的策略处理器。.
 
     Args:
         app_config: APPConfig, 应用配置对象，包含传感器和行为配置。
@@ -411,7 +409,7 @@ def make_surrounding_handler(
 
     if app_config.debug.log_level == "DEBUG":
 
-        def _log_state():
+        def _log_state() -> None:
             _logger.debug("Entering Surr State")
 
         start_state.after_exiting.append(_log_state)
@@ -760,8 +758,7 @@ def make_scan_handler(
     run_config: RunConfig,
     end_state: MovingState = None,
 ) -> Tuple[List[MovingState], List[MovingTransition]]:
-    """
-    Generates a scan handler for the given application configuration, run configuration, and optional end state.
+    """Generates a scan handler for the given application configuration, run configuration, and optional end state.
 
     Args:
         app_config (APPConfig): The application configuration.
@@ -794,7 +791,7 @@ def make_scan_handler(
     )
     if app_config.debug.log_level == "DEBUG":
 
-        def _log_state():
+        def _log_state() -> None:
             _logger.debug("Entering Scan State")
 
         scan_state.after_exiting.append(_log_state)
@@ -917,8 +914,7 @@ def make_scan_handler(
         check_edge_breaker = Breakers.make_std_edge_full_breaker(app_config, run_config)
 
         def boolean_full_edge_breaker() -> bool:
-            """
-            converts the  edge breaker to a boolean edge breaker
+            """Converts the  edge breaker to a boolean edge breaker
             Returns:
 
             """
@@ -941,8 +937,7 @@ def make_scan_handler(
 def make_rand_turn_handler(
     app_config: APPConfig, run_config: RunConfig, end_state: MovingState = None
 ) -> Tuple[List[MovingState], List[MovingTransition]]:
-    """
-    Generates a handler for a random turn action.
+    """Generates a handler for a random turn action.
 
     Args:
         app_config (APPConfig): The application configuration.
@@ -952,7 +947,6 @@ def make_rand_turn_handler(
     Returns:
         Tuple[List[MovingState], List[MovingTransition]]: A tuple containing the list of states and the list of transitions.
     """
-
     end_state = end_state or MovingState.halt()
 
     conf = run_config.search.rand_turn
@@ -977,8 +971,7 @@ def make_rand_turn_handler(
 def make_gradient_move(
     app_config: APPConfig, run_config: RunConfig, is_salvo_end: bool = True, fall_back: bool = False
 ) -> MovingState:
-    """
-    Generates a MovingState object for a gradient move in a search algorithm.
+    """Generates a MovingState object for a gradient move in a search algorithm.
 
     Args:
         app_config (APPConfig): The application configuration.
@@ -1041,8 +1034,7 @@ def make_search_handler(
     start_state: MovingState = None,
     stop_state: MovingState = None,
 ) -> Tuple[List[MovingState], List[MovingTransition]]:
-    """
-    Generates a search handler for the given application configuration, run configuration, and optional start and stop states.
+    """Generates a search handler for the given application configuration, run configuration, and optional start and stop states.
 
     Args:
         app_config (APPConfig): The application configuration.
@@ -1095,8 +1087,7 @@ def make_fence_handler(
     start_state: MovingState = None,
     stop_state: MovingState = None,
 ) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
-    """
-    Generates a fence handler for a given app configuration, run configuration, and optional start state.
+    """Generates a fence handler for a given app configuration, run configuration, and optional start state.
 
     Args:
         app_config (APPConfig): The app configuration.
@@ -1107,13 +1098,12 @@ def make_fence_handler(
     Returns:
         Tuple[MovingState, MovingState, List[MovingTransition]]: A tuple containing the start state, stop state, and list of transitions.
     """
-
     start_state = start_state or continues_state.clone()
     stop_state = stop_state or MovingState.halt()
     transitions_pool: List[MovingTransition] = []
     if app_config.debug.log_level == "DEBUG":
 
-        def _log_state():
+        def _log_state() -> None:
             _logger.debug("Entering Fence State")
 
         start_state.after_exiting.append(_log_state)
@@ -1243,8 +1233,7 @@ def make_align_direction_handler(
     not_aligned_state: Optional[MovingState] = None,
     aligned_state: Optional[MovingState] = None,
 ) -> Tuple[List[MovingState], List[MovingTransition]]:
-    """
-    Constructs a state machine handler for aligning the direction.
+    """Constructs a state machine handler for aligning the direction.
 
     Parameters:
         app_config (APPConfig): The configuration object for the application.
@@ -1258,7 +1247,6 @@ def make_align_direction_handler(
     Raises:
         ValueError: If the align direction is invalid.
     """
-
     conf = run_config.fence
 
     match conf.direction_align_direction:
@@ -1296,8 +1284,7 @@ def make_align_direction_handler(
 def make_back_to_stage_handler(
     app_config: APPConfig, run_config: RunConfig, end_state: MovingState = None, **_
 ) -> Tuple[List[MovingState], List[MovingTransition], List[MovingState], List[MovingTransition]]:
-    """
-    Creates a state machine handler for moving back to the stage.
+    """Creates a state machine handler for moving back to the stage.
 
     Args:
         app_config (APPConfig): The configuration object for the application.
@@ -1307,7 +1294,6 @@ def make_back_to_stage_handler(
     Returns:
         Tuple[List[MovingState], List[MovingTransition]]: A tuple containing lists of states and transitions.
     """
-
     end_state = end_state or MovingState.halt()
     small_advance = MovingState(run_config.backstage.small_advance_speed)
     small_advance_transition = MovingTransition(run_config.backstage.small_advance_duration)
@@ -1389,8 +1375,7 @@ def make_back_to_stage_handler(
 def make_reboot_handler(
     app_config: APPConfig, run_config: RunConfig, end_state: MovingState = None
 ) -> Tuple[List[MovingState], List[MovingTransition]]:
-    """
-    Constructs a state machine handler for reboot sequences.
+    """Constructs a state machine handler for reboot sequences.
 
     Parameters:
         app_config: APPConfig, configuration object for application specifics including sensor details.
@@ -1459,8 +1444,7 @@ def make_reboot_handler(
 def make_rand_walk_handler(
     app_config: APPConfig, run_config: RunConfig, end_state: MovingState = None, **_
 ) -> Tuple[List[MovingState], List[MovingTransition]]:
-    """
-    Generates a random walk handler for the given run configuration and end state.
+    """Generates a random walk handler for the given run configuration and end state.
 
     Args:
         app_config (APPConfig): The application configuration containing the sensor details.
@@ -1488,11 +1472,11 @@ def make_rand_walk_handler(
     moves_seq = []
     weights = []
     if conf.use_turn:
-        for left_turn_spd, w in zip(conf.rand_turn_speeds, conf.rand_turn_speed_weights):
+        for left_turn_spd, w in zip(conf.rand_turn_speeds, conf.rand_turn_speed_weights, strict=False):
             moves_seq.append((-left_turn_spd, -left_turn_spd, left_turn_spd, left_turn_spd))
             weights.append(w * conf.turn_weight)
     if conf.use_straight:
-        for straight_spd, w in zip(conf.rand_straight_speeds, conf.rand_straight_speed_weights):
+        for straight_spd, w in zip(conf.rand_straight_speeds, conf.rand_straight_speed_weights, strict=False):
             moves_seq.append((straight_spd, straight_spd, straight_spd, straight_spd))
             weights.append(w * conf.straight_weight)
 
@@ -1511,8 +1495,7 @@ def make_std_battle_handler(
     app_config: APPConfig,
     run_config: RunConfig,
 ) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
-    """
-    Generates a standard battle handler for a given app configuration, run configuration, and optional tag group.
+    """Generates a standard battle handler for a given app configuration, run configuration, and optional tag group.
 
     Args:
         app_config (APPConfig): The application configuration.
@@ -1540,19 +1523,21 @@ def make_std_battle_handler(
         abnormal_exit=end_state.clone(),
     )
 
-    unclear_zone_start_state,_,unclear_zone_pack = make_unclear_zone_handler(app_config, run_config,normal_exit=end_state.clone())
+    unclear_zone_start_state, _, unclear_zone_pack = make_unclear_zone_handler(
+        app_config, run_config, normal_exit=end_state.clone()
+    )
 
     case_reg = CaseRegistry(StageCodeSign)
-    transition_pool = [*reboot_transitions_pack, *fence_pack, *stage_pack,*unclear_zone_pack]
+    transition_pool = [*reboot_transitions_pack, *fence_pack, *stage_pack, *unclear_zone_pack]
 
     (
         case_reg.batch_register(
-            [StageCodeSign.ON_STAGE_REBOOT, StageCodeSign.OFF_STAGE_REBOOT,StageCodeSign.UNCLEAR_ZONE_REBOOT],
+            [StageCodeSign.ON_STAGE_REBOOT, StageCodeSign.OFF_STAGE_REBOOT, StageCodeSign.UNCLEAR_ZONE_REBOOT],
             reboot_start_state,
         )
         .register(StageCodeSign.ON_STAGE, on_stage_start_state)
         .register(StageCodeSign.OFF_STAGE, fence_start_state)
-        .register(StageCodeSign.UNCLEAR_ZONE,unclear_zone_start_state)
+        .register(StageCodeSign.UNCLEAR_ZONE, unclear_zone_start_state)
     )
 
     check_trans = MovingTransition(
@@ -1570,8 +1555,7 @@ def make_on_stage_handler(
     start_state: MovingState = None,
     abnormal_exit: MovingState = None,
 ) -> Tuple[MovingState, List[MovingTransition]]:
-    """
-    创建一个舞台处理程序，用于管理机器人的移动状态和过渡。
+    """创建一个舞台处理程序，用于管理机器人的移动状态和过渡。.
 
     Parameters:
         app_config: 应用配置对象，包含通用的应用配置信息。
@@ -1584,7 +1568,6 @@ def make_on_stage_handler(
         异常退出状态；
         包含所有边缘、环绕和搜索处理状态转换的列表。
     """
-
     conf = run_config.strategy
     start_state = start_state or continues_state.clone()
     abnormal_exit = abnormal_exit or MovingState.halt()
@@ -1613,7 +1596,7 @@ def make_on_stage_handler(
         transitions.extend(search_pack[-1])
     if not any(transitions):
         _logger.warning(
-            f"No transition is generated for on stage handler, since the strategy config does not use any component."
+            "No transition is generated for on stage handler, since the strategy config does not use any component."
         )
     return start_state, transitions
 
@@ -1622,8 +1605,7 @@ def make_always_on_stage_battle_handler(
     app_config: APPConfig,
     run_config: RunConfig,
 ) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
-    """
-    Generates a handler for an always-on stage battle.
+    """Generates a handler for an always-on stage battle.
 
     Args:
         app_config (APPConfig): The application configuration.
@@ -1654,8 +1636,7 @@ def make_always_off_stage_battle_handler(
     app_config: APPConfig,
     run_config: RunConfig,
 ) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
-    """
-    Generates a battle handler for when the stage is always off.
+    """Generates a battle handler for when the stage is always off.
 
     Args:
         app_config (APPConfig): The application configuration.
@@ -1690,8 +1671,7 @@ def make_always_off_stage_battle_handler(
 
 @lru_cache(1)
 def make_salvo_end_state() -> MovingState:
-    """
-    创建并返回一个表示循环轮结束状态的移动状态。
+    """创建并返回一个表示循环轮结束状态的移动状态。.
 
     这个状态在进入时会将之前的循环轮速度重置为零，以准备下一次循环轮。
 
@@ -1706,14 +1686,10 @@ def make_salvo_end_state() -> MovingState:
     return end_state
 
 
-
 def make_unclear_zone_handler(
-        app_config: APPConfig,
-        run_config: RunConfig,
-        normal_exit:Optional[MovingState]=None
+    app_config: APPConfig, run_config: RunConfig, normal_exit: Optional[MovingState] = None
 ) -> Tuple[MovingState, MovingState, List[MovingTransition]]:
-    """
-    Generate a handler for the unclear zone.
+    """Generate a handler for the unclear zone.
 
     Args:
         app_config: Application configuration containing sensor information.
@@ -1723,13 +1699,13 @@ def make_unclear_zone_handler(
     Returns:
         A tuple containing: initial state, normal exit state, and a list of moving transitions.
     """
-
     # Get stage configuration from runtime config
     conf = run_config.stage
 
     # Create the initial state: random direction turn
-    start_state = MovingState.rand_dir_turn(controller, turn_speed=conf.unclear_zone_turn_speed,
-                                            turn_left_prob=conf.unclear_zone_turn_left_prob)
+    start_state = MovingState.rand_dir_turn(
+        controller, turn_speed=conf.unclear_zone_turn_speed, turn_left_prob=conf.unclear_zone_turn_left_prob
+    )
 
     # Create the normal exit state: halt movement
     normal_exit = normal_exit or MovingState.halt()
@@ -1737,14 +1713,17 @@ def make_unclear_zone_handler(
     # Register context executor to update gray value
     updater = controller.register_context_executor(
         menta.construct_inlined_function(
-            usages=[SamplerUsage(used_sampler_index=SamplerIndexes.adc_all,
-                                required_data_indexes=[app_config.sensor.gray_adc_index])],  # Specify ADC sample index
+            usages=[
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.adc_all, required_data_indexes=[app_config.sensor.gray_adc_index]
+                )
+            ],  # Specify ADC sample index
             judging_source="ret=s0",  # Gray value stored in s0
             return_type=int,
-            function_name="get_unclear_zone_gray"
+            function_name="get_unclear_zone_gray",
         ),
         output_keys=[ContextVar.unclear_zone_gray.name],
-        function_name="update_unclear_zone_gray"
+        function_name="update_unclear_zone_gray",
     )
 
     # Register context getter for gray value
@@ -1752,24 +1731,28 @@ def make_unclear_zone_handler(
 
     # Construct function to judge if in unclear zone
     judge = menta.construct_inlined_function(
-        usages=[SamplerUsage(used_sampler_index=SamplerIndexes.adc_all,
-                            required_data_indexes=[app_config.sensor.gray_adc_index])],
+        usages=[
+            SamplerUsage(
+                used_sampler_index=SamplerIndexes.adc_all, required_data_indexes=[app_config.sensor.gray_adc_index]
+            )
+        ],
         extra_context={"getter": getter},
         judging_source=f"ret=abs(s0-getter())>{conf.unclear_zone_tolerance}",  # Check if gray value difference exceeds tolerance
         return_type=bool,
-        function_name="judge_unclear_zone"
+        function_name="judge_unclear_zone",
     )
 
     # Append updater to actions after exiting initial state
     start_state.after_exiting.append(updater)
 
     # Build state transition structure
-    [_, transitions] = (composer
-                        .init_container()
-                        .add(start_state)
-                        .add(MovingTransition(conf.unclear_zone_turn_duration, breaker=judge))  # Add transition condition
-                        .add(normal_exit)
-                        .export_structure())
+    [_, transitions] = (
+        composer.init_container()
+        .add(start_state)
+        .add(MovingTransition(conf.unclear_zone_turn_duration, breaker=judge))  # Add transition condition
+        .add(normal_exit)
+        .export_structure()
+    )
 
     # Return initial state, normal exit state, and transition list
     return start_state, normal_exit, transitions

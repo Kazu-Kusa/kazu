@@ -31,9 +31,7 @@ menta = Menta(
 
 @dataclass
 class SamplerIndexes:
-    """
-    Indexes of the samplers in the menta module.
-    """
+    """Indexes of the samplers in the menta module."""
 
     adc_all: int = 0
     io_all: int = 1
@@ -45,8 +43,7 @@ class SamplerIndexes:
 
 
 def inited_controller(app_config: APPConfig) -> CloseLoopController:
-    """
-    Initializes the controller with the given configuration.
+    """Initializes the controller with the given configuration.
 
     Args:
         app_config (APPConfig): The application configuration containing the motor information and port.
@@ -71,8 +68,7 @@ def inited_controller(app_config: APPConfig) -> CloseLoopController:
 
 
 def inited_tag_detector(app_config: APPConfig, retry_interval: float = 0.5) -> TagDetector:
-    """
-    Initializes the tag detector with the given configuration.
+    """Initializes the tag detector with the given configuration.
 
     Args:
         retry_interval (float, optional): The retry interval in seconds. Defaults to 0.5.
@@ -99,7 +95,6 @@ def inited_tag_detector(app_config: APPConfig, retry_interval: float = 0.5) -> T
         sleep(retry_interval)
         success, _ = tag_detector.camera_device.read()
         if success:
-
             _logger.info("Camera is successfully opened !")
         else:
             _logger.critical(f"Failed to open Camera-{app_config.vision.camera_device_id}")

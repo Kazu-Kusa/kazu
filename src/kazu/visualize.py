@@ -1,7 +1,7 @@
 from click import secho
 
 
-def print_colored_toml(toml_content):
+def print_colored_toml(toml_content) -> None:
     # 假设 toml_content 是一个字符串形式的 TOML 数据
     lines = toml_content.split("\n")
     for line in lines:

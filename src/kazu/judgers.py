@@ -4,20 +4,18 @@ from typing import Callable, Tuple
 
 from mentabotix import SamplerUsage
 
-from kazu.config import APPConfig, RunConfig, ContextVar, TagGroup
-from kazu.constant import EdgeWeights, Attitude, ScanWeights, StageWeight, SurroundingWeights, FenceWeights, Axis
-from kazu.hardwares import controller, menta, SamplerIndexes, tag_detector
+from kazu.config import APPConfig, ContextVar, RunConfig, TagGroup
+from kazu.constant import Attitude, Axis, EdgeWeights, FenceWeights, ScanWeights, StageWeight, SurroundingWeights
+from kazu.hardwares import SamplerIndexes, controller, menta, tag_detector
 from kazu.logger import _logger
 from kazu.static import make_query_table
 
 
 class Breakers:
-
     @staticmethod
     @lru_cache(maxsize=None)
     def make_std_edge_rear_breaker(app_config: APPConfig, run_config: RunConfig) -> Callable[[], bool]:
-        """
-        Constructs a standard function to detect edge at the rear direction,
+        """Constructs a standard function to detect edge at the rear direction,.
 
         Parameters:
         - app_config: Configuration object for the application, holding sensor indices among other settings.
@@ -52,8 +50,7 @@ class Breakers:
     @staticmethod
     @lru_cache(maxsize=None)
     def make_std_edge_front_breaker(app_config: APPConfig, run_config: RunConfig) -> Callable[[], bool]:
-        """
-        Constructs a standard function to detect edge at the front direction,
+        """Constructs a standard function to detect edge at the front direction,.
 
         Parameters:
         - app_config: Configuration object for the application, holding sensor indices among other settings.
@@ -91,8 +88,7 @@ class Breakers:
     @staticmethod
     @lru_cache(maxsize=None)
     def make_std_edge_full_breaker(app_config: APPConfig, run_config: RunConfig) -> Callable[[], int]:
-        """
-        Constructs a standard function to detect edge at both front and rear directions,
+        """Constructs a standard function to detect edge at both front and rear directions,.
 
         Parameters:
         - app_config: Configuration object for the application, holding sensor indices among other settings.
@@ -125,13 +121,12 @@ class Breakers:
                 "ret=sum(["
                 + ",".join(
                     f"({lt}>s{s_id} or {ut}<s{s_id})*{wt}"
-                    for s_id, lt, ut, wt in zip(range(4), lt_seq, ut_seq, EdgeWeights.export_std_weight_seq())
+                    for s_id, lt, ut, wt in zip(range(4), lt_seq, ut_seq, EdgeWeights.export_std_weight_seq(), strict=False)
                 )
                 + "])"
             ]
         ctx = {}
         if app_config.debug.log_level == "DEBUG":
-
             ctx["_logger"] = _logger
             source.append('_logger.debug(f"Edge Code: {ret}")')
 
@@ -170,8 +165,7 @@ class Breakers:
     @staticmethod
     @lru_cache(maxsize=None)
     def make_std_turn_to_front_breaker(app_config: APPConfig, run_config: RunConfig) -> Callable[[], bool]:
-        """
-        Constructs a standard function to detect the timing to stop the turning action, impl by checking the front obstacles
+        """Constructs a standard function to detect the timing to stop the turning action, impl by checking the front obstacles.
 
         Parameters:
         - app_config: Configuration object for the application, holding sensor indices among other settings.
@@ -206,29 +200,27 @@ class Breakers:
                 return_raw=False,
                 function_name="std_turn_to_front_breaker",
             )
-        else:
-            return menta.construct_inlined_function(
-                usages=[
-                    SamplerUsage(
-                        used_sampler_index=SamplerIndexes.io_all,
-                        required_data_indexes=[
-                            app_config.sensor.gray_io_left_index,  # s0
-                            app_config.sensor.gray_io_right_index,  # s1
-                        ],
-                    ),
-                ],
-                judging_source=f"ret=s0=={activate} or s1=={activate}",
-                return_type=bool,
-                return_raw=False,
-                function_name="std_turn_to_front_breaker",
-            )
+        return menta.construct_inlined_function(
+            usages=[
+                SamplerUsage(
+                    used_sampler_index=SamplerIndexes.io_all,
+                    required_data_indexes=[
+                        app_config.sensor.gray_io_left_index,  # s0
+                        app_config.sensor.gray_io_right_index,  # s1
+                    ],
+                ),
+            ],
+            judging_source=f"ret=s0=={activate} or s1=={activate}",
+            return_type=bool,
+            return_raw=False,
+            function_name="std_turn_to_front_breaker",
+        )
 
     @staticmethod
     @lru_cache(maxsize=None)
     def make_std_atk_breaker(app_config: APPConfig, run_config: RunConfig) -> Callable[[], bool]:
-        """
-        Constructs a standard function to detect the timing to stop the atk action,
-        impl by checking both the front obstacles and the edge of the stage
+        """Constructs a standard function to detect the timing to stop the atk action,
+        impl by checking both the front obstacles and the edge of the stage.
 
         Parameters:
         - app_config: Configuration object for the application, holding sensor indices among other settings.
@@ -270,9 +262,8 @@ class Breakers:
     @staticmethod
     @lru_cache(maxsize=None)
     def make_atk_breaker_with_edge_sensors(app_config: APPConfig, run_config: RunConfig) -> Callable[[], bool]:
-        """
-        Constructs a standard function to detect the timing to stop the atk action,
-        impl by checking both the front obstacles and the edge of the stage
+        """Constructs a standard function to detect the timing to stop the atk action,
+        impl by checking both the front obstacles and the edge of the stage.
 
         Parameters:
         - app_config: Configuration object for the application, holding sensor indices among other settings.
@@ -321,9 +312,8 @@ class Breakers:
     @staticmethod
     @lru_cache(maxsize=None)
     def make_std_stage_align_breaker(app_config: APPConfig, run_config: RunConfig) -> Callable[[], bool]:
-        """
-        Constructs a standard function to detect the timing to stop the turning action,
-        impl by checking obstacles in both front and rear
+        """Constructs a standard function to detect the timing to stop the turning action,
+        impl by checking obstacles in both front and rear.
 
         Parameters:
         - app_config: Configuration object for the application, holding sensor indices among other settings.
@@ -358,9 +348,8 @@ class Breakers:
     @staticmethod
     @lru_cache(maxsize=None)
     def make_stage_align_breaker_mpu(app_config: APPConfig, run_config: RunConfig) -> Callable[[], bool]:
-        """
-        Constructs a standard function to detect the timing to stop the turning action,
-        impl by checking obstacles in the front and checking the mpu angle
+        """Constructs a standard function to detect the timing to stop the turning action,
+        impl by checking obstacles in the front and checking the mpu angle.
 
         Parameters:
         - app_config: Configuration object for the application, holding sensor indices among other settings.
@@ -403,8 +392,8 @@ class Breakers:
     @staticmethod
     @lru_cache(maxsize=None)
     def make_std_fence_breaker(app_config: APPConfig, run_config: RunConfig) -> Callable[[], int]:
-        """
-        Divide control flow to corresponding handle.
+        """Divide control flow to corresponding handle.
+
         Args:
             app_config:
             run_config:
@@ -457,8 +446,7 @@ class Breakers:
     @staticmethod
     @lru_cache(maxsize=None)
     def make_lr_sides_blocked_breaker(app_config: APPConfig, run_config: RunConfig) -> Callable[[], bool]:
-        """
-        Constructs a function to judge if the left and right sides are blocked based on sensor data.
+        """Constructs a function to judge if the left and right sides are blocked based on sensor data.
 
         Args:
             app_config: APPConfig object containing sensor configurations.
@@ -484,8 +472,7 @@ class Breakers:
     @staticmethod
     @lru_cache(maxsize=None)
     def make_align_direction_breaker_mpu(app_config: APPConfig, run_config: RunConfig) -> Callable[[], bool]:
-        """
-        Generates a function that determines whether the alignment of a direction has breached the specified yaw tolerance.
+        """Generates a function that determines whether the alignment of a direction has breached the specified yaw tolerance.
 
         This function is designed to be used within a system that monitors and controls the directional alignment,
         typically in applications involving autonomous vehicles, drones, or any system requiring precise orientation control.
@@ -521,8 +508,7 @@ class Breakers:
     @staticmethod
     @lru_cache(maxsize=None)
     def make_std_align_direction_breaker(app_config: APPConfig, run_config: RunConfig) -> Callable[[], bool]:
-        """
-        Creates a function that checks if the alignment direction is correct based on the sensor and run configurations.
+        """Creates a function that checks if the alignment direction is correct based on the sensor and run configurations.
 
         Parameters:
         - app_config (APPConfig): The application configuration object, containing sensor indices and other settings.
@@ -589,8 +575,7 @@ class Breakers:
     @staticmethod
     @lru_cache(maxsize=None)
     def make_std_scan_breaker(app_config: APPConfig, run_config: RunConfig) -> Callable[[], int]:
-        """
-        Generates a function that acts as a breaker for standard scanning.
+        """Generates a function that acts as a breaker for standard scanning.
 
         Args:
             app_config (APPConfig): The application configuration.
@@ -658,9 +643,7 @@ class Breakers:
     @staticmethod
     @lru_cache(maxsize=None)
     def make_std_stage_breaker(app_config: APPConfig, run_config: RunConfig) -> Callable[[], int]:
-        """
-        Creates a function that determines the stage break condition, dividing the control flow to reboot/on stage/off stage
-
+        """Creates a function that determines the stage break condition, dividing the control flow to reboot/on stage/off stage.
 
         This function is designed to return a callable object that, when called, judges whether the current stage should transition
         based on the values of gray-scale ADC and reboot button, and returns the corresponding stage transition score.
@@ -672,7 +655,6 @@ class Breakers:
         Returns:
             Callable[[], int]: A callable object that takes no arguments and returns an integer value representing the stage transition score.
         """
-
         # Obtain the current stage configuration from the runtime configuration
         conf = run_config.stage
         # Construct an inline function that judges stage transition conditions using the menta library
@@ -692,8 +674,7 @@ class Breakers:
                     ],
                 ),
             ],
-            judging_source=
-            f"ret={StageWeight.STAGE}*(s0<={conf.gray_adc_off_stage_upper_threshold})"
+            judging_source=f"ret={StageWeight.STAGE}*(s0<={conf.gray_adc_off_stage_upper_threshold})"
             f"+{StageWeight.UNCLEAR}*({conf.gray_adc_off_stage_upper_threshold}<s0<{conf.gray_adc_on_stage_lower_threshold})"
             f"+{StageWeight.REBOOT}*(s1=={run_config.boot.button_io_activate_case_value})",
             return_type=int,
@@ -704,8 +685,7 @@ class Breakers:
     @staticmethod
     @lru_cache(maxsize=None)
     def make_always_on_stage_breaker(app_config: APPConfig, run_config: RunConfig) -> Callable[[], int]:
-        """
-        Creates a function that determines the stage break condition, always considering the stage to be on.
+        """Creates a function that determines the stage break condition, always considering the stage to be on.
 
         Args:
             app_config (APPConfig): Configuration object for the application, holding sensor setup details.
@@ -747,8 +727,7 @@ class Breakers:
     @staticmethod
     @lru_cache(maxsize=None)
     def make_always_off_stage_breaker(app_config: APPConfig, run_config: RunConfig) -> Callable[[], int]:
-        """
-        Creates a function that determines the stage break condition, always considering the stage to be off.
+        """Creates a function that determines the stage break condition, always considering the stage to be off.
 
         Args:
             app_config (APPConfig): Configuration object for the application, holding sensor setup details.
@@ -761,7 +740,6 @@ class Breakers:
         which evaluates the stage based on sensor inputs (ADC for gray data, and IO for reboot button status).
         The constructed function follows a predefined logic to decide between stage continuation or a reboot scenario.
         """
-
         # Construct an inlined function with specific sampler usages and decision logic:
         # - Uses ADC sampler to read gray data (s0).
         # - Monitors IO sampler for reboot button state (s1).
@@ -798,8 +776,7 @@ class Breakers:
     @staticmethod
     @lru_cache(maxsize=None)
     def make_surr_breaker(app_config: APPConfig, run_config: RunConfig) -> Callable[[], int]:
-        """
-        创建一个用于处理周边环境感知的闭包函数。
+        """创建一个用于处理周边环境感知的闭包函数。.
 
         根据应用和运行配置，以及团队颜色，配置和构建用于判断周围环境状况的逻辑。
         当使用摄像头时，该函数会考虑视觉标签的信息；
@@ -848,7 +825,7 @@ class Breakers:
 
         # 使用Menta工具构建闭包函数，用于判断周围环境状况
         # 函数将根据传感器数据（IO和ADC）返回一个综合评估值
-        surr_full_breaker = menta.construct_inlined_function(
+        return menta.construct_inlined_function(
             usages=[
                 SamplerUsage(
                     used_sampler_index=SamplerIndexes.io_all,
@@ -875,13 +852,11 @@ class Breakers:
             return_raw=False,
             function_name="surrounding_breaker_with_cam",
         )
-        return surr_full_breaker
 
     @staticmethod
     @lru_cache(maxsize=None)
     def make_reboot_button_pressed_breaker(app_config: APPConfig, run_config: RunConfig) -> Callable[[], bool]:
-        """
-        Generates a function that acts as a breaker for the reboot button pressed.
+        """Generates a function that acts as a breaker for the reboot button pressed.
 
         Args:
             app_config (APPConfig): The application configuration.
@@ -899,7 +874,6 @@ class Breakers:
         The judging source is constructed based on the provided configuration.
         The function name is set to "reboot_button_pressed_breaker".
         """
-
         return menta.construct_inlined_function(
             usages=[
                 SamplerUsage(
@@ -920,8 +894,7 @@ class Breakers:
     @staticmethod
     @lru_cache(maxsize=None)
     def make_check_gray_adc_for_scan_breaker(app_config: APPConfig, run_config: RunConfig) -> Callable[[], bool]:
-        """
-        Generates a function that acts as a breaker for the gray ADC data.
+        """Generates a function that acts as a breaker for the gray ADC data.
 
         Args:
             app_config (APPConfig): The application configuration.
@@ -939,7 +912,6 @@ class Breakers:
         The judging source is constructed based on the provided configuration.
         The function name is set to "check_gray_adc_for_scan_breaker".
         """
-
         return menta.construct_inlined_function(
             usages=[
                 SamplerUsage(
@@ -958,8 +930,7 @@ class Breakers:
     @staticmethod
     @lru_cache(maxsize=None)
     def make_is_on_stage_breaker(app_config: APPConfig, run_config: RunConfig) -> Callable[[], bool]:
-        """
-        Generates a function that acts as a breaker for the stage.
+        """Generates a function that acts as a breaker for the stage.
 
         Args:
             app_config (APPConfig): The application configuration.
@@ -977,7 +948,6 @@ class Breakers:
         The judging source is constructed based on the provided configuration.
         The function name is set to "is_on_stage_breaker".
         """
-
         return menta.construct_inlined_function(
             usages=[
                 SamplerUsage(
@@ -995,8 +965,7 @@ class Breakers:
     @staticmethod
     @lru_cache(maxsize=None)
     def make_back_stage_side_away_breaker(app_config: APPConfig, run_config: RunConfig) -> Callable[[], bool]:
-        """
-        Generates a function that acts as a breaker for the stage.
+        """Generates a function that acts as a breaker for the stage.
 
         Args:
             app_config (APPConfig): The application configuration.
@@ -1014,7 +983,6 @@ class Breakers:
         The judging source is constructed based on the provided configuration.
         The function name is set to "back_stage_side_away_breaker".
         """
-
         return menta.construct_inlined_function(
             usages=[SamplerUsage(used_sampler_index=SamplerIndexes.acc_all, required_data_indexes=[Axis.z])],
             judging_source=[f"ret=s0<{cos(radians(run_config.backstage.side_away_degree_tolerance))}"],

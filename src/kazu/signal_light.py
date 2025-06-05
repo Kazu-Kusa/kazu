@@ -1,5 +1,5 @@
 from types import MappingProxyType
-from typing import TypeAlias, Callable, Dict, Tuple, Optional, Self
+from typing import Callable, Dict, Optional, Self, Tuple, TypeAlias
 
 from colorama import Fore
 from pyuptech import Color
@@ -18,23 +18,19 @@ ColorSetter: TypeAlias = Callable[[], None]
 __black__ = Color.BLACK.value
 
 
-def set_all_black():
-    """
-    Set all light to black, used to shut down or init the leds
-    """
+def set_all_black() -> None:
+    """Set all light to black, used to shut down or init the leds."""
     set_all(__black__)
 
 
 class SigLightRegistry(object):
-    """
-    A registry class for managing signal light purposes associated with color combinations.
+    """A registry class for managing signal light purposes associated with color combinations.
     It ensures uniqueness of color-purpose mappings and provides methods to register
     and display these associations.
     """
 
-    def __init__(self, init_registry: Optional[Dict[Tuple[int, int], str]] = None):
-        """
-        Initializes the signal light registry with an initial mapping.
+    def __init__(self, init_registry: Optional[Dict[Tuple[int, int], str]] = None) -> None:
+        """Initializes the signal light registry with an initial mapping.
 
         Args:
             init_registry (Optional[Dict[Tuple[int, int], str]]):
@@ -61,12 +57,10 @@ class SigLightRegistry(object):
 
     @staticmethod
     def get_enum_color_name(color: Tuple[Color, Color]) -> Tuple[str, str]:
-
         return color[0].name, color[1].name
 
     def _register(self, color: Tuple[Color, Color], purpose: str) -> Self:
-        """
-        Registers a new color combination with its purpose in the registry.
+        """Registers a new color combination with its purpose in the registry.
 
         Args:
             color (Tuple[Color, Color]): The color combination to register.
@@ -79,22 +73,21 @@ class SigLightRegistry(object):
             SigLightRegistry: The current instance for method chaining.
         """
         if color == (Color.BLACK, Color.BLACK):
-            raise ValueError(f"All black color is reserved to init the led, you can not register it as signal")
+            raise ValueError("All black color is reserved to init the led, you can not register it as signal")
         if (key := self.make_key(color)) in self._registry:
             raise ValueError(
                 f"{self.get_enum_color_name(color)} is already registered with the purpose of <{self._registry.get(key)}>! Can not register it with <{purpose}>!"
             )
         if tuple(reversed(key)) in self._registry:
             raise ValueError(
-                f"You can't register {(name:=self.get_enum_color_name(color))} with <{purpose}>! Because a mirrored version of {name} is already registered."
+                f"You can't register {(name := self.get_enum_color_name(color))} with <{purpose}>! Because a mirrored version of {name} is already registered."
             )
-        _logger.debug(f"Register SigLight{color} for <{purpose}>" f"\n{self.usage_table}")
+        _logger.debug(f"Register SigLight{color} for <{purpose}>\n{self.usage_table}")
         self._registry[key] = purpose
         return self
 
     def register_all(self, purpose: str, color: Color) -> ColorSetter:
-        """
-        Registers a color for usage where both lights in a pair display the same color,
+        """Registers a color for usage where both lights in a pair display the same color,
         and returns a setter function to apply this setting.
 
         Args:
@@ -113,8 +106,7 @@ class SigLightRegistry(object):
         return ctx.get(func_name)
 
     def register_singles(self, purpose: str, color_0: Color, color_1: Color) -> ColorSetter:
-        """
-        Registers a color pair for usage where lights can have different colors within a pair,
+        """Registers a color pair for usage where lights can have different colors within a pair,
         and returns a setter function to apply this setting.
 
         Args:
@@ -136,19 +128,17 @@ class SigLightRegistry(object):
 
     @property
     def usage_table(self) -> str:
-        """
-        Generates a formatted table displaying the current registry of color combinations and their purposes.
+        """Generates a formatted table displaying the current registry of color combinations and their purposes.
 
         Returns:
             str: A string representation of the registry table.
         """
-
         trunk = []
         for k, v in self._registry.items():
             name = self.get_key_color_name(k)
-            trunk.append((f"{colorful_int(name[0],k[0])}, {colorful_int(name[1],k[1])}", v))
+            trunk.append((f"{colorful_int(name[0], k[0])}, {colorful_int(name[1], k[1])}", v))
 
-        data = [["Color", "Purpose"]] + trunk
+        data = [["Color", "Purpose"], *trunk]
 
         table = SingleTable(data)
         table.inner_column_border = False
@@ -157,12 +147,11 @@ class SigLightRegistry(object):
 
     @property
     def mapping(self) -> MappingProxyType[Tuple[int, int], str]:
-        """The mapping of the usage registry"""
+        """The mapping of the usage registry."""
         return self._mapping
 
     def clear(self) -> Self:
-        """Clear the registry"""
-
+        """Clear the registry."""
         self._registry.clear()
         return self
 

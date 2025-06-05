@@ -1,4 +1,4 @@
-from socket import socket, AF_INET, SOCK_DGRAM
+from socket import AF_INET, SOCK_DGRAM, socket
 from typing import Dict, Tuple
 
 from mentabotix import MovingState
@@ -14,10 +14,7 @@ continues_state = MovingState(
 
 
 def make_query_table(tag_group: TagGroup) -> Dict[Tuple[int, bool], int]:
-    """
-
-
-    Args:
+    """Args:
         tag_group (TagGroup):
 
     Returns:
@@ -37,10 +34,8 @@ def make_query_table(tag_group: TagGroup) -> Dict[Tuple[int, bool], int]:
 
 
 def get_local_ip() -> str | None:
-    """
-
-    Returns:
-        str|None : the local ip
+    """Returns:
+    str|None : the local ip.
 
     """
     s = socket(AF_INET, SOCK_DGRAM)
@@ -49,8 +44,7 @@ def get_local_ip() -> str | None:
         s.connect(("8.8.8.8", 80))
         # 获取本地IP地址
         local_ip = s.getsockname()[0]
-    except Exception as e:
-        print(e)
+    except Exception:
         return None
     finally:
         s.close()
@@ -58,8 +52,7 @@ def get_local_ip() -> str | None:
 
 
 def get_timestamp() -> str:
-    """
-    Returns a string representing the current timestamp in the format "YYYY-MM-DD-HH-MM-SS-ms".
+    """Returns a string representing the current timestamp in the format "YYYY-MM-DD-HH-MM-SS-ms".
 
     :return: A string representing the current timestamp.
     :rtype: str
@@ -73,7 +66,6 @@ def get_timestamp() -> str:
     timestamp_format = "%Y-%m-%d-%H-%M-%S-%f"
 
     # 格式化时间戳为字符串，去除最后三位微秒（保留毫秒）
-    timestamp_str = now.strftime(timestamp_format)[:-3]
+    return now.strftime(timestamp_format)[:-3]
 
     # 返回格式化后的字符串
-    return timestamp_str
