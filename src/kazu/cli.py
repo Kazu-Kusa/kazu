@@ -1709,7 +1709,71 @@ def trace(
     port: int,
     **_,
 ) -> None:
-    """Trace the std battle using viztracer."""
+    """Trace the standard battle execution using viztracer for performance profiling.
+
+    Profiles the robot's battle execution cycle by running it for a specified number
+    of iterations while collecting detailed performance data with viztracer.
+
+    Args:
+        conf (_InternalConfig): Internal configuration object containing app configuration
+            settings for hardware initialization and behavior parameters.
+        run_config_path (Path): Path to the run configuration file containing battle
+            parameters and behavior thresholds.
+        output_path (Path): File path where the viztracer profile will be saved,
+            typically as a JSON file.
+        salvo (int): Number of battle cycles to execute during profiling. Higher values
+            provide more comprehensive profiles but take longer to run.
+        disable_view_profile (bool): If True, skips launching the visualization server
+            after profile data collection completes.
+        port (int): Network port to use for the viztracer visualization server if
+            profile viewing is enabled.
+        **_: Additional keyword arguments (ignored).
+
+    Returns:
+        None
+
+    Description:
+        This function performs the following operations:
+
+        1. Environment Setup:
+           - Creates necessary directories for profile output
+           - Initializes viztracer for performance profiling
+           - Loads run configuration from specified path
+           - Opens all required hardware interfaces
+
+        2. Hardware Initialization:
+           - Initializes sensors (ADC, IO, MPU6500)
+           - Sets up tag detector with camera
+           - Configures motor controller with context variables
+           - Clears all signal lights for clean startup
+
+        3. Profiling Execution:
+           - Assembles the standard on-stage battle schema
+           - Compiles the execution function with named reference
+           - Starts viztracer data collection
+           - Runs the battle function for specified number of iterations
+           - Stops data collection
+
+        4. Resource Cleanup:
+           - Resets all signal lights
+           - Releases camera and tag detector resources
+           - Sends motor reset commands and closes controller
+           - Closes sensor interfaces
+           - Saves profile data to specified output path
+
+        5. Profile Visualization (if enabled):
+           - Determines local IP address for server access
+           - Launches vizviewer server on specified port
+           - Provides access URL in terminal
+           - Maintains server until user enters quit command
+
+    Note:
+        - Profile data can be used to identify performance bottlenecks
+        - The visualization server requires network connectivity
+        - Resource cleanup is performed regardless of execution success
+        - All hardware interfaces are properly initialized and released
+        - Profile visualization requires the vizviewer tool to be installed
+    """
     from bdmc import CMD
     from viztracer import VizTracer
 
@@ -1719,19 +1783,14 @@ def trace(
     from kazu.signal_light import set_all_black
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-
     traver = VizTracer()
-
     run_config = load_run_config(run_config_path)
-
     app_config = conf.app_config
-
     sensors.adc_io_open().MPU6500_Open()
     set_all_black()
     tag_detector = inited_tag_detector(app_config).apriltag_detect_start()
     con = inited_controller(app_config)
     con.context.update(ContextVar.export_context())
-
     botix.token_pool = assembly_NGS_schema(app_config, run_config)
     stage_func = botix.compile(function_name="std_battle")
     seq = (0,) * salvo
@@ -1739,13 +1798,11 @@ def trace(
     for _ in seq:
         stage_func()
     traver.stop()
-
     set_all_black()
     tag_detector.apriltag_detect_end().release_camera()
     con.send_cmd(CMD.RESET).close()
     sensors.adc_io_close()
     traver.save(output_path.as_posix())
-
     if not disable_view_profile:
         from subprocess import DEVNULL, Popen
 
@@ -1788,8 +1845,51 @@ def trace(
     default=False,
     show_default=True,
 )
-def view_profile(port: int, flamegraph: Path, profile: Path, **_) -> None:
-    """View the profile using vizviewer."""
+def view_profile(port: int, flamegraph: bool, profile: Path, **_) -> None:
+    """View the profile using vizviewer for performance analysis.
+    
+    Launches a vizviewer server for visualizing performance profiling data collected
+    with viztracer, making it accessible through a web browser interface.
+
+    Args:
+        port (int): Network port to use for the vizviewer server. Default is 2024.
+        flamegraph (bool): If True, generates a flamegraph visualization of the profile data,
+            showing hierarchical function call relationships and timing. If False, displays
+            the standard timeline view.
+        profile (Path): File path to the profile data file (typically a .json file) generated
+            by viztracer that contains the performance metrics to visualize.
+        **_: Additional keyword arguments (ignored).
+
+    Returns:
+        None
+        
+    Description:
+        This function performs the following operations:
+
+        1. Network Setup:
+           - Determines the local machine's IP address for server access
+           - Constructs a URL for accessing the visualization web interface
+
+        2. Server Configuration:
+           - Configures vizviewer with the specified port and profile path
+           - Sets up optional flamegraph generation if requested
+
+        3. Server Management:
+           - Launches vizviewer in server-only mode as a background process
+           - Displays the access URL in the terminal for user navigation
+           - Maintains the server until the user enters the quit command
+           - Terminates the server process when finished
+
+        The function provides a convenient way to analyze performance bottlenecks
+        and execution flow using the collected profile data through an interactive
+        web-based visualization tool.
+
+    Note:
+        - Requires network connectivity for server operation
+        - The server is accessible to any device on the local network
+        - Profile data should be generated using the 'trac' command
+        - The quit command is defined by the QUIT constant (typically "quit")
+    """
     from subprocess import DEVNULL, Popen
 
     from kazu.static import get_local_ip
@@ -1842,7 +1942,60 @@ def view_profile(port: int, flamegraph: Path, profile: Path, **_) -> None:
     envvar=Env.KAZU_RUN_CONFIG_PATH,
 )
 def record_data(conf: _InternalConfig, output_dir: Path, interval: float, run_config_path: Path) -> None:
-    """Record data."""
+    """Record sensor data from robot into CSV files for analysis and debugging.
+    
+    Captures time-series data from all analog sensors at specified intervals, organizing 
+    recordings into separate files by recording session. Sessions are controlled using 
+    the robot's physical reboot button as a trigger.
+    
+    Args:
+        conf (_InternalConfig): Internal configuration object containing app configuration
+            with sensor mapping and hardware settings.
+        output_dir (Path): Directory where recorded CSV files will be saved. Created if
+            it doesn't exist.
+        interval (float): Time between sensor readings in seconds. Lower values provide
+            more detailed data but generate larger files.
+        run_config_path (Path): Path to the run configuration file containing threshold
+            values and behavior parameters.
+            
+    Returns:
+        None
+        
+    Description:
+        This function performs the following operations:
+        
+        1. Hardware Initialization:
+           - Opens ADC/IO interfaces for sensor access
+           - Initializes onboard LCD screen for status display
+           - Sets up visual indicators using signal lights
+           
+        2. Recording Process:
+           - Displays white signal lights while waiting for recording to start
+           - Uses reboot button as trigger to start/stop individual recording sessions
+           - Shows recording status on terminal and with red signal lights
+           - Collects timestamped sensor readings at specified intervals
+           
+        3. Data Collection:
+           - Records from all edge detection sensors (FL, FR, RL, RR)
+           - Records from all directional distance sensors (LEFT, RIGHT, FRONT, BACK)
+           - Records from grayscale sensor
+           - Timestamps each reading for correlation
+           
+        4. Data Storage:
+           - Converts collected data to pandas DataFrames
+           - Generates unique timestamped filenames for each recording session
+           - Saves data as CSV files in the specified output directory
+           - Maintains separate files for each recording session
+        
+        Multiple recording sessions can be created by repeatedly pressing the reboot
+        button, with each session saved as a separate CSV file in the output directory.
+        
+    Note:
+        - Recording continues indefinitely until interrupted with Ctrl+C
+        - The reboot button acts as both the start and stop trigger for sessions
+        - Files are named with timestamps to prevent overwriting previous recordings
+        - All hardware resources are properly released on exit
+    """
     from pandas import DataFrame
 
     from kazu.hardwares import screen, sensors
