@@ -84,13 +84,13 @@ def check_power(sensors: OnBoardSensors) -> bool:
     _logger.info("Start checking power supply.")
 
     try:
-        voltage = sensors.adc_all_channels()[-1] * 3.3 * 4.0 / 4096
+        voltage = sensors.adc_all_channels()[-1] * 3.3 * 4.0 / 4096 #formula copied from the uptech source code
     except Exception as e:
         _logger.error(f"Encounter exception: {e}")
         return False
     if voltage > 7.0:
-        _logger.info("Power supply is ready.")
+        _logger.info("Extension board power supply is ready.")
         return True
     else:
-        _logger.error(f"Power supply is not ready, low voltage: {voltage:2f}V.")
+        _logger.error(f"Extension board power supply is not ready, low voltage: {voltage:2f}V. Is the power supply plugged in the extension board?")
         return False
