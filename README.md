@@ -1,51 +1,50 @@
-# 🤖 Kazu
+# kazu
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Kazu-Kusa/kazu)
 [![Python 3.11](https://img.shields.io/badge/python-3.11-green.svg)](https://www.python.org/downloads/release/python-311/)
+[![Release Package](https://github.com/Kazu-Kusa/kazu/actions/workflows/auto-make-prerelease.yml/badge.svg)](https://github.com/Kazu-Kusa/kazu/actions/workflows/auto-make-prerelease.yml)
+
+[![Build Status](https://github.com/Kazu-Kusa/kazu/actions/workflows/build_on_push.yml/badge.svg)](
+https://github.com/Kazu-Kusa/kazu/actions/workflows/build_on_push.yml
+)
 
 ---
 
-## 📋 Table of Contents
-- [Installation](#installation)
-- [Configure KAZU](#configure-kazu)
-  - [AppConfig](#appconfig)
-  - [RunConfig](#runconfig)
-- [TODO](#todo)
 
-# 🚀 Installation
+# Installation
 
 This project uses `pdm` to manage dependencies, so you can use `pdm` to install it.
 ```shell
-# 🔄 upgrade pip using tuna mirror
+# upgrade pip using tuna mirror
 python -m pip --upgrade install pip -i https://pypi.tuna.tsinghua.edu.cn/simple
 
-# 🔧 config pip mirror, change it to tuna mirror
+# config pip mirror, change it to tuna mirror
 python -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
 
-# 📦 install pdm
+# install pdm
 python -m pip install pdm
 
-# 🔧 config pdm mirror, change it to tuna mirror either
+# config pdm mirror, change it to tuna mirror either
 pdm config pypi.url https://pypi.tuna.tsinghua.edu.cn/simple
 
-# 📥 clone the project repo to local
+# clone the project repo to local
 git clone https://github.com/Kazu-Kusa/kazu --depth=1
 
-# 📂 change directory to the cloned repo in the local
+# change directory to the cloned repo in the local
 cd ./kazu
 
-# ⚙️ run pdm to install the project
+# run pdm to install the project
 pdm install
 ```
 
 
-# ⚙️ Configure KAZU
+# Configure KAZU
 
-## 📝 AppConfig
+## AppConfig
 
 Configure the app config file using the `kazu config` command.
 
-For example:
+for example:
 ```shell
 kazu config debug.log_level DEBUG
 ```
@@ -56,7 +55,7 @@ If the Key-value pair is not specified, kazu config will display the current val
 kazu config
 ```
 
-You should see the details of config in console ✨:
+You should see the details of config in console
 ```shell
 
 [motion]
@@ -99,33 +98,34 @@ reboot_button_index  = 7
 
 ```
 
-In addition, you can change the appconfig values in the config file by directly editing it. 📄 The path of the App-config file is at `<USERHOME>/.kazu/config.toml`, also, if you are can change the directory in which app config file is stored by changing environment variable `KAZU_APP_CONFIG_PATH` 🔀
+In addition, you can change the appconfig values in the config file by directly editing it. The path of the App-config file is at `<USERHOME>/.kazu/config.toml`, also, if you are can change the directory in which app config file is stored by changing environment variable `KAZU_APP_CONFIG_PATH`
 
-## ⚡ RunConfig
+## RunConfig
 
-For runtime configuration, currently only supports direct editing the config file, `RunConfig` will not read any config file and will use built-in default run config while the user neither specify `--run-config-path` under related subcommands(e.g. `run`, `viz`, `trac`) nor set the environment variable `KAZU_RUN_CONFIG_PATH`.
+For runtime configuration, currently only supports direct editing the config file, `RunConfig` will not read any config file and will use built-in default run config  while the user neither specify `--run-config-path`  under related subcommands(e.g. `run`, `viz`, `trac`) nor set the environment variable `KAZU_RUN_CONFIG_PATH`.
 
-To get the template config file, you do as below, after which you should get a toml file like [this](./examples/run_config.toml), or [zh_CN ver](./examples/run_config_zh_CN.toml) 🌏.
+To get the template config file, you do as below, after which you should get a toml file like [this](./examples/run_config.toml), or  [zh_CN ver](./examples/run_config_zh_CN.toml).
 
 ```shell
-# 📤 export run config to ./run_config.toml 
+# export run config to ./run_config.toml 
 kazu config -r ./run_config.toml
 ```
 
 
-Use your favourite text editor to open `./run_config.toml`, you should see the default run config. 🔍
+Use your favourite text editor to open `./run_config.toml`, you should see the default run config. 
 
-You can make some tweak by reading the comment over each config item. After that you can feed the run config to the `kazu` as below:
+You can make some tweak by reading the comment over each config item. After that you can feed the run config to the `kazu` as below.
 
 ```shell
-# 🏃‍♂️ run with ./run_config.toml
+#run with ./run_config.toml
 kazu run -r ./run_config.toml
 
-# 📊 generate puml using ./run_config.toml
+#generate puml using ./run_config.toml
 kazu viz -r ./run_config.toml 
 ```
 
-## ✅ TODO
+## TODO
 
 - [x] divide stage cases into 3 categories: on stage, off stage, and unclear
 - [x] add back stage success checker
+
