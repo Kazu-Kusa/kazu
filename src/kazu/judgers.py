@@ -121,7 +121,9 @@ class Breakers:
                 "ret=sum(["
                 + ",".join(
                     f"({lt}>s{s_id} or {ut}<s{s_id})*{wt}"
-                    for s_id, lt, ut, wt in zip(range(4), lt_seq, ut_seq, EdgeWeights.export_std_weight_seq(), strict=False)
+                    for s_id, lt, ut, wt in zip(
+                        range(4), lt_seq, ut_seq, EdgeWeights.export_std_weight_seq(), strict=False
+                    )
                 )
                 + "])"
             ]
