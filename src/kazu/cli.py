@@ -119,7 +119,42 @@ def configure(
     kv: Optional[Tuple[str, str]],
     **_,
 ) -> None:
-    """Configure KAZU."""
+    """Configure KAZU application settings and export configuration templates.
+
+    Displays or modifies the current application configuration, and provides options
+    to export default configuration templates for both app and run configurations.
+
+
+    \b
+    Description:
+        This function provides two operational modes:
+
+        \b
+        1. Display Mode (no KV pair provided):
+           - Shows the current configuration file path
+           - Prints the complete configuration in color-formatted TOML
+           - Includes all settings from the application configuration
+
+        \b
+        2. Modification Mode (KV pair provided):
+           - Takes a key-value pair as arguments (e.g., "sensor.camera_id 1")
+           - Modifies the specified configuration parameter
+           - Validates and saves changes to the configuration file
+           - Exits with code 0 after successful modification
+
+        \b
+        The function also supports exporting default configuration templates:
+        - Run configuration template via the --export-run-conf-path option
+        - App configuration template via the --export-app-conf-path option
+
+    \b
+    Note:
+        - Configuration changes are persistent and stored to disk
+        - Key must be a valid attribute path in the configuration object
+        - Exceptions during value assignment are displayed but don't stop execution
+        - Configuration files use TOML format for human readability
+        - Template exports are handled by their respective callbacks
+    """
     app_config = config.app_config
     if kv is None:
         from tomlkit import dumps
@@ -220,36 +255,36 @@ def run(
     Executes the robot control system in different operational modes with hardware initialization
     and proper resource management.
 
-    Args:
-        ctx (click.Context): Click context object for command execution.
-        conf (_InternalConfig): Internal configuration object containing app configuration.
-        run_config_path (Path | None): Path to the run configuration file. If None, uses default.
-        mode (str): Operational mode to run the system in. Must be one of the RunMode values.
-        **_: Additional keyword arguments (ignored).
 
-    Returns:
-        None
 
+
+    \b
     Raises:
         KeyboardInterrupt: When the program is interrupted by user (Ctrl+C).
         Exception: Any other exception that occurs during execution.
 
+    \b
     Description:
         This function initializes all hardware components including sensors, camera, and motor
         controller, then runs the robot in one of several operational modes:
 
+        \b
         - FGS (Off Stage Start): Runs boot sequence once, then stage sequence in loop
         - NGS (On Stage Start): Runs only stage sequence in continuous loop
         - AFG (Always Off Stage): Runs off-stage sequence continuously
         - ANG (Always On Stage): Runs on-stage sequence continuously
         - FGDL (Off Stage Dash Loop): Runs boot sequence continuously in loop
 
+        \b
         The function ensures proper resource cleanup in the finally block, including:
+
+        \b
         - Stopping motors and resetting controller
         - Releasing camera resources
         - Closing sensor connections
         - Turning off signal lights
 
+    \b
     Note:
         This function will run indefinitely until interrupted or an error occurs.
         All hardware resources are properly initialized before execution and cleaned up
@@ -364,25 +399,12 @@ def test(conf: _InternalConfig, device: str, **_) -> None:
     Tests the functionality of various hardware devices connected to the robot system.
     Each device is tested individually and results are displayed in a formatted table.
 
-    Args:
-        conf (_InternalConfig): Internal configuration object containing app configuration
-            and file paths for system setup.
-        device (str): Device type(s) to test. Can be one or more of:
-            - "mot": Motor controller
-            - "cam": Camera/tag detector
-            - "adc": Analog-to-digital converter sensors
-            - "io": Input/output sensors
-            - "mpu": Motion processing unit (gyroscope/accelerometer)
-            - "pow": Power monitoring
-            - "all": Test all available devices
-        **_: Additional keyword arguments (ignored).
 
-    Returns:
-        None
-
+    \b
     Description:
         This function performs hardware diagnostics by testing specified devices:
 
+        \b
         - ADC: Tests analog sensor readings by opening ADC interface and checking
           sensor connectivity
         - IO: Tests digital input/output functionality by checking IO channels
@@ -394,6 +416,7 @@ def test(conf: _InternalConfig, device: str, **_) -> None:
         - MOTOR: Tests motor controller communication, initialization, and
           basic movement commands
 
+        \b
         Each test result is displayed in a color-coded table:
         - Device names appear in yellow (success) or red (failure)
         - Test results show as green "True" (pass) or red "False" (fail)
@@ -401,6 +424,7 @@ def test(conf: _InternalConfig, device: str, **_) -> None:
         The function automatically handles resource management, ensuring proper
         initialization and cleanup of hardware interfaces for each test.
 
+    \b
     Note:
         - If no device is specified or "all" is included, all devices are tested
         - Hardware resources are properly opened and closed for each test
@@ -498,29 +522,18 @@ def read_sensors(
     Continuously reads and displays sensor data from various hardware components
     in real-time with configurable refresh intervals and display options.
 
-    Args:
-        ctx (click.Context): Click context object for command execution and exit handling.
-        conf (_InternalConfig): Internal configuration object containing app configuration
-            and sensor mapping definitions.
-        interval (float): Time interval between sensor readings in seconds.
-        device (str): Device type(s) to read from. Can be one or more of:
-            - "adc": Analog-to-digital converter sensors (edge sensors, distance sensors)
-            - "io": Digital input/output sensors (buttons, switches)
-            - "mpu": Motion processing unit (gyroscope, accelerometer, attitude)
-            - "all": Read from all available sensor types
-        use_screen (bool): If True, displays sensor data on the onboard LCD screen
-            in addition to terminal output.
 
-    Returns:
-        None
 
+    \b
     Raises:
         KeyboardInterrupt: When the program is interrupted by user (Ctrl+C).
         ValueError: If an invalid device type is specified.
 
+    \b
     Description:
         This function initializes and continuously reads from the specified sensor types:
 
+        \b
         - ADC Sensors: Reads analog values from edge detection sensors (front-left,
           front-right, rear-left, rear-right), directional distance sensors (left,
           right, front, back), and grayscale sensors
@@ -528,23 +541,24 @@ def read_sensors(
           and grayscale digital sensors
         - MPU Sensors: Reads motion data including gyroscope, accelerometer, and
           attitude information from the MPU6500 unit
-
+        \b
         The function configures sensor parameters based on the application config:
         - Sets gyroscope full-scale range (FSR)
         - Sets accelerometer full-scale range (FSR)
         - Configures all IO pins to input mode (0)
-
+        \b
         Display features:
         - Terminal output: Refreshes sensor tables in terminal every interval
         - LCD output: Shows ADC and IO sensor data on onboard screen when enabled
         - Labeled sensor data with human-readable names for easy identification
-
+        \b
         The function ensures proper resource management by:
         - Opening necessary sensor interfaces before reading
         - Properly closing ADC/IO interfaces in the finally block
         - Closing and clearing the LCD screen if used
         - Graceful exit handling through click context
 
+    \b
     Note:
         - The function runs indefinitely until interrupted
         - All sensor interfaces are properly initialized and cleaned up
@@ -691,58 +705,36 @@ def visualize(
     Generates PlantUML state-transition diagrams for various robot behavioral handlers
     and optionally renders them to SVG format for visualization and documentation.
 
-    Args:
-        conf (_InternalConfig): Internal configuration object containing app configuration
-            and system settings for handler initialization.
-        destination (Path): Output directory path where generated PlantUML files will be saved.
-            Directory will be created if it doesn't exist.
-        run_config_path (Optional[Path]): Path to the run configuration file. If None,
-            uses default configuration. Contains runtime behavior parameters.
-        render (bool): If True, renders generated PlantUML files to SVG format using
-            online PlantUML service. If False, only generates .puml files.
-        packname (Tuple[str, ...]): Tuple of handler package names to visualize. Can include:
-            - "edge": Edge detection handler
-            - "boot": System reboot handler
-            - "bkstage": Back to stage handler
-            - "surr": Surrounding detection handler
-            - "scan": Area scanning handler
-            - "search": Target search handler
-            - "fence": Fence detection handler
-            - "rdwalk": Random walk handler
-            - "stdbat": Standard battle handler
-            - "onstage": Always on-stage battle handler
-            - "angbat": Always on-stage battle handler (alias)
-            - "afgbat": Always off-stage battle handler
-            - "all": Generate diagrams for all available handlers
 
-    Returns:
-        None
 
+    \b
     Description:
         This function creates visual state-transition diagrams for robot behavioral handlers
         using PlantUML markup language. The process involves:
 
+        \b
         1. Handler Selection: Determines which handlers to visualize based on packname parameter
         2. Configuration Loading: Loads app and run configurations for handler initialization
         3. Handler Execution: Executes each selected handler to extract state structure
         4. PlantUML Generation: Exports handler structure to PlantUML format (.puml files)
         5. Optional Rendering: Converts PlantUML files to SVG using online service
-
+        \b
         Each handler represents a different robot behavior pattern:
         - Edge handlers manage boundary detection and avoidance
         - Battle handlers control combat and competition strategies
         - Navigation handlers manage movement and positioning
         - System handlers control initialization and recovery
-
+        \b
         The generated diagrams show:
         - State nodes and their relationships
         - Transition conditions between states
         - Decision points and branching logic
         - Handler flow and execution paths
-
+        \b
         Signal light registry is used during handler execution to ensure proper
         resource management and visual feedback during diagram generation.
 
+    \b
     Note:
         - Requires internet connection for SVG rendering via PlantUML web service
         - Generated .puml files can be opened in PlantUML-compatible editors
@@ -812,6 +804,7 @@ def visualize(
         secho(f"Exported {filename}", fg="green", bold=True)
 
 
+@main.command("cmd", context_settings={"ignore_unknown_options": True})
 @click.help_option("-h", "--help")
 @click.pass_obj
 @click.option(
@@ -845,54 +838,46 @@ def control_motor(
     Sends movement commands to the robot's motor controller to move at specified speeds
     for a given duration, with support for both single commands and interactive shell mode.
 
-    Args:
-        conf (_InternalConfig): Internal configuration object containing app configuration
-            and motor controller settings for hardware initialization.
-        duration (Optional[float]): Duration in seconds to run the motors. Required for
-            single command mode, ignored in shell mode.
-        speeds (Optional[list[int]]): List of motor speeds. Can be:
-            - Single value: Applied to all motors
-            - Two values: [left_side, right_side] speeds
-            - Four values: [front_left, rear_left, rear_right, front_right] speeds
-        shell (bool): If True, enters interactive shell mode for continuous command input.
-            If False, executes a single movement command.
-        **_: Additional keyword arguments (ignored).
 
-    Returns:
-        None
 
+
+    \b
     Raises:
         ValueError: When invalid speed values or command format is provided.
         SerialException: When motor controller connection fails.
 
+    \b
     Description:
         This function provides two operational modes for motor control:
 
+        \b
         1. Single Command Mode (shell=False):
            - Requires both duration and speeds parameters
            - Executes one movement command and exits
            - Shows a progress bar during movement execution
            - Automatically stops motors after the specified duration
 
+        \b
         2. Interactive Shell Mode (shell=True):
            - Enters a continuous command prompt loop
            - Accepts commands in format: "<duration> <speed1> [speed2] [speed3] [speed4]"
            - Validates each command before execution
            - Continues until 'quit' command is entered
-
+        \b
         Command Format:
         - 2 tokens: "<duration> <speed>" - All motors at same speed
         - 3 tokens: "<duration> <left_speed> <right_speed>" - Differential drive
         - 5 tokens: "<duration> <fl> <rl> <rr> <fr>" - Individual motor control
-
+        \b
         The function initializes the motor controller using the application configuration,
         validates the serial connection, and ensures proper resource cleanup by closing
         the controller connection when finished.
-
+        \b
         Progress visualization includes a colored progress bar with ETA display during
         movement execution, running in a separate daemon thread to avoid blocking
         the motor control commands.
 
+    \b
     Note:
         - Motor controller must be properly connected and configured
         - All motor speeds are validated before sending commands
@@ -1023,31 +1008,26 @@ def list_ports(conf: _InternalConfig, check: bool, timeout: float) -> None:
     Scans the system for available serial ports and displays them in a formatted table,
     with optional checking of port availability status.
 
-    Args:
-        conf (_InternalConfig): Internal configuration object containing app configuration
-            and current motor controller port settings.
-        check (bool): If True, attempts to open each port to verify availability.
-            If False, only lists the ports without checking.
-        timeout (float): Timeout in seconds for port checking operations when
-            attempting to open serial connections.
 
-    Returns:
-        None
 
+    \b
     Description:
         This function performs the following operations:
 
+        \b
         1. Port Discovery: Detects all available serial ports on the system using
            the bdmc.find_serial_ports utility
 
+        \b
         2. Optional Port Checking: When check=True, attempts to open each port
            with the specified timeout to determine if it's available or in use
 
+        \b
         3. Status Display: Shows a color-coded table with:
            - All detected serial ports (sorted in reverse order)
            - Availability status (if check=True)
            - The currently configured port from application settings
-
+        \b
         Status colors indicate:
         - Green: Port is available and can be opened
         - Red: Port is in use or cannot be opened
@@ -1056,6 +1036,7 @@ def list_ports(conf: _InternalConfig, check: bool, timeout: float) -> None:
         The configured port is displayed at the bottom of the table for
         easy reference and comparison.
 
+    \b
     Note:
         - Serial ports may require special permissions on some systems
         - Busy ports cannot be opened and will show as "Not available"
@@ -1121,39 +1102,38 @@ def stream_send_msg(ctx: click.Context, conf: _InternalConfig, **_) -> None:
     Establishes a bidirectional serial communication channel with the motor controller
     for sending custom commands and receiving immediate responses.
 
-    Args:
-        ctx (click.Context): Click context object for command execution and exit handling.
-        conf (_InternalConfig): Internal configuration object containing app configuration
-            with serial port settings for controller communication.
-        **_: Additional keyword arguments (ignored).
 
-    Returns:
-        None
-
+    \b
     Raises:
         SerialException: When the serial connection cannot be established.
 
+    \b
     Description:
         This function provides an interactive console for direct communication with
         the motor controller over the serial port. It operates as follows:
 
+        \b
         1. Connection Setup: Initializes the motor controller with configured port settings
            and verifies that the serial connection is open and ready
 
+        \b
         2. Interactive Console: Enters a command loop that:
            - Prompts the user for input with a colored command prompt
            - Sends each command to the controller with carriage return termination
            - Displays the controller's response with distinct formatting
            - Continues until the user enters the quit command
 
+        \b
         3. Resource Cleanup: Ensures the serial connection is properly closed when
            exiting the command loop
 
+        \b
         The function supports direct access to the controller's command interface,
         allowing for custom commands that may not be available through the higher-level
         API. This is particularly useful for debugging, testing new commands, or
         exploring the controller's capabilities.
 
+    \b
     Note:
         - Commands are sent as ASCII with carriage return termination
         - The quit command is defined by the QUIT constant (typically "quit")
@@ -1210,20 +1190,14 @@ def control_display(conf: _InternalConfig, sig_lights: bool, **_) -> None:
     Provides interfaces for controlling the onboard LED display and visualizing
     registered signal light patterns with their associated purposes.
 
-    Args:
-        conf (_InternalConfig): Internal configuration object containing app configuration
-            and signal light settings.
-        sig_lights (bool): If True, displays all registered signal light patterns and
-            their purposes sequentially. If False, enters LED shell mode based on
-            the shell option.
-        **_: Additional keyword arguments (ignored).
 
-    Returns:
-        None
 
+
+    \b
     Description:
         This function provides two operational modes:
 
+        \b
         1. Signal Light Display Mode (-g/--sig-lights):
            - Temporarily enables signal lights if they are disabled in configuration
            - Initializes the standard battle handler to register all signal patterns
@@ -1232,22 +1206,24 @@ def control_display(conf: _InternalConfig, sig_lights: bool, **_) -> None:
            - Presents a color-coded representation of the pattern in the terminal
            - Advances to the next pattern when the user presses Enter
 
+        \b
         2. LED Shell Mode (-s/--shell) [handled by callback]:
            - When the shell option is provided, the led_light_shell_callback is triggered
            - This provides an interactive shell for directly controlling LEDs
-
+        \b
         In Signal Light Display Mode, each registered pattern is shown with:
         - The actual LED lights displaying the pattern on the robot
         - The LCD screen showing the pattern's purpose/meaning
         - Terminal output showing color names in their actual colors
         - Interactive progression through all patterns
-
+        \b
         The function ensures proper hardware initialization and cleanup:
         - Opens and configures the onboard LCD screen
         - Opens the ADC/IO interface for LED control
         - Properly closes all hardware interfaces when finished
         - Resets all LEDs to black/off state
 
+    \b
     Note:
         - Signal light patterns are defined in the signal_light_registry
         - Each pattern is associated with a specific robot behavior or state
@@ -1330,41 +1306,38 @@ def tag_test(ctx: click.Context, conf: _InternalConfig, interval: float, **_) ->
     Continuously monitors and displays AprilTag detection results from the camera
     with configurable refresh interval.
 
-    Args:
-        ctx (click.Context): Click context object for command execution and exit handling.
-        conf (_InternalConfig): Internal configuration object containing app configuration
-            with camera settings.
-        interval (float): Time interval in seconds between tag detection checks.
-            Lower values provide more responsive detection but higher CPU usage.
-        **_: Additional keyword arguments (ignored).
 
-    Returns:
-        None
 
+    \b
     Raises:
         KeyboardInterrupt: When the program is interrupted by user (Ctrl+C).
 
+    \b
     Description:
         This function provides a real-time AprilTag detection testing environment:
 
+        \b
         1. Camera Initialization: Sets up the tag detector with the configured camera,
            verifying camera readiness before proceeding.
 
+        \b
         2. Detection Loop: Continuously performs the following operations:
            - Reads frames from the camera at specified intervals
            - Processes frames for AprilTag detection
            - Updates the terminal with the detected tag ID in real-time
            - Maintains a non-blocking interface with inline output
 
+        \b
         3. Resource Cleanup: Ensures camera resources are properly released when exiting,
            including stopping the tag detection thread and closing the camera interface.
-
+        \b
         The function is useful for:
         - Testing camera positioning and focus
         - Verifying tag detection capabilities
         - Debugging tag recognition issues
         - Checking detection range and reliability
 
+    \b
     Note:
         - Terminal output updates in-place with carriage return
         - Camera must be properly connected and configured
@@ -1437,26 +1410,17 @@ def breaker_test(
     Continuously monitors and displays the state of multiple robot behavior triggers
     (breakers) with configurable refresh intervals and display options.
 
-    Args:
-        ctx (click.Context): Click context object for command execution and exit handling.
-        conf (_InternalConfig): Internal configuration object containing app configuration
-            and sensor threshold settings.
-        run_config_path (Path): Path to the run configuration file with behavior parameters.
-        interval (float): Time interval in seconds between breaker state updates.
-            Lower values provide more responsive detection but higher CPU usage.
-        use_screen (bool): If True, displays breaker states on the onboard LCD screen
-            in addition to terminal output.
 
-    Returns:
-        None
-
+    \b
     Raises:
         KeyboardInterrupt: When the program is interrupted by user (Ctrl+C).
         Exception: Any other exception that occurs during execution.
 
+    \b
     Description:
         This function initializes and continuously monitors multiple breaker detectors:
 
+        \b
         - Edge Breakers: Detect boundaries and edges in different directions
         - Surrounding Breakers: Detect obstacles around the robot
         - Scanning Breakers: Detect scan conditions and patterns
@@ -1465,21 +1429,25 @@ def breaker_test(
         - Stage Breakers: Detect on/off stage conditions
         - Attack Breakers: Detect attack opportunities
 
+        \b
         The function configures sensor interfaces and initializes the breakers using
         the provided application and run configurations. It then continuously updates
         and displays the state of each breaker in a formatted table.
 
+        \b
         Display features:
         - Terminal output: Refreshes breaker state tables at specified intervals
         - LCD output: Shows breaker states on onboard screen when enabled
         - Color-coded formatting for better readability
 
+        \b
         The function ensures proper resource management by:
         - Opening necessary sensor interfaces before reading
         - Properly closing hardware interfaces in the finally block
         - Clearing the LCD screen if used
         - Graceful exit handling through click context
 
+    \b
     Note:
         - The function runs indefinitely until interrupted by Ctrl+C
         - All breaker states are displayed with their corresponding enum value names
@@ -1714,39 +1682,28 @@ def trace(
     Profiles the robot's battle execution cycle by running it for a specified number
     of iterations while collecting detailed performance data with viztracer.
 
-    Args:
-        conf (_InternalConfig): Internal configuration object containing app configuration
-            settings for hardware initialization and behavior parameters.
-        run_config_path (Path): Path to the run configuration file containing battle
-            parameters and behavior thresholds.
-        output_path (Path): File path where the viztracer profile will be saved,
-            typically as a JSON file.
-        salvo (int): Number of battle cycles to execute during profiling. Higher values
-            provide more comprehensive profiles but take longer to run.
-        disable_view_profile (bool): If True, skips launching the visualization server
-            after profile data collection completes.
-        port (int): Network port to use for the viztracer visualization server if
-            profile viewing is enabled.
-        **_: Additional keyword arguments (ignored).
 
-    Returns:
-        None
 
+
+    \b
     Description:
         This function performs the following operations:
 
+        \b
         1. Environment Setup:
            - Creates necessary directories for profile output
            - Initializes viztracer for performance profiling
            - Loads run configuration from specified path
            - Opens all required hardware interfaces
 
+        \b
         2. Hardware Initialization:
            - Initializes sensors (ADC, IO, MPU6500)
            - Sets up tag detector with camera
            - Configures motor controller with context variables
            - Clears all signal lights for clean startup
 
+        \b
         3. Profiling Execution:
            - Assembles the standard on-stage battle schema
            - Compiles the execution function with named reference
@@ -1754,19 +1711,21 @@ def trace(
            - Runs the battle function for specified number of iterations
            - Stops data collection
 
+        \b
         4. Resource Cleanup:
            - Resets all signal lights
            - Releases camera and tag detector resources
            - Sends motor reset commands and closes controller
            - Closes sensor interfaces
            - Saves profile data to specified output path
-
+        \b
         5. Profile Visualization (if enabled):
            - Determines local IP address for server access
            - Launches vizviewer server on specified port
            - Provides access URL in terminal
            - Maintains server until user enters quit command
 
+    \b
     Note:
         - Profile data can be used to identify performance bottlenecks
         - The visualization server requires network connectivity
@@ -1847,43 +1806,38 @@ def trace(
 )
 def view_profile(port: int, flamegraph: bool, profile: Path, **_) -> None:
     """View the profile using vizviewer for performance analysis.
-    
+
     Launches a vizviewer server for visualizing performance profiling data collected
     with viztracer, making it accessible through a web browser interface.
 
-    Args:
-        port (int): Network port to use for the vizviewer server. Default is 2024.
-        flamegraph (bool): If True, generates a flamegraph visualization of the profile data,
-            showing hierarchical function call relationships and timing. If False, displays
-            the standard timeline view.
-        profile (Path): File path to the profile data file (typically a .json file) generated
-            by viztracer that contains the performance metrics to visualize.
-        **_: Additional keyword arguments (ignored).
 
-    Returns:
-        None
-        
+
+    \b
     Description:
         This function performs the following operations:
 
+        \b
         1. Network Setup:
            - Determines the local machine's IP address for server access
            - Constructs a URL for accessing the visualization web interface
 
+        \b
         2. Server Configuration:
            - Configures vizviewer with the specified port and profile path
            - Sets up optional flamegraph generation if requested
 
+        \b
         3. Server Management:
            - Launches vizviewer in server-only mode as a background process
            - Displays the access URL in the terminal for user navigation
            - Maintains the server until the user enters the quit command
            - Terminates the server process when finished
-
+        \b
         The function provides a convenient way to analyze performance bottlenecks
         and execution flow using the collected profile data through an interactive
         web-based visualization tool.
 
+    \b
     Note:
         - Requires network connectivity for server operation
         - The server is accessible to any device on the local network
@@ -1943,53 +1897,48 @@ def view_profile(port: int, flamegraph: bool, profile: Path, **_) -> None:
 )
 def record_data(conf: _InternalConfig, output_dir: Path, interval: float, run_config_path: Path) -> None:
     """Record sensor data from robot into CSV files for analysis and debugging.
-    
-    Captures time-series data from all analog sensors at specified intervals, organizing 
-    recordings into separate files by recording session. Sessions are controlled using 
+
+    Captures time-series data from all analog sensors at specified intervals, organizing
+    recordings into separate files by recording session. Sessions are controlled using
     the robot's physical reboot button as a trigger.
-    
-    Args:
-        conf (_InternalConfig): Internal configuration object containing app configuration
-            with sensor mapping and hardware settings.
-        output_dir (Path): Directory where recorded CSV files will be saved. Created if
-            it doesn't exist.
-        interval (float): Time between sensor readings in seconds. Lower values provide
-            more detailed data but generate larger files.
-        run_config_path (Path): Path to the run configuration file containing threshold
-            values and behavior parameters.
-            
-    Returns:
-        None
-        
+
+
+
+    \b
     Description:
         This function performs the following operations:
-        
+
+        \b
         1. Hardware Initialization:
            - Opens ADC/IO interfaces for sensor access
            - Initializes onboard LCD screen for status display
            - Sets up visual indicators using signal lights
-           
+
+        \b
         2. Recording Process:
            - Displays white signal lights while waiting for recording to start
            - Uses reboot button as trigger to start/stop individual recording sessions
            - Shows recording status on terminal and with red signal lights
            - Collects timestamped sensor readings at specified intervals
-           
+
+        \b
         3. Data Collection:
            - Records from all edge detection sensors (FL, FR, RL, RR)
            - Records from all directional distance sensors (LEFT, RIGHT, FRONT, BACK)
            - Records from grayscale sensor
            - Timestamps each reading for correlation
-           
+
+        \b
         4. Data Storage:
            - Converts collected data to pandas DataFrames
            - Generates unique timestamped filenames for each recording session
            - Saves data as CSV files in the specified output directory
            - Maintains separate files for each recording session
-        
+        \b
         Multiple recording sessions can be created by repeatedly pressing the reboot
         button, with each session saved as a separate CSV file in the output directory.
-        
+
+    \b
     Note:
         - Recording continues indefinitely until interrupted with Ctrl+C
         - The reboot button acts as both the start and stop trigger for sessions
