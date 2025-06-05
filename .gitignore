@@ -165,3 +165,4 @@ run_conf.toml
 kazu_config.toml
 *puml
 visualize/
+.vs
