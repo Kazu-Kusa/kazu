@@ -9,7 +9,6 @@ content_hash = "sha256:5b69298197fdf1998564633575682af56b25f5b679678850526bab0e6
 
 [[metadata.targets]]
 requires_python = "==3.11.*"
-
 [[package]]
 name = "altgraph"
 version = "0.17.4"

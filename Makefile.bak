@@ -12,12 +12,19 @@ all: build_bin build_whl
 
 build_bin:
 	@echo "Start building Binary $(APP_NAME)..."
-	pycrucible -e . -o $(DIST_DIR)/$(APP_NAME)
+	pyinstaller --name=$(APP_NAME) \
+	              --onefile \
+	              --distpath=$(DIST_DIR) \
+	              --collect-binaries pyapriltags \
+	              --collect-binaries pyuptech \
+	              --collect-binaries opencv-python-headless \
+	              --icon=$(ICON) \
+	              $(SOURCE)
 	@echo "$(APP_NAME) was successfully built! See $(DIST_DIR)/$(APP_NAME)"
 
 build_whl:
 	@echo "Start building whl $(APP_NAME)..."
-	uv build -d $(DIST_DIR)
+	pdm build -d $(DIST_DIR) --no-clean
 
 	@echo "$(APP_NAME) was successfully built! See $(DIST_DIR)"
 
